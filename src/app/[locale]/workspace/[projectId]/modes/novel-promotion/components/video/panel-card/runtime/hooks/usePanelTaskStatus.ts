@@ -1,0 +1,101 @@
+import { resolveErrorDisplay } from '@/lib/errors/display'
+import { resolveTaskPresentationState } from '@/lib/task/presentation'
+import type { VideoPanelCardShellProps } from '../../types'
+
+interface UsePanelTaskStatusParams {
+  panel: VideoPanelCardShellProps['panel']
+  hasVisibleBaseVideo: boolean
+  lipSyncEnabled?: boolean
+  tCommon: (key: string) => string
+}
+
+export function usePanelTaskStatus({
+  panel,
+  hasVisibleBaseVideo,
+  lipSyncEnabled = false,
+  tCommon,
+}: UsePanelTaskStatusParams) {
+  const isVideoTaskRunning = !!panel.videoTaskRunning
+  const isLipSyncTaskRunning = lipSyncEnabled && !!panel.lipSyncTaskRunning
+  const rawErrorMessage = panel.videoErrorMessage || (lipSyncEnabled ? panel.lipSyncErrorMessage : null) || null
+  const panelErrorDisplayBase = resolveErrorDisplay({
+    code: panel.videoErrorCode || (lipSyncEnabled ? panel.lipSyncErrorCode : null) || null,
+    message: rawErrorMessage,
+  })
+  const panelErrorDisplay =
+    panelErrorDisplayBase && rawErrorMessage && (
+      panelErrorDisplayBase.code === 'EXTERNAL_ERROR' || panelErrorDisplayBase.code === 'INTERNAL_ERROR'
+    )
+      ? { ...panelErrorDisplayBase, message: rawErrorMessage }
+      : panelErrorDisplayBase
+  const videoRunningPhase = panel.videoTaskPhase === 'queued' ? 'queued' : 'processing'
+  const lipSyncRunningPhase = panel.lipSyncTaskPhase === 'queued' ? 'queued' : 'processing'
+
+  const videoRunningPresentation = isVideoTaskRunning
+    ? resolveTaskPresentationState({
+      phase: videoRunningPhase,
+      intent: hasVisibleBaseVideo ? 'regenerate' : 'generate',
+      resource: 'video',
+      hasOutput: hasVisibleBaseVideo,
+    })
+    : null
+
+  const lipSyncRunningPresentation = isLipSyncTaskRunning
+    ? resolveTaskPresentationState({
+      phase: lipSyncRunningPhase,
+      intent: 'process',
+      resource: 'video',
+      hasOutput: !!panel.lipSyncVideoUrl || hasVisibleBaseVideo,
+    })
+    : null
+
+  const taskRunningVideoLabel = isLipSyncTaskRunning
+    ? (lipSyncRunningPresentation?.labelKey
+      ? tCommon(lipSyncRunningPresentation.labelKey)
+      : tCommon('taskStatus.intent.process.running.video'))
+    : (videoRunningPresentation?.labelKey
+      ? tCommon(videoRunningPresentation.labelKey)
+      : tCommon('taskStatus.intent.generate.running.video'))
+
+  const overlayPresentation = (() => {
+    if (!isVideoTaskRunning && !isLipSyncTaskRunning) return null
+    if (isLipSyncTaskRunning) {
+      return (
+        lipSyncRunningPresentation ||
+        resolveTaskPresentationState({
+          phase: lipSyncRunningPhase,
+          intent: 'process',
+          resource: 'video',
+          hasOutput: !!panel.lipSyncVideoUrl || hasVisibleBaseVideo,
+        })
+      )
+    }
+    return (
+      videoRunningPresentation ||
+      resolveTaskPresentationState({
+        phase: videoRunningPhase,
+        intent: 'generate',
+        resource: 'video',
+        hasOutput: hasVisibleBaseVideo,
+      })
+    )
+  })()
+
+  const lipSyncInlineState = resolveTaskPresentationState({
+    phase: lipSyncRunningPhase,
+    intent: 'process',
+    resource: 'video',
+    hasOutput: lipSyncEnabled && (!!panel.lipSyncVideoUrl || hasVisibleBaseVideo),
+  })
+
+  return {
+    isVideoTaskRunning,
+    isLipSyncTaskRunning,
+    panelErrorDisplay,
+    videoRunningPresentation,
+    lipSyncRunningPresentation,
+    taskRunningVideoLabel,
+    overlayPresentation,
+    lipSyncInlineState,
+  }
+}

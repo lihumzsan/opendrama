@@ -1,0 +1,205 @@
+{
+  "eyebrow": "独立创作工具",
+  "title": "视频工具",
+  "subtitle": "集中处理不需要进入项目库的临时视频与音频结果。",
+  "seamConcat": {
+    "title": "视频无缝拼接",
+    "description": "依次上传两个视频，设置 Video 1 尾部和 Video 2 头部需要去掉的帧数，再按 Video 1 的帧率无缝拼接画面和声音。"
+  },
+  "bridge": {
+    "label": "转接方式",
+    "direct": "直接拼接",
+    "ai": "自然 AI 桥接",
+    "description": "从两段视频提取四个运动锚点，生成锚点之间的连续运动，并将最终输出锁回原视频端点；不是淡化，也不是遮挡。",
+    "duration": "桥接时长",
+    "durationHelp": "四个运动锚点共同约束桥接；只有计算后的中央区间会增加到最终视频时长。",
+    "prompt": "运动说明（可选）",
+    "promptPlaceholder": "例如：镜头继续缓慢推进，人物自然转身"
+  },
+  "workflowNoteDirect": "直接拼接由远端处理，输出固定使用 NVENC H.264 MP4、yuv420p 和 10 Mbit/s。",
+  "workflowNoteAi": "AI 桥接使用本地 H.264 MP4，沿用 Video 1 的画面尺寸和帧率，按画面自适应码率，并保留可用音频。",
+  "input1": {
+    "title": "Video 1",
+    "description": "拼接结果的前半段，并决定最终输出帧率。",
+    "trimLabel": "去掉尾部帧数",
+    "trimHelp": "拼接前从视频尾部移除这些帧。"
+  },
+  "input2": {
+    "title": "Video 2",
+    "description": "拼接结果的后半段，可设置头部裁剪帧数。",
+    "trimLabel": "去掉头部帧数",
+    "trimHelp": "从视频头部移除这些帧及对应音频。"
+  },
+  "actions": {
+    "select": "点击或拖入视频",
+    "replace": "替换",
+    "remove": "移除",
+    "start": "开始拼接",
+    "download": "下载视频"
+  },
+  "status": {
+    "idle": "等待上传",
+    "uploading": "正在上传",
+    "queued": "排队中",
+    "preparing": "准备视频",
+    "probing": "检测媒体",
+    "generating": "生成桥接运动",
+    "composing": "合成视频",
+    "processing": "正在拼接",
+    "persisting": "保存结果",
+    "completed": "已完成",
+    "failed": "拼接失败"
+  },
+  "result": {
+    "title": "拼接结果",
+    "description": "任务完成后可在这里预览和下载。",
+    "emptyHint": "上传两个视频并开始拼接，结果将在这里显示。",
+    "processingHint": "正在处理视频，请保持当前页面打开，完成后可预览和下载。"
+  },
+  "diagnostics": {
+    "title": "AI 桥接诊断",
+    "output": "输出画面 / 帧率",
+    "outputFrames": "输出帧数",
+    "outputAudio": "输出音频",
+    "audioPresent": "有音频",
+    "audioAbsent": "无音频",
+    "requestedDuration": "请求生成时长",
+    "generatedFrames": "生成帧数",
+    "handleFrames": "两侧衔接帧数",
+    "centralFrames": "中央新增帧数",
+    "centralSilence": "中央静音时长",
+    "motionAnchors": "运动锚点",
+    "sourceAnchors": "源视频",
+    "generatedAnchors": "生成视频",
+    "generationCanvas": "生成画布 / 内容",
+    "canvasPadding": "左、上、右、下边距",
+    "targetBitrate": "自适应目标码率",
+    "audioPolicy": "音频策略",
+    "audioBoth": "保留两段视频音频",
+    "audioVideo1Only": "仅保留 Video 1 音频",
+    "audioVideo2Only": "仅保留 Video 2 音频",
+    "audioSilent": "输出静音",
+    "video2Tempo": "Video 2 音频速度因子"
+  },
+  "environmentSound": {
+    "title": "独立环境音",
+    "description": "分析最终拼接视频、代表画面、原视频有声区间、剧本和可选配音密度，按连续声场规划环境音，最终只输出一条与视频等长的 MP3。",
+    "status": {
+      "idle": "等待视频",
+      "queued": "排队中",
+      "analyzing": "分析声场",
+      "planReady": "方案可编辑",
+      "generating": "生成环境音",
+      "persisting": "合成 MP3",
+      "completed": "已完成",
+      "failed": "处理失败"
+    },
+    "video": {
+      "title": "最终拼接视频",
+      "hint": "优先自动使用上方刚完成的拼接结果，也可以单独上传完整视频。",
+      "select": "选择完整视频",
+      "replace": "替换视频",
+      "stitchedResult": "最终拼接视频.mp4"
+    },
+    "script": {
+      "title": "当前剧本 / 台词（可选）",
+      "placeholder": "粘贴与这个完整视频对应的剧本和台词。没有也可以直接分析视频。"
+    },
+    "voice": {
+      "title": "对应配音（可选）",
+      "hint": "只用于估计对白密度，不会靠音频时长猜测它已和视频时间轴对齐，也不会混进环境音。支持 MP3、WAV、M4A、FLAC、OGG，最大 64 MB。",
+      "select": "选择配音",
+      "replace": "替换配音",
+      "remove": "移除"
+    },
+    "analysis": {
+      "note": "系统会均匀覆盖完整视频抽取代表画面，并结合剧本、原视频有声/静音区间和配音密度，按连续声场而不是分镜切点规划环境音；不会冒充识别原音轨里的具体声音。",
+      "start": "分析需要什么环境音",
+      "running": "正在分析声场"
+    },
+    "plan": {
+      "title": "环境音方案",
+      "hint": "视频时长 {duration} 秒，共 {count} 个连续声场。时间边界由视频决定，内容可直接修改。",
+      "summary": "整体说明",
+      "zone": "声场 {index}",
+      "scene": "场景判断",
+      "ambience": "持续底噪",
+      "events": "事件音（每行一个）",
+      "avoid": "不要出现（每行一个）",
+      "prompt": "Stable Audio 英文提示词（生成前按中文方案自动同步）",
+      "negative": "负面提示词",
+      "transition": "转入下一声场",
+      "smooth": "平滑过渡",
+      "hard": "快速切换"
+    },
+    "generation": {
+      "note": "生成会按声场和模型时长上限自动拆片、顺序执行，再交叉淡化成一条与视频等长的 MP3；不会写回或改动视频。",
+      "start": "生成独立环境音 MP3",
+      "running": "正在生成并合成"
+    },
+    "result": {
+      "title": "环境音 MP3",
+      "hint": "成品时长约 {duration} 秒，可试听或下载后自行与视频合成。",
+      "ttl": "任务、临时配音和成品保留 24 小时；刷新页面可恢复最近一次任务。",
+      "download": "下载 MP3"
+    },
+    "errors": {
+      "videoUploadFailed": "完整视频上传失败",
+      "voiceUploadFailed": "配音上传失败",
+      "analyzeFailed": "环境音分析失败",
+      "generateFailed": "环境音生成失败",
+      "statusFailed": "无法读取环境音任务状态"
+    }
+  },
+  "freeVoice": {
+    "title": "自由配音",
+    "description": "必须选择项目及其角色参考音色，输入文本后生成一段临时配音。",
+    "ttl": "Redis 临时保存 1 天",
+    "project": "项目",
+    "selectProject": "选择项目",
+    "loadingProjects": "正在加载项目",
+    "emptyProjects": "暂无可用项目",
+    "character": "角色",
+    "selectProjectFirst": "请先选择项目",
+    "selectCharacter": "选择角色",
+    "loadingCharacters": "正在加载角色",
+    "emptyCharacters": "该项目暂无角色",
+    "missingReference": "缺少参考音频",
+    "text": "配音文本",
+    "textPlaceholder": "输入需要朗读的文本",
+    "generate": "生成自由配音",
+    "submitting": "提交中",
+    "resultTitle": "配音结果",
+    "emptyResults": "生成后的音频会显示在这里，1 天后自动失效。",
+    "download": "下载",
+    "status": {
+      "queued": "排队中",
+      "processing": "生成中",
+      "completed": "已完成",
+      "failed": "生成失败"
+    },
+    "errors": {
+      "loadProjectsFailed": "无法读取项目列表",
+      "loadCharactersFailed": "无法读取角色列表",
+      "loadFailed": "无法读取自由配音结果",
+      "submitFailed": "自由配音提交失败"
+    }
+  },
+  "errors": {
+    "uploadFailed": "视频上传失败",
+    "submitFailed": "拼接任务提交失败",
+    "statusFailed": "无法读取当前拼接状态",
+    "mediaDownloadFailed": "无法下载源视频，请确认上传结果仍有效后重试",
+    "ffmpegUnavailable": "当前处理环境缺少本地视频编码能力",
+    "mediaProbeFailed": "无法读取视频的媒体信息",
+    "dimensionsUnsupported": "视频画面尺寸不受支持",
+    "aspectRatioMismatch": "两段视频的画面比例不一致",
+    "fpsMismatch": "两段视频的帧率差异过大",
+    "contextTooShort": "裁剪后的视频不足以提取桥接运动锚点",
+    "anchorMissing": "生成结果缺少所需的运动锚点",
+    "fourAnchorUnsupported": "当前生成能力不支持四锚点桥接",
+    "generatedRangeInvalid": "生成结果的有效桥接区间不完整",
+    "audioComposeFailed": "视频已生成，但音频合成失败",
+    "processingFailed": "视频处理失败，请稍后重试"
+  }
+}

@@ -1,0 +1,205 @@
+{
+  "eyebrow": "Standalone creation tools",
+  "title": "Video Tools",
+  "subtitle": "Temporary video and audio tools whose results do not enter project history.",
+  "seamConcat": {
+    "title": "Seamless Video Concatenation",
+    "description": "Upload two videos in order, choose the tail and head trim counts, and join both streams at the frame rate of Video 1."
+  },
+  "bridge": {
+    "label": "Transition method",
+    "direct": "Direct join",
+    "ai": "Natural AI bridge",
+    "description": "Extracts four motion anchors from the two videos, generates continuous motion between them, and locks the final output back to the original endpoints. This is not a fade or overlay.",
+    "duration": "Bridge duration",
+    "durationHelp": "Four motion anchors constrain the bridge. Only the calculated central interval adds to the final duration.",
+    "prompt": "Motion instruction (optional)",
+    "promptPlaceholder": "For example: the camera continues a slow push-in while the subject turns naturally"
+  },
+  "workflowNoteDirect": "Direct joins are processed remotely as NVENC H.264 MP4 with yuv420p at 10 Mbit/s.",
+  "workflowNoteAi": "AI bridge output uses local H.264 MP4 with Video 1 geometry and FPS, adaptive bitrate, and retained audio when available.",
+  "input1": {
+    "title": "Video 1",
+    "description": "The first part of the result and the source of the output frame rate.",
+    "trimLabel": "Trim tail frames",
+    "trimHelp": "Remove this many frames from the end before joining."
+  },
+  "input2": {
+    "title": "Video 2",
+    "description": "The second part of the result, with a configurable head trim.",
+    "trimLabel": "Trim head frames",
+    "trimHelp": "Remove this many frames and matching audio from the start."
+  },
+  "actions": {
+    "select": "Click or drop a video",
+    "replace": "Replace",
+    "remove": "Remove",
+    "start": "Start Concatenation",
+    "download": "Download Video"
+  },
+  "status": {
+    "idle": "Waiting for uploads",
+    "uploading": "Uploading",
+    "queued": "Queued",
+    "preparing": "Preparing videos",
+    "probing": "Inspecting media",
+    "generating": "Generating bridge motion",
+    "composing": "Composing video",
+    "processing": "Concatenating",
+    "persisting": "Saving result",
+    "completed": "Completed",
+    "failed": "Concatenation failed"
+  },
+  "result": {
+    "title": "Concatenated Result",
+    "description": "Preview and download the output when the task completes.",
+    "emptyHint": "Upload two videos and start concatenation. The result will appear here.",
+    "processingHint": "The videos are being processed. Keep this page open to preview and download the result."
+  },
+  "diagnostics": {
+    "title": "AI bridge diagnostics",
+    "output": "Output geometry / FPS",
+    "outputFrames": "Output frames",
+    "outputAudio": "Output audio",
+    "audioPresent": "Audio present",
+    "audioAbsent": "No audio",
+    "requestedDuration": "Requested generation duration",
+    "generatedFrames": "Generated frames",
+    "handleFrames": "Handle frames per side",
+    "centralFrames": "Central added frames",
+    "centralSilence": "Central silence",
+    "motionAnchors": "Motion anchors",
+    "sourceAnchors": "Source videos",
+    "generatedAnchors": "Generated video",
+    "generationCanvas": "Generation canvas / content",
+    "canvasPadding": "Left, top, right, bottom padding",
+    "targetBitrate": "Adaptive target bitrate",
+    "audioPolicy": "Audio policy",
+    "audioBoth": "Retain audio from both videos",
+    "audioVideo1Only": "Retain Video 1 audio only",
+    "audioVideo2Only": "Retain Video 2 audio only",
+    "audioSilent": "Silent output",
+    "video2Tempo": "Video 2 audio tempo factor"
+  },
+  "environmentSound": {
+    "title": "Standalone Environment Sound",
+    "description": "Analyze the final stitched video, representative frames, source-audio activity, script, and optional voice density; plan continuous acoustic zones; and output one exact-duration MP3.",
+    "status": {
+      "idle": "Waiting for video",
+      "queued": "Queued",
+      "analyzing": "Analyzing soundscape",
+      "planReady": "Plan ready to edit",
+      "generating": "Generating ambience",
+      "persisting": "Composing MP3",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "video": {
+      "title": "Final stitched video",
+      "hint": "The latest result above is adopted automatically, or upload a separate complete video.",
+      "select": "Select complete video",
+      "replace": "Replace video",
+      "stitchedResult": "final-stitched-video.mp4"
+    },
+    "script": {
+      "title": "Current script / dialogue (optional)",
+      "placeholder": "Paste the script and dialogue matching this complete video. Video-only analysis also works."
+    },
+    "voice": {
+      "title": "Matching voice track (optional)",
+      "hint": "Used only to estimate dialogue density. Similar duration never implies timeline alignment, and the voice is never mixed into the result. MP3, WAV, M4A, FLAC, or OGG up to 64 MB.",
+      "select": "Select voice track",
+      "replace": "Replace voice track",
+      "remove": "Remove"
+    },
+    "analysis": {
+      "note": "Whole-video frame coverage, script context, source signal/silence intervals, and voice density are combined into continuous acoustic zones. The system does not pretend to identify the semantic content of source audio.",
+      "start": "Analyze needed environment sound",
+      "running": "Analyzing soundscape"
+    },
+    "plan": {
+      "title": "Environment sound plan",
+      "hint": "{duration} seconds across {count} continuous sound zones. Video-derived timing stays fixed while the content remains editable.",
+      "summary": "Overall direction",
+      "zone": "Sound zone {index}",
+      "scene": "Scene reading",
+      "ambience": "Continuous ambience",
+      "events": "Event sounds (one per line)",
+      "avoid": "Avoid (one per line)",
+      "prompt": "Stable Audio English prompt (auto-synced from edited facts before generation)",
+      "negative": "Negative prompt",
+      "transition": "Transition to next zone",
+      "smooth": "Smooth crossfade",
+      "hard": "Quick switch"
+    },
+    "generation": {
+      "note": "Zones are split only when the model duration limit requires it, generated sequentially, then crossfaded into one exact-duration MP3. The source video is never modified.",
+      "start": "Generate standalone MP3",
+      "running": "Generating and composing"
+    },
+    "result": {
+      "title": "Environment sound MP3",
+      "hint": "About {duration} seconds. Preview it here or download it for your own video mix.",
+      "ttl": "Tasks, temporary voice uploads, and results expire after 24 hours. The latest task is restored after a page reload.",
+      "download": "Download MP3"
+    },
+    "errors": {
+      "videoUploadFailed": "Complete video upload failed",
+      "voiceUploadFailed": "Voice track upload failed",
+      "analyzeFailed": "Environment sound analysis failed",
+      "generateFailed": "Environment sound generation failed",
+      "statusFailed": "Could not load the environment sound task"
+    }
+  },
+  "freeVoice": {
+    "title": "Free Voice",
+    "description": "A project and its character reference voice are required to generate one temporary voice clip.",
+    "ttl": "Redis stores it for 1 day",
+    "project": "Project",
+    "selectProject": "Select a project",
+    "loadingProjects": "Loading projects",
+    "emptyProjects": "No projects available",
+    "character": "Character",
+    "selectProjectFirst": "Select a project first",
+    "selectCharacter": "Select a character",
+    "loadingCharacters": "Loading characters",
+    "emptyCharacters": "No characters in this project",
+    "missingReference": "missing reference audio",
+    "text": "Voice text",
+    "textPlaceholder": "Enter the text to read aloud",
+    "generate": "Generate free voice",
+    "submitting": "Submitting",
+    "resultTitle": "Voice results",
+    "emptyResults": "Generated audio appears here and expires automatically after 1 day.",
+    "download": "Download",
+    "status": {
+      "queued": "Queued",
+      "processing": "Generating",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "errors": {
+      "loadProjectsFailed": "Failed to load projects",
+      "loadCharactersFailed": "Failed to load characters",
+      "loadFailed": "Failed to load free voice results",
+      "submitFailed": "Failed to submit free voice"
+    }
+  },
+  "errors": {
+    "uploadFailed": "Video upload failed",
+    "submitFailed": "Could not submit the concatenation task",
+    "statusFailed": "Could not load the current concatenation status",
+    "mediaDownloadFailed": "The source videos could not be downloaded. Check that the uploads are still available and try again.",
+    "ffmpegUnavailable": "Local video encoding is unavailable in the processing environment.",
+    "mediaProbeFailed": "The video media information could not be read.",
+    "dimensionsUnsupported": "The video dimensions are unsupported.",
+    "aspectRatioMismatch": "The two videos have different aspect ratios.",
+    "fpsMismatch": "The two videos have incompatible frame rates.",
+    "contextTooShort": "The trimmed videos are too short to extract the bridge motion anchors.",
+    "anchorMissing": "The generated result is missing a required motion anchor.",
+    "fourAnchorUnsupported": "The current generation capability does not support a four-anchor bridge.",
+    "generatedRangeInvalid": "The generated result does not contain a complete bridge interval.",
+    "audioComposeFailed": "The video was generated, but its audio could not be composed.",
+    "processingFailed": "Video processing failed. Please try again later."
+  }
+}

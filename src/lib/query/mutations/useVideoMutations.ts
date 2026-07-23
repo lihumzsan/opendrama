@@ -1,0 +1,250 @@
+import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { queryKeys } from '../keys'
+import { invalidateEpisodeQueries } from '../episode-cache'
+import { invalidateQueryTemplates, requestJsonWithError, requestTaskResponseWithError } from './mutation-shared'
+import { resolveTaskResponse } from '@/lib/task/client'
+import type { FirstLastFramePromptReason } from '@/lib/novel-promotion/first-last-frame-prompt'
+import type { FirstLastFramePromptResult } from '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
+import type { VideoDurationBinding } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/video'
+
+/**
+ * 获取剧集可下载视频列表（项目）
+ */
+export function useListProjectEpisodeVideoUrls(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: {
+      episodeId: string
+      panelPreferences: Record<string, boolean>
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/video-urls`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        '获取视频列表失败',
+      ),
+  })
+}
+
+export async function invalidateFirstLastFramePromptCaches(
+  queryClient: QueryClient,
+  projectId: string,
+  episodeId: string,
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.projectData(projectId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.episodeDataPrefix(projectId, episodeId), exact: false }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.storyboards.all(episodeId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.videos.all(episodeId) }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.videos.panels(episodeId) }),
+  ])
+}
+
+export function useGenerateFirstLastFramePrompt(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: {
+      firstPanelId: string
+      lastPanelId: string
+      episodeId: string
+      reason: FirstLastFramePromptReason
+      onTaskUpdate?: (task: {
+        status: 'queued' | 'processing' | 'completed' | 'failed' | 'canceled'
+      }) => void
+    }) => {
+      const response = await requestTaskResponseWithError(
+        `/api/novel-promotion/${projectId}/first-last-frame-prompt`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        'generate first/last frame prompt failed',
+      )
+      return await resolveTaskResponse<FirstLastFramePromptResult>(response, {
+        onTaskUpdate: payload.onTaskUpdate,
+      })
+    },
+  })
+}
+
+/**
+ * 更新 panel 首尾帧链接状态（项目）
+ */
+export function useUpdateProjectPanelLink(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: {
+      storyboardId: string
+      panelIndex: number
+      linked: boolean
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/panel-link`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        '保存链接状态失败',
+      ),
+  })
+}
+
+/**
+ * 更新 Panel 视频提示词
+ */
+export function useUpdateProjectPanelVideoPrompt(projectId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      storyboardId,
+      panelIndex,
+      value,
+      field = 'videoPrompt',
+    }: {
+      storyboardId: string
+      panelIndex: number
+      value: string
+      field?: 'videoPrompt' | 'firstLastFramePrompt'
+      episodeId?: string
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/panel`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storyboardId,
+            panelIndex,
+            ...(field === 'firstLastFramePrompt'
+              ? { firstLastFramePrompt: value }
+              : { videoPrompt: value }),
+          }),
+        },
+        'update failed',
+      ),
+    onSettled: (_data, _error, variables) => {
+      if (variables.field === 'firstLastFramePrompt' && variables.episodeId) {
+        void invalidateFirstLastFramePromptCaches(queryClient, projectId, variables.episodeId)
+        return
+      }
+      void invalidateQueryTemplates(queryClient, [queryKeys.projectData(projectId)])
+    },
+  })
+}
+
+export function useUpdateProjectPanelVideoModel(projectId: string, episodeId?: string | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      storyboardId,
+      panelIndex,
+      model,
+    }: {
+      storyboardId: string
+      panelIndex: number
+      model: string
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/panel`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storyboardId,
+            panelIndex,
+            videoModel: model,
+          }),
+        },
+        'update failed',
+      ),
+    onSettled: () => {
+      invalidateQueryTemplates(queryClient, [queryKeys.projectData(projectId)])
+      if (episodeId) {
+        void Promise.all([
+          invalidateEpisodeQueries(queryClient, projectId, episodeId),
+          invalidateQueryTemplates(queryClient, [queryKeys.storyboards.all(episodeId)]),
+        ])
+      }
+    },
+  })
+}
+
+export function useUpdateProjectPanelVideoDurationBinding(projectId: string, episodeId?: string | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      storyboardId,
+      panelIndex,
+      binding,
+    }: {
+      storyboardId: string
+      panelIndex: number
+      binding: VideoDurationBinding
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/panel`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storyboardId,
+            panelIndex,
+            videoDurationBinding: binding,
+          }),
+        },
+        'update failed',
+      ),
+    onSettled: () => {
+      invalidateQueryTemplates(queryClient, [queryKeys.projectData(projectId)])
+      if (episodeId) {
+        void Promise.all([
+          invalidateEpisodeQueries(queryClient, projectId, episodeId),
+          invalidateQueryTemplates(queryClient, [queryKeys.storyboards.all(episodeId)]),
+        ])
+      }
+    },
+  })
+}
+
+export function useRestorePreviousProjectPanelVideo(projectId: string, episodeId?: string | null) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      panelId,
+      storyboardId,
+      panelIndex,
+    }: {
+      panelId?: string
+      storyboardId?: string
+      panelIndex?: number
+    }) =>
+      await requestJsonWithError(
+        `/api/novel-promotion/${projectId}/restore-video`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            panelId,
+            storyboardId,
+            panelIndex,
+          }),
+        },
+        'restore failed',
+      ),
+    onSettled: () => {
+      invalidateQueryTemplates(queryClient, [queryKeys.projectData(projectId)])
+      if (episodeId) {
+        void Promise.all([
+          invalidateEpisodeQueries(queryClient, projectId, episodeId),
+          invalidateQueryTemplates(queryClient, [queryKeys.storyboards.all(episodeId)]),
+        ])
+      }
+    },
+  })
+}

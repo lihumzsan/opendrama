@@ -1,0 +1,635 @@
+import { Prisma } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
+import { withPrismaRetry } from '@/lib/prisma-retry'
+import { locales } from '@/i18n/routing'
+import { parseModelKeyStrict } from '@/lib/model-config-contract'
+import { TASK_STATUS, type CreateTaskInput, type TaskBillingInfo, type TaskStatus } from './types'
+
+const ACTIVE_STATUSES: TaskStatus[] = [TASK_STATUS.QUEUED, TASK_STATUS.PROCESSING]
+const taskModel = prisma.task
+
+/**
+ * 校验 BullMQ Job 是否仍然活着。
+ * 检查失败时（如 Redis 不可用）安全降级为 true，不阻塞正常创建流程。
+ */
+async function verifyJobAlive(taskId: string): Promise<boolean> {
+  try {
+    const { isJobAlive } = await import('./reconcile')
+    return await isJobAlive(taskId)
+  } catch {
+    // Redis 异常等不可控情况 → 降级信任 DB 状态
+    return true
+  }
+}
+
+function isPrismaKnownError(error: unknown): error is { code?: string } {
+  return typeof error === 'object' && error !== null && 'code' in error
+}
+
+function isActiveStatus(status: string) {
+  return status === TASK_STATUS.QUEUED || status === TASK_STATUS.PROCESSING
+}
+
+function toObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
+
+function isMergeableObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+}
+
+function mergeTaskPayload(base: unknown, patch: Record<string, unknown>) {
+  const baseObject = isMergeableObject(base) ? base : {}
+  const next: Record<string, unknown> = { ...baseObject }
+
+  for (const [key, patchValue] of Object.entries(patch)) {
+    const baseValue = baseObject[key]
+    if (isMergeableObject(baseValue) && isMergeableObject(patchValue)) {
+      next[key] = mergeTaskPayload(baseValue, patchValue)
+      continue
+    }
+    next[key] = patchValue
+  }
+
+  return next
+}
+
+function normalizeLocale(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim().toLowerCase()
+  if (!normalized) return null
+  for (const locale of locales) {
+    if (normalized === locale || normalized.startsWith(`${locale}-`)) {
+      return locale
+    }
+  }
+  return null
+}
+
+function hasTaskLocale(payload: unknown): boolean {
+  const payloadObject = toObject(payload)
+  const payloadMeta = toObject(payloadObject.meta)
+  const locale = normalizeLocale(payloadMeta.locale) || normalizeLocale(payloadObject.locale)
+  return locale !== null
+}
+
+function toNullableJson(value?: Prisma.InputJsonValue | Record<string, unknown> | null) {
+  if (value === undefined) return undefined
+  if (value === null) return Prisma.JsonNull
+  return value as Prisma.InputJsonValue
+}
+
+function parseTaskBillingInfo(raw: unknown): TaskBillingInfo | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  if (!('billable' in raw)) return null
+  const billable = (raw as { billable?: unknown }).billable
+  if (typeof billable !== 'boolean') return null
+  return raw as TaskBillingInfo
+}
+
+const TASK_MODEL_KEY_FIELDS = new Set([
+  'model',
+  'modelKey',
+  'imageModel',
+  'videoModel',
+  'audioModel',
+  'lipSyncModel',
+  'flModel',
+  'voiceDesignModel',
+])
+
+function collectTaskModelKeys(value: unknown, keys: Set<string>) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return
+
+  for (const [field, nested] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof nested === 'string' && TASK_MODEL_KEY_FIELDS.has(field)) {
+      const parsed = parseModelKeyStrict(nested)
+      if (parsed?.modelKey) {
+        keys.add(parsed.modelKey)
+      }
+    }
+
+    if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+      collectTaskModelKeys(nested, keys)
+    }
+  }
+}
+
+export function extractTaskModelKeys(input: {
+  type?: unknown
+  payload?: unknown
+  billingInfo?: unknown
+}): string[] {
+  const keys = new Set<string>()
+  const billingInfo = parseTaskBillingInfo(input.billingInfo)
+  const billingModelRaw = billingInfo && 'model' in billingInfo && typeof billingInfo.model === 'string'
+    ? billingInfo.model
+    : null
+  const billingModel = typeof billingModelRaw === 'string'
+    ? parseModelKeyStrict(billingModelRaw)
+    : null
+  if (billingModel?.modelKey) {
+    keys.add(billingModel.modelKey)
+  }
+  collectTaskModelKeys(input.payload, keys)
+  return Array.from(keys)
+}
+
+export function taskUsesComfyUiProvider(input: {
+  type?: unknown
+  payload?: unknown
+  billingInfo?: unknown
+}): boolean {
+  if (input.type === 'voice_design' || input.type === 'asset_hub_voice_design') {
+    return true
+  }
+  return extractTaskModelKeys(input).some((modelKey) => parseModelKeyStrict(modelKey)?.provider === 'comfyui')
+}
+
+async function failTaskWithMissingLocale(task: {
+  id: string
+}) {
+  await taskModel.update({
+    where: { id: task.id },
+    data: {
+      status: TASK_STATUS.FAILED,
+      errorCode: 'TASK_LOCALE_REQUIRED',
+      errorMessage: 'task locale is missing',
+      finishedAt: new Date(),
+      heartbeatAt: null,
+      dedupeKey: null,
+    },
+  })
+}
+
+export async function createTask(input: CreateTaskInput) {
+  const model = taskModel
+
+  if (input.dedupeKey) {
+    const existing = await model.findFirst({
+      where: {
+        dedupeKey: input.dedupeKey,
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (existing) {
+      if (isActiveStatus(existing.status)) {
+        if (!hasTaskLocale(existing.payload)) {
+          await failTaskWithMissingLocale(existing)
+        } else {
+          // 校验 BullMQ Job 是否真的还活着，防止 DB 与队列状态脱节导致永久卡死
+          const jobAlive = await verifyJobAlive(existing.id)
+          if (jobAlive) {
+            return { task: existing, deduped: true as const }
+          }
+
+          // Job 已死（terminal / missing）→ 终止孤儿任务，释放 dedupeKey，继续创建新任务
+          await model.update({
+            where: { id: existing.id },
+            data: {
+              status: TASK_STATUS.FAILED,
+              errorCode: 'RECONCILE_ORPHAN',
+              errorMessage: 'Queue job lost, replaced by new task',
+              finishedAt: new Date(),
+              heartbeatAt: null,
+              dedupeKey: null,
+            },
+          })
+        }
+      } else {
+        // dedupeKey is unique in DB. Release terminal-task key so a new task can be created.
+        await model.update({
+          where: { id: existing.id },
+          data: { dedupeKey: null },
+        })
+      }
+    }
+  }
+
+  const createData = {
+    userId: input.userId,
+    projectId: input.projectId,
+    episodeId: input.episodeId || null,
+    type: input.type,
+    targetType: input.targetType,
+    targetId: input.targetId,
+    status: TASK_STATUS.QUEUED,
+    progress: 0,
+    attempt: 0,
+    maxAttempts: input.maxAttempts ?? 5,
+    priority: input.priority ?? 0,
+    dedupeKey: input.dedupeKey || null,
+    payload: toNullableJson(input.payload ?? null),
+    billingInfo: Prisma.JsonNull,
+    queuedAt: new Date(),
+  }
+
+  try {
+    const task = await model.create({ data: createData })
+    return { task, deduped: false as const }
+  } catch (error: unknown) {
+    if (input.dedupeKey && isPrismaKnownError(error) && error.code === 'P2002') {
+      const collided = await model.findFirst({
+        where: { dedupeKey: input.dedupeKey },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      if (collided) {
+        if (isActiveStatus(collided.status)) {
+          if (!hasTaskLocale(collided.payload)) {
+            await failTaskWithMissingLocale(collided)
+          } else {
+            // P2002 竞态路径：同样校验 BullMQ Job 状态
+            const jobAlive = await verifyJobAlive(collided.id)
+            if (jobAlive) {
+              return { task: collided, deduped: true as const }
+            }
+
+            await model.update({
+              where: { id: collided.id },
+              data: {
+                status: TASK_STATUS.FAILED,
+                errorCode: 'RECONCILE_ORPHAN',
+                errorMessage: 'Queue job lost, replaced by new task',
+                finishedAt: new Date(),
+                heartbeatAt: null,
+                dedupeKey: null,
+              },
+            })
+          }
+        } else {
+          await model.update({
+            where: { id: collided.id },
+            data: { dedupeKey: null },
+          })
+        }
+
+        const task = await model.create({ data: createData })
+        return { task, deduped: false as const }
+      }
+    }
+
+    throw error
+  }
+}
+
+export async function getTaskById(taskId: string) {
+  return await taskModel.findUnique({ where: { id: taskId } })
+}
+
+export async function queryTasks(filters: {
+  projectId?: string
+  targetType?: string
+  targetId?: string
+  status?: TaskStatus[]
+  type?: string[]
+  limit?: number
+}) {
+  return await taskModel.findMany({
+    where: {
+      ...(filters.projectId ? { projectId: filters.projectId } : {}),
+      ...(filters.targetType ? { targetType: filters.targetType } : {}),
+      ...(filters.targetId ? { targetId: filters.targetId } : {}),
+      ...(filters.status?.length ? { status: { in: filters.status } } : {}),
+      ...(filters.type?.length ? { type: { in: filters.type } } : {}),
+    },
+    orderBy: { createdAt: 'desc' },
+    take: filters.limit ?? 50,
+  })
+}
+
+export async function getActiveTasksForTarget(params: {
+  targetType: string
+  targetId: string
+  projectId?: string
+}) {
+  return await taskModel.findMany({
+    where: {
+      targetType: params.targetType,
+      targetId: params.targetId,
+      ...(params.projectId ? { projectId: params.projectId } : {}),
+      status: { in: [...ACTIVE_STATUSES] },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+}
+
+export async function markTaskEnqueueFailed(taskId: string, error: string) {
+  return await taskModel.update({
+    where: { id: taskId },
+    data: {
+      enqueueAttempts: { increment: 1 },
+      lastEnqueueError: error.slice(0, 500),
+    },
+  })
+}
+
+export async function markTaskEnqueued(taskId: string) {
+  return await taskModel.update({
+    where: { id: taskId },
+    data: {
+      enqueuedAt: new Date(),
+      lastEnqueueError: null,
+    },
+  })
+}
+
+export async function updateTaskPayload(taskId: string, payload: Record<string, unknown> | null) {
+  return await taskModel.update({
+    where: { id: taskId },
+    data: {
+      payload: toNullableJson(payload as unknown as Prisma.InputJsonValue),
+    },
+  })
+}
+
+function activeTaskWhere(taskId: string) {
+  return {
+    id: taskId,
+    status: { in: [...ACTIVE_STATUSES] },
+  }
+}
+
+export async function isTaskActive(taskId: string) {
+  const task = await withPrismaRetry(() =>
+    taskModel.findUnique({
+      where: { id: taskId },
+      select: { status: true },
+    })
+  )
+  if (!task) return false
+  return isActiveStatus(task.status)
+}
+
+export async function tryMarkTaskProcessing(taskId: string, externalId?: string | null) {
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: {
+      status: TASK_STATUS.PROCESSING,
+      startedAt: new Date(),
+      heartbeatAt: new Date(),
+      externalId: externalId || null,
+      attempt: { increment: 1 },
+    },
+  })
+  return result.count > 0
+}
+
+export async function trySetTaskExternalId(taskId: string, externalId: string) {
+  const value = typeof externalId === 'string' ? externalId.trim() : ''
+  if (!value) return false
+  const result = await taskModel.updateMany({
+    where: {
+      ...activeTaskWhere(taskId),
+      OR: [
+        { externalId: null },
+        { externalId: '' },
+      ],
+    },
+    data: {
+      externalId: value,
+    },
+  })
+  return result.count > 0
+}
+
+export async function touchTaskHeartbeat(taskId: string) {
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: { heartbeatAt: new Date() },
+  })
+  return result.count > 0
+}
+
+export async function tryUpdateTaskProgress(taskId: string, progress: number, payload?: Record<string, unknown> | null) {
+  if (!payload) {
+    const result = await taskModel.updateMany({
+      where: activeTaskWhere(taskId),
+      data: { progress },
+    })
+    return result.count > 0
+  }
+
+  const task = await withPrismaRetry(() =>
+    taskModel.findUnique({
+      where: { id: taskId },
+      select: {
+        status: true,
+        payload: true,
+      },
+    })
+  )
+  if (!task || !isActiveStatus(task.status)) return false
+
+  const nextPayload = mergeTaskPayload(task.payload, payload)
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: {
+      progress,
+      payload: toNullableJson(nextPayload),
+    },
+  })
+  return result.count > 0
+}
+
+export async function tryMarkTaskQueuedForRetry(taskId: string, payload?: Record<string, unknown> | null) {
+  const task = await withPrismaRetry(() =>
+    taskModel.findUnique({
+      where: { id: taskId },
+      select: {
+        status: true,
+        payload: true,
+      },
+    })
+  )
+  if (!task || task.status !== TASK_STATUS.PROCESSING) return false
+
+  const nextPayload = payload ? mergeTaskPayload(task.payload, payload) : task.payload
+  const result = await taskModel.updateMany({
+    where: {
+      id: taskId,
+      status: TASK_STATUS.PROCESSING,
+    },
+    data: {
+      status: TASK_STATUS.QUEUED,
+      queuedAt: new Date(),
+      startedAt: null,
+      heartbeatAt: null,
+      payload: toNullableJson(nextPayload),
+    },
+  })
+  return result.count > 0
+}
+
+export async function tryMarkTaskCompleted(taskId: string, resultPayload?: Record<string, unknown> | null) {
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: {
+      status: TASK_STATUS.COMPLETED,
+      progress: 100,
+      result: toNullableJson(resultPayload ?? null),
+      finishedAt: new Date(),
+      heartbeatAt: null,
+    },
+  })
+  return result.count > 0
+}
+
+export async function tryMarkTaskFailed(taskId: string, errorCode: string, errorMessage: string) {
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: {
+      status: TASK_STATUS.FAILED,
+      errorCode: errorCode.slice(0, 80),
+      errorMessage: errorMessage.slice(0, 2000),
+      finishedAt: new Date(),
+      heartbeatAt: null,
+    },
+  })
+  return result.count > 0
+}
+
+export async function tryMarkTaskCanceled(taskId: string, errorCode: string, errorMessage: string) {
+  const result = await taskModel.updateMany({
+    where: activeTaskWhere(taskId),
+    data: {
+      status: TASK_STATUS.CANCELED,
+      errorCode: errorCode.slice(0, 80),
+      errorMessage: errorMessage.slice(0, 2000),
+      finishedAt: new Date(),
+      heartbeatAt: null,
+    },
+  })
+  return result.count > 0
+}
+
+export async function markTaskProcessing(taskId: string, externalId?: string | null) {
+  return await tryMarkTaskProcessing(taskId, externalId)
+}
+
+export async function updateTaskProgress(taskId: string, progress: number, payload?: Record<string, unknown> | null) {
+  return await tryUpdateTaskProgress(taskId, progress, payload)
+}
+
+export async function markTaskCompleted(taskId: string, result?: Record<string, unknown> | null) {
+  return await tryMarkTaskCompleted(taskId, result)
+}
+
+export async function markTaskFailed(taskId: string, errorCode: string, errorMessage: string) {
+  return await tryMarkTaskFailed(taskId, errorCode, errorMessage)
+}
+
+export async function markTaskCanceled(taskId: string, errorCode: string, errorMessage: string) {
+  return await tryMarkTaskCanceled(taskId, errorCode, errorMessage)
+}
+
+export async function cancelTask(taskId: string, reason = 'Task cancelled by user') {
+  const snapshot = await taskModel.findUnique({
+    where: { id: taskId },
+    select: {
+      id: true,
+      status: true,
+    },
+  })
+  if (!snapshot) {
+    return {
+      task: null,
+      cancelled: false,
+    }
+  }
+
+  const cancelled = isActiveStatus(snapshot.status)
+    ? await tryMarkTaskCanceled(taskId, 'TASK_CANCELLED', reason)
+    : false
+  const task = await taskModel.findUnique({ where: { id: taskId } })
+  return {
+    task,
+    cancelled,
+  }
+}
+
+export async function sweepStaleTasks(params: {
+  processingThresholdMs: number
+  limit?: number
+}) {
+  const limit = Math.max(1, params.limit || 200)
+  const processingBefore = new Date(Date.now() - Math.max(1, params.processingThresholdMs))
+
+  const staleProcessing = await taskModel.findMany({
+    where: {
+      status: TASK_STATUS.PROCESSING,
+      OR: [
+        { heartbeatAt: { lt: processingBefore } },
+        {
+          heartbeatAt: null,
+          startedAt: { lt: processingBefore },
+        },
+        {
+          heartbeatAt: null,
+          startedAt: null,
+          updatedAt: { lt: processingBefore },
+        },
+      ],
+    },
+    orderBy: { updatedAt: 'asc' },
+    take: limit,
+    select: {
+      id: true,
+      userId: true,
+      projectId: true,
+      episodeId: true,
+      type: true,
+      targetType: true,
+      targetId: true,
+    },
+  })
+
+  if (staleProcessing.length === 0) return []
+
+  const finishedAt = new Date()
+  const timedOut: Array<typeof staleProcessing[number] & {
+    errorCode: string
+    errorMessage: string
+  }> = []
+  for (const task of staleProcessing) {
+    const updated = await taskModel.updateMany({
+      where: {
+        id: task.id,
+        status: TASK_STATUS.PROCESSING,
+      },
+      data: {
+        status: TASK_STATUS.FAILED,
+        errorCode: 'WATCHDOG_TIMEOUT',
+        errorMessage: 'Task heartbeat timeout',
+        finishedAt,
+        heartbeatAt: null,
+      },
+    })
+    if (updated.count > 0) {
+      timedOut.push({
+        ...task,
+        errorCode: 'WATCHDOG_TIMEOUT',
+        errorMessage: 'Task heartbeat timeout',
+      })
+    }
+  }
+
+  return timedOut
+}
+
+export async function dismissFailedTasks(taskIds: string[], userId: string) {
+  if (taskIds.length === 0) return 0
+  const result = await taskModel.updateMany({
+    where: {
+      id: { in: taskIds },
+      userId,
+      status: TASK_STATUS.FAILED,
+    },
+    data: {
+      status: TASK_STATUS.DISMISSED,
+    },
+  })
+  return result.count
+}
