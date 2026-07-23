@@ -1,101 +1,121 @@
-<p align="center">
-  <img src="public/banner.png" alt="waoowaoo" width="600">
-</p>
-
-<h1 align="center">waoowaoo AI 影视 Studio</h1>
+<h1 align="center">OpenDrama AI Video Studio</h1>
 
 <p align="center">
-  一款基于 AI 技术的短剧/漫画视频制作工具，支持从小说文本自动生成分镜、角色、场景，并制作成完整视频。
+  一款基于 AI 的短视频/分镜制作平台，支持小说解析、角色与场景生成、分镜合成、配音与任务编排。
 </p>
 
 <p align="center">
-  <a href="README_en.md">English</a> · <a href="https://www.waoowaoo.com/">加入内测候补</a> · <a href="https://github.com/saturndec/waoowaoo/issues">反馈问题</a>
+  <a href="README_en.md">English</a> · <a href="https://github.com/lihumzsan/opendrama/issues">反馈问题</a>
 </p>
 
 > [!IMPORTANT]
-> 本仓库只支持开发模式。本机通过 `npm run dev` 运行 Next.js、Worker、Watchdog 和 Bull Board；仅在明确需要预热时使用 `npm run dev:full`。MySQL、Redis、MinIO 与 ComfyUI 固定使用 `192.168.0.112` 上的现有服务。本机不运行或管理 Docker。
+> 本仓库以开发模式为主。启动时默认同时运行 Next.js、Worker、Watchdog 与 Bull Board。
 
-## ✨ 功能特性
+## ✨ 主要功能
 
-- 🎬 **AI 剧本分析** — 自动解析小说，提取角色、场景、剧情
-- 🎨 **角色与场景生成** — AI 生成一致性人物和场景图片
-- 📽️ **分镜视频制作** — 自动生成分镜头并合成视频
-- 🎙️ **AI 配音** — 多角色语音合成
-- 🌐 **多语言支持** — 中文 / 英文界面
+- AI 剧本解析与角色提取
+- 角色、场景、道具一致性生成
+- 分镜管理与自动视频生成
+- AI 配音（多角色）与音频工具
+- 双语界面与任务流程可视化
 
-## 🚀 开发环境启动
+## 🧭 当前代码结构（高层）
 
-### 前提条件
+- `src/`：业务应用与接口实现
+  - `src/app`：Next.js 路由/页面（含多语言路由）
+  - `src/lib`：通用服务、Provider 封装、数据库/队列/日志工具
+  - `src/app/**`：主页面、工作区、任务页
+  - `scripts/`：启动、巡检、校验与开发脚本
+  - `tests/`：单元测试、集成测试、系统/回归测试
+- `prisma/`：数据库模型与迁移
+- `messages/`：i18n 文案（中英）
+- `lib/prompts/`：提示词模板库
+- `public/`：前端静态资源
+
+## 🧪 部署与运行流程
+
+### 1. 预备
 
 - Node.js >= 18.18.0
 - npm >= 9.0.0
-- 本机能够访问 `192.168.0.112`
 
-### 初始化
+### 2. 获取与安装
 
 ```bash
-git clone https://github.com/lihumzsan/waoowaoo.git
-cd waoowaoo
+git clone https://github.com/lihumzsan/opendrama.git
+cd opendrama
 cp .env.example .env
 npm install
+```
+
+### 3. 开发启动（推荐）
+
+```bash
 npm run dev
 ```
 
-按需编辑 `.env` 中的 AI 服务配置。`.env.example` 已预置远端基础设施地址；启动后访问：
+启动后默认执行：
+- `storage:init`（Prisma storage 初始化）
+- `dev:next`（Next.js）
+- `dev:worker`
+- `dev:watchdog`
+- `dev:board`（Bull Board）
 
-- 应用：[http://localhost:3000](http://localhost:3000)
-- Bull Board：[http://localhost:3010/admin/queues](http://localhost:3010/admin/queues)
+访问地址：
+- 应用：`http://localhost:3000`
+- Bull Board：`http://localhost:3010/admin/queues`
 
-### 远端开发服务
+### 4. 生产构建
 
-| 服务 | 地址 |
-| --- | --- |
-| MySQL | `192.168.0.112:13306` |
-| Redis | `192.168.0.112:16379` |
-| MinIO API | `http://192.168.0.112:19000` |
-| MinIO 控制台 | `http://192.168.0.112:19001` |
-| ComfyUI | `http://192.168.0.112:8878` |
+```bash
+npm run build
+npm exec next start
+```
 
-在设置中心将 ComfyUI 服务地址配置为上表地址。仓库不提供本地基础设施备用方案，也不管理远端容器。
+或按你现有部署环境使用自定义启动入口（PM2/Docker/systemd）。
 
-> [!WARNING]
-> `192.168.0.112` 是正在使用的共享开发环境。不要从本仓库对该数据库执行结构推送、重建或其他破坏性操作。
+### 5. 环境变量与外部服务
 
-## 🧪 验证命令
+项目默认依赖远端开发基础设施（数据库、Redis、MinIO、ComfyUI）。
+
+```text
+MySQL:    192.168.0.112:13306
+Redis:    192.168.0.112:16379
+MinIO:    http://192.168.0.112:19000
+MinIO UI: http://192.168.0.112:19001
+ComfyUI:  http://192.168.0.112:8878
+```
+
+`COMFYUI_WORKFLOW_ROOT` 在需要复用仓库外工作流目录时配置。
+
+## 🧰 常用命令
 
 ```bash
 npm run lint:all
 npm run typecheck
 npm run test:all
 npm run build
+npm run check:api-handler
+npm run check:no-api-direct-llm-call
+npm run test:unit:all
+npm run test:integration:api
+npm run test:integration:provider
 ```
 
-## 🎛️ ComfyUI 工作流
+> 这些脚本用于在 PR 前做静态校验和测试分层检查。
 
-仓库内置 `src/lib/providers/comfyui/workflows`。不配置 `COMFYUI_WORKFLOW_ROOT` 时直接使用内置工作流；如需复用仓库外目录，可在 `.env` 中设置绝对路径。
+## 🧱 技术栈
 
-## 🔧 API 配置
+- Next.js 15 + React 19
+- TypeScript 5
+- Prisma + MySQL
+- Redis + BullMQ
+- Tailwind CSS v4
+- NextAuth.js
 
-启动后进入设置中心配置 AI 服务 API Key，界面内包含配置说明。目前推荐使用各服务商官方 API。
+## 🤝 参与
 
-## 📦 技术栈
+- 提交 Issue：`https://github.com/lihumzsan/opendrama/issues`
+- 建议提 PR 并在说明中补充变更影响范围与回归说明。
 
-- **框架**：Next.js 15 + React 19
-- **数据库**：MySQL + Prisma ORM
-- **队列**：Redis + BullMQ
-- **对象存储**：MinIO / S3 Compatible
-- **样式**：Tailwind CSS v4
-- **认证**：NextAuth.js
-
-## 📦 页面功能预览
-
-![4f7b913264f7f26438c12560340e958c67fa833a](https://github.com/user-attachments/assets/fa0e9c57-9ea0-4df3-893e-b76c4c9d304b)
-![67509361cbe6809d2496a550de5733b9f99a9702](https://github.com/user-attachments/assets/f2fb6a64-5ba8-4896-a064-be0ded213e42)
-![466e13c8fd1fc799d8f588c367ebfa24e1e99bf7](https://github.com/user-attachments/assets/09bbff39-e535-4c67-80a9-69421c3b05ee)
-![c067c197c20b0f1de456357c49cdf0b0973c9b31](https://github.com/user-attachments/assets/688e3147-6e95-43b0-b9e7-dd9af40db8a0)
-
-## 🤝 参与方式
-
-欢迎通过 Issue 反馈 Bug 或提出功能建议，也可以提交 Pull Request 供维护者审阅。
-
-**Made with ❤️ by waoowaoo team**
+**Project Marker: OpenDrama**
