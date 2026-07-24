@@ -1,4 +1,4 @@
-# waoowaoo 项目结构梳理
+# opendrama 项目结构梳理
 
 > 生成时间：2026-05-27  
 > 最近校准：2026-05-27，按当前工作区源码重新读取。  
@@ -7,7 +7,7 @@
 
 ## 1. 项目定位
 
-`waoowaoo` 是一个基于 Next.js 的 AI 影视/短剧制作工作台。核心链路是：
+`opendrama` 是一个基于 Next.js 的 AI 影视/短剧制作工作台。核心链路是：
 
 ```mermaid
 flowchart LR
@@ -174,10 +174,10 @@ BullMQ 队列：
 
 | 队列 | 名称 | 主要任务 |
 | --- | --- | --- |
-| image | `waoowaoo-image` | 面板图、角色图、场景图、资产图、图片修改 |
-| video | `waoowaoo-video` | 分镜视频、口型同步 |
-| voice | `waoowaoo-voice` | 配音、音色设计 |
-| text | `waoowaoo-text` | 剧本分析、分镜生成、LLM 修改、长流程 |
+| image | `opendrama-image` | 面板图、角色图、场景图、资产图、图片修改 |
+| video | `opendrama-video` | 分镜视频、口型同步 |
+| voice | `opendrama-voice` | 配音、音色设计 |
+| text | `opendrama-text` | 剧本分析、分镜生成、LLM 修改、长流程 |
 
 Worker 入口：
 

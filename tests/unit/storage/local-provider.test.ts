@@ -47,7 +47,7 @@ describe('local storage provider stream writes', () => {
   let provider: LocalStorageProvider
 
   beforeEach(async () => {
-    sandboxRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-local-storage-'))
+    sandboxRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-local-storage-'))
     uploadRoot = path.join(sandboxRoot, 'uploads')
     process.env.UPLOAD_DIR = path.relative(process.cwd(), uploadRoot)
     vi.resetModules()

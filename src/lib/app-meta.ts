@@ -1,4 +1,4 @@
-const GITHUB_REPOSITORY_VALUE = 'saturndec/waoowaoo'
+const GITHUB_REPOSITORY_VALUE = 'saturndec/opendrama'
 
 const packageVersion = process.env.NEXT_PUBLIC_APP_VERSION
 if (typeof packageVersion !== 'string' || packageVersion.trim().length === 0) {

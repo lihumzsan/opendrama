@@ -1,94 +1,89 @@
 <h1 align="center">OpenDrama AI Video Studio</h1>
 
 <p align="center">
-  一款基于 AI 的短视频/分镜制作平台，支持小说解析、角色与场景生成、分镜合成、配音与任务编排。
-</p>
-
-<p align="center">
   <a href="README_en.md">English</a> · <a href="https://github.com/lihumzsan/opendrama/issues">反馈问题</a>
 </p>
 
-> [!IMPORTANT]
-> 本仓库以开发模式为主。启动时默认同时运行 Next.js、Worker、Watchdog 与 Bull Board。
+> 本项目为 **免费 + 开源（Apache-2.0）**。
+> 可自建环境运行，不绑定商业服务或专有平台。
 
-## ✨ 主要功能
+## 🎯 先看这里：启动要求（最重要）
 
-- AI 剧本解析与角色提取
-- 角色、场景、道具一致性生成
-- 分镜管理与自动视频生成
-- AI 配音（多角色）与音频工具
-- 双语界面与任务流程可视化
+### 1) 本地运行环境
 
-## 🧭 当前代码结构（高层）
+- Node.js `>= 18.18.0`
+- npm `>= 9.0.0`
+- Git
 
-- `src/`：业务应用与接口实现
-  - `src/app`：Next.js 路由/页面（含多语言路由）
-  - `src/lib`：通用服务、Provider 封装、数据库/队列/日志工具
-  - `src/app/**`：主页面、工作区、任务页
-  - `scripts/`：启动、巡检、校验与开发脚本
-  - `tests/`：单元测试、集成测试、系统/回归测试
-- `prisma/`：数据库模型与迁移
-- `messages/`：i18n 文案（中英）
-- `lib/prompts/`：提示词模板库
-- `public/`：前端静态资源
+### 2) 运行前环境依赖（必须）
 
-## 🧪 部署与运行流程
+项目默认依赖以下外部服务（按需替换成你的部署地址）：
 
-### 1. 预备
+- MySQL：`192.168.0.112:13306`
+- Redis：`192.168.0.112:16379`
+- MinIO API：`http://192.168.0.112:19000`
+- MinIO 控制台：`http://192.168.0.112:19001`
+- ComfyUI：`http://192.168.0.112:8878`
 
-- Node.js >= 18.18.0
-- npm >= 9.0.0
-
-### 2. 获取与安装
+### 3) 直接启动（建议）
 
 ```bash
 git clone https://github.com/lihumzsan/opendrama.git
 cd opendrama
 cp .env.example .env
 npm install
+npm run dev
 ```
 
-### 3. 开发启动（推荐）
+启动后默认运行：
+
+- Next.js（端口 `3000`）
+- Worker
+- Watchdog
+- Bull Board（默认端口 `3010`，路径 `/admin/queues`）
+
+打开：
+- 应用：`http://localhost:3000`
+- Bull Board：`http://localhost:3010/admin/queues`
+
+## ✨ 项目能力
+
+- AI 剧本解析与角色提取
+- 角色、场景、道具一致性生成
+- 分镜管理与自动视频生成
+- AI 配音（多角色）
+- 中文 / 英文双语界面与任务编排
+
+## 🧱 代码结构（概览）
+
+- `src/`：核心业务与 API 实现
+  - `src/app`：Next.js 路由与页面
+  - `src/lib`：Provider、队列、数据库、日志等能力层
+  - `scripts/`：启动、巡检、校验脚本
+  - `tests/`：单测/集成/回归测试
+- `prisma/`：数据库模型与迁移
+- `messages/`：i18n 文案
+- `lib/prompts/`：提示词模板集合
+- `public/`：静态资源
+
+## 🛠️ 交付与部署
+
+### 开发
 
 ```bash
 npm run dev
 ```
 
-启动后默认执行：
-- `storage:init`（Prisma storage 初始化）
-- `dev:next`（Next.js）
-- `dev:worker`
-- `dev:watchdog`
-- `dev:board`（Bull Board）
-
-访问地址：
-- 应用：`http://localhost:3000`
-- Bull Board：`http://localhost:3010/admin/queues`
-
-### 4. 生产构建
+### 生产
 
 ```bash
 npm run build
 npm exec next start
 ```
 
-或按你现有部署环境使用自定义启动入口（PM2/Docker/systemd）。
+按需可改为 PM2、systemd、Docker 等启动方式。
 
-### 5. 环境变量与外部服务
-
-项目默认依赖远端开发基础设施（数据库、Redis、MinIO、ComfyUI）。
-
-```text
-MySQL:    192.168.0.112:13306
-Redis:    192.168.0.112:16379
-MinIO:    http://192.168.0.112:19000
-MinIO UI: http://192.168.0.112:19001
-ComfyUI:  http://192.168.0.112:8878
-```
-
-`COMFYUI_WORKFLOW_ROOT` 在需要复用仓库外工作流目录时配置。
-
-## 🧰 常用命令
+## ✅ 常用质量校验
 
 ```bash
 npm run lint:all
@@ -97,14 +92,9 @@ npm run test:all
 npm run build
 npm run check:api-handler
 npm run check:no-api-direct-llm-call
-npm run test:unit:all
-npm run test:integration:api
-npm run test:integration:provider
 ```
 
-> 这些脚本用于在 PR 前做静态校验和测试分层检查。
-
-## 🧱 技术栈
+## 📦 技术栈
 
 - Next.js 15 + React 19
 - TypeScript 5
@@ -113,9 +103,9 @@ npm run test:integration:provider
 - Tailwind CSS v4
 - NextAuth.js
 
-## 🤝 参与
+## 🤝 参与方式
 
 - 提交 Issue：`https://github.com/lihumzsan/opendrama/issues`
-- 建议提 PR 并在说明中补充变更影响范围与回归说明。
+- 提交 PR 并说明变更范围与回归影响。
 
 **Project Marker: OpenDrama**

@@ -448,7 +448,7 @@ describe('comfyui client media refs', () => {
 
   it('uploads a neutral reference for image workflows that require LoadImage but receive no refs', async () => {
     vi.useFakeTimers()
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'baseimage/client/neutral-reference', {
       nodes: [
@@ -548,7 +548,7 @@ describe('comfyui client media refs', () => {
 
   it('uploads video first, reference, and last frames before resolving workflow image filenames', async () => {
     vi.useFakeTimers()
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'basevideo/client/reference-order', {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
@@ -646,7 +646,7 @@ describe('comfyui client media refs', () => {
 
   it('injects a neutral audio upload into video workflows that contain LoadAudio placeholders', async () => {
     vi.useFakeTimers()
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'basevideo/client/neutral-audio', {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
@@ -732,7 +732,7 @@ describe('comfyui client media refs', () => {
 
   it('uses provided reference audio for video workflows before falling back to neutral audio', async () => {
     vi.useFakeTimers()
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'basevideo/client/reference-audio', {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
@@ -828,7 +828,7 @@ describe('comfyui client media refs', () => {
   it('fetches relative signed reference audio URLs through the internal app base URL', async () => {
     vi.useFakeTimers()
     process.env.INTERNAL_APP_URL = 'http://internal.test'
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'basevideo/client/relative-reference-audio', {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
@@ -918,7 +918,7 @@ describe('comfyui client media refs', () => {
 
   it('normalizes model filename inputs to server object_info aliases before prompt submit', async () => {
     vi.useFakeTimers()
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, 'basevideo/client/model-alias', {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
@@ -1433,7 +1433,7 @@ describe('comfyui client media refs', () => {
   it('dumps resolved ComfyUI video prompts to stdout when prompt dump is enabled', async () => {
     vi.useFakeTimers()
     process.env.COMFYUI_VIDEO_PROMPT_DUMP = '1'
-    workflowRoot = mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-client-'))
+    workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     writeWorkflow(workflowRoot, COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },

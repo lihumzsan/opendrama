@@ -61,7 +61,7 @@ const messages = {
     signup: '注册',
   },
   common: {
-    appName: 'waoowaoo',
+    appName: 'opendrama',
     betaVersion: 'Beta v{version}',
     updateNotice: {
       openDialog: '打开更新弹窗',

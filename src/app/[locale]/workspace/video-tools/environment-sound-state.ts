@@ -39,7 +39,7 @@ export type EnvironmentSoundTaskView = {
   errorMessage: string | null
 }
 
-export const ENVIRONMENT_SOUND_RECOVERY_STORAGE_KEY = 'waoowaoo:video-tools:environment-sound:recovery'
+export const ENVIRONMENT_SOUND_RECOVERY_STORAGE_KEY = 'opendrama:video-tools:environment-sound:recovery'
 
 export type EnvironmentSoundRecovery = {
   taskId: string

@@ -124,7 +124,7 @@ function buildAnchorOutputPattern(rawOutputPaths: [string, string]): string {
 }
 
 export async function createVideoSeamWorkspace(): Promise<VideoSeamWorkspace> {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-'))
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-'))
   return {
     directory,
     input1Path: path.join(directory, 'input-1.mp4'),

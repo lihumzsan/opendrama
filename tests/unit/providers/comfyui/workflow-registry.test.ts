@@ -10,7 +10,7 @@ import { STABLE_AUDIO_3_MEDIUM_WORKFLOW_KEY } from '@/lib/video-tools/environmen
 import { buildVideoSeamBridgePlan } from '@/lib/video-tools/seam-bridge-plan'
 
 function createWorkflowRoot() {
-  return mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-'))
+  return mkdtempSync(join(tmpdir(), 'opendrama-comfyui-'))
 }
 
 function writeWorkflow(root: string, workflowKey: string, workflow: unknown) {

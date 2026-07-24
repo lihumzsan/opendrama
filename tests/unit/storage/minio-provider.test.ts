@@ -8,7 +8,7 @@ describe('minio storage provider', () => {
   function createProvider() {
     process.env.MINIO_ENDPOINT = 'http://127.0.0.1:9000'
     process.env.MINIO_REGION = 'us-east-1'
-    process.env.MINIO_BUCKET = 'waoowaoo'
+    process.env.MINIO_BUCKET = 'opendrama'
     process.env.MINIO_ACCESS_KEY = 'minioadmin'
     process.env.MINIO_SECRET_KEY = 'minioadmin'
     process.env.MINIO_FORCE_PATH_STYLE = 'true'
@@ -27,7 +27,7 @@ describe('minio storage provider', () => {
     const provider = createProvider()
 
     expect(
-      provider.extractStorageKey('http://127.0.0.1:9000/waoowaoo/images/voice/custom/project-1/chenji.wav'),
+      provider.extractStorageKey('http://127.0.0.1:9000/opendrama/images/voice/custom/project-1/chenji.wav'),
     ).toBe('images/voice/custom/project-1/chenji.wav')
   })
 
@@ -63,7 +63,7 @@ describe('minio storage provider', () => {
     })
 
     expect(putInputs).toEqual([{
-      Bucket: 'waoowaoo',
+      Bucket: 'opendrama',
       Key: 'video-tools/user-1/inputs/one.mp4',
       Body: expect.any(Readable),
       ContentLength: 3,
@@ -128,7 +128,7 @@ describe('minio storage provider', () => {
       const address = server.address() as AddressInfo
       process.env.MINIO_ENDPOINT = `http://127.0.0.1:${address.port}`
       process.env.MINIO_REGION = 'us-east-1'
-      process.env.MINIO_BUCKET = 'waoowaoo'
+      process.env.MINIO_BUCKET = 'opendrama'
       process.env.MINIO_ACCESS_KEY = 'minioadmin'
       process.env.MINIO_SECRET_KEY = 'minioadmin'
       process.env.MINIO_FORCE_PATH_STYLE = 'true'

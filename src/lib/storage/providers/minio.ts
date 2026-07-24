@@ -173,7 +173,7 @@ export class MinioStorageProvider implements StorageProvider {
     }
 
     try {
-      const parsed = new URL(input, 'http://waoowaoo.local')
+      const parsed = new URL(input, 'http://opendrama.local')
       if (parsed.pathname === '/api/storage/sign') {
         const signedKey = parsed.searchParams.get('key')?.replace(/^\/+/, '')
         return signedKey || null

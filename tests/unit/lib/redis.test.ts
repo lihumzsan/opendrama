@@ -19,11 +19,11 @@ describe('redis subscriber config', () => {
     vi.resetModules()
     redisConstructorMock.mockClear()
     redisClientFactoryMock.mockClear()
-    delete (globalThis as typeof globalThis & { __waoowaooRedis?: unknown }).__waoowaooRedis
+    delete (globalThis as typeof globalThis & { __opendramaRedis?: unknown }).__opendramaRedis
   })
 
   afterEach(() => {
-    delete (globalThis as typeof globalThis & { __waoowaooRedis?: unknown }).__waoowaooRedis
+    delete (globalThis as typeof globalThis & { __opendramaRedis?: unknown }).__opendramaRedis
   })
 
   it('creates subscriber clients with ready check disabled', async () => {

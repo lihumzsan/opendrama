@@ -521,7 +521,7 @@ function buildUploadFilename(originalFilename: string, mimeType: string, index: 
       const guessed = mimeType.split('/')[1] || 'bin'
       return `.${guessed.replace(/[^a-z0-9]+/gi, '') || 'bin'}`
     })()
-  return `waoowaoo-${Date.now()}-${index}-${sanitizedBase || 'upload'}${extension}`
+  return `opendrama-${Date.now()}-${index}-${sanitizedBase || 'upload'}${extension}`
 }
 
 function buildStreamingMultipartBody(source: {
@@ -532,7 +532,7 @@ function buildStreamingMultipartBody(source: {
   body: ReadableStream<Uint8Array>
   headers: Headers
 } {
-  const boundary = `----waoowaoo-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const boundary = `----opendrama-${Date.now()}-${Math.random().toString(36).slice(2)}`
   const encoder = new TextEncoder()
   const prefix = encoder.encode([
     `--${boundary}`,
@@ -937,7 +937,7 @@ export async function runComfyUiWorkflow(
   const promptResponse = await fetch(`${base}/prompt`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt: workflow, client_id: 'waoowaoo' }),
+    body: JSON.stringify({ prompt: workflow, client_id: 'opendrama' }),
     signal: AbortSignal.timeout(params.expect === 'video' ? 600_000 : 180_000),
   })
 

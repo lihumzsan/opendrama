@@ -32,7 +32,7 @@ function deriveTestDatabaseUrl(databaseUrl: string) {
     const databaseName = parsed.pathname.replace(/^\//, '').trim()
     const nextDatabaseName = databaseName.endsWith('_test')
       ? databaseName
-      : `${databaseName || 'waoowaoo'}_test`
+      : `${databaseName || 'opendrama'}_test`
     parsed.pathname = `/${nextDatabaseName}`
     return parsed.toString()
   } catch {
@@ -64,7 +64,7 @@ export function loadTestEnv() {
 
   setIfMissing('NODE_ENV', 'test')
   setIfMissing('BILLING_MODE', 'OFF')
-  const baseDatabaseUrl = mutableEnv.DATABASE_URL || 'mysql://root:waoowaoo123@127.0.0.1:13306/waoowaoo'
+  const baseDatabaseUrl = mutableEnv.DATABASE_URL || 'mysql://root:opendrama123@127.0.0.1:13306/opendrama'
   mutableEnv.DATABASE_URL = deriveTestDatabaseUrl(baseDatabaseUrl)
   setIfMissing('REDIS_HOST', '127.0.0.1')
   setIfMissing('REDIS_PORT', '16379')

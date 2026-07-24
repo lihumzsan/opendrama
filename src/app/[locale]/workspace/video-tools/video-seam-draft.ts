@@ -17,7 +17,7 @@ export type VideoSeamDraft = {
 }
 
 const VIDEO_SEAM_DRAFT_VERSION = 1
-const VIDEO_SEAM_DRAFT_STORAGE_PREFIX = 'waoowaoo:video-seam:draft:'
+const VIDEO_SEAM_DRAFT_STORAGE_PREFIX = 'opendrama:video-seam:draft:'
 
 function normalizeUserId(userId: string): string {
   return userId.trim()

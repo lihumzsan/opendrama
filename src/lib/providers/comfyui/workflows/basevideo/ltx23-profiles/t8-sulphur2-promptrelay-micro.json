@@ -2994,7 +2994,7 @@
         }
       },
       "widgets_values": [
-        "waoowaoo-1778948346882-0-sign.wav",
+        "opendrama-1778948346882-0-sign.wav",
         null,
         null
       ]
@@ -3967,7 +3967,7 @@
       "634": {
         "class_type": "LoadAudio",
         "inputs": {
-          "audio": "waoowaoo-1778948346882-0-sign.wav"
+          "audio": "opendrama-1778948346882-0-sign.wav"
         },
         "_meta": {
           "title": "参考音频输入"

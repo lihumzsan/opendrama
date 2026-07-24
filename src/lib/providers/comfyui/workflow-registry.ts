@@ -2492,7 +2492,7 @@ function applySeedance2BerniniAudioFinalPromptControls(
     finalPositiveNode._meta = {
       ...(finalPositiveNode._meta || {}),
       title: finalPositiveNode._meta?.title || 'Bernini final positive prompt',
-      waoowaooPromptTrace: {
+      opendramaPromptTrace: {
         stage: 'audio_lipsync_final_positive_prompt',
         source: 'app-controlled-direct',
         cleanFramePhrase: SEEDANCE2_BERNINI_CLEAN_FRAME_PHRASE,
@@ -3140,7 +3140,7 @@ function formatTimeSegment(date: Date): string {
 
 function sanitizeFilenamePrefix(raw: string): string {
   const trimmed = raw.trim()
-  if (!trimmed) return 'waoowaoo'
+  if (!trimmed) return 'opendrama'
 
   const now = new Date()
   const withExpandedMacros = trimmed
@@ -3154,7 +3154,7 @@ function sanitizeFilenamePrefix(raw: string): string {
     .filter(Boolean)
     .join('/')
 
-  return normalized || 'waoowaoo'
+  return normalized || 'opendrama'
 }
 
 function applySaveOutputHeuristics(graph: ComfyUiWorkflowGraph): void {

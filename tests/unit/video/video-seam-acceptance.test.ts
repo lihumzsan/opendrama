@@ -256,7 +256,7 @@ describe('video seam real-media acceptance', () => {
       id: 'task-1', status: 'completed', result: { mode: 'direct' },
     }))
     const rmSpy = vi.spyOn(fs, 'rm').mockImplementation(async (target, options) => {
-      if (String(target).includes('waoowaoo-video-seam-acceptance-')) {
+      if (String(target).includes('opendrama-video-seam-acceptance-')) {
         failedCleanupPath = String(target)
         throw new Error('acceptance temp cleanup failed')
       }
@@ -269,7 +269,7 @@ describe('video seam real-media acceptance', () => {
         outputPath: path.join(directory, 'output.mp4'),
         resultPath,
       })).rejects.toThrow('VIDEO_SEAM_ACCEPTANCE_RESULT_INVALID')
-      expect(failedCleanupPath).toContain('waoowaoo-video-seam-acceptance-')
+      expect(failedCleanupPath).toContain('opendrama-video-seam-acceptance-')
     } finally {
       rmSpy.mockRestore()
       if (failedCleanupPath) await realRm(failedCleanupPath, { recursive: true, force: true })
@@ -298,7 +298,7 @@ describe('video seam real-media acceptance', () => {
       ].join('\n')
       process.env.FFMPEG_PATH = await createSilenceAnalysisWrapper(directory)
       rmSpy = vi.spyOn(fs, 'rm').mockImplementation(async (target, options) => {
-        if (String(target).includes('waoowaoo-video-seam-acceptance-')) {
+        if (String(target).includes('opendrama-video-seam-acceptance-')) {
           failedCleanupPath = String(target)
           throw new Error('acceptance temp cleanup failed')
         }
@@ -311,7 +311,7 @@ describe('video seam real-media acceptance', () => {
         outputPath: fixture.outputPath,
         resultPath: fixture.resultPath,
       })).resolves.toMatchObject({ passed: true })
-      expect(failedCleanupPath).toContain('waoowaoo-video-seam-acceptance-')
+      expect(failedCleanupPath).toContain('opendrama-video-seam-acceptance-')
     } finally {
       rmSpy?.mockRestore()
       if (originalFfmpegPath === undefined) delete process.env.FFMPEG_PATH

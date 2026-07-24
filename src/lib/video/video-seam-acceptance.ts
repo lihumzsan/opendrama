@@ -472,7 +472,7 @@ export async function verifyVideoSeamAcceptance(params: {
   outputPath: string
   resultPath: string
 }): Promise<VideoSeamAcceptanceReport> {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-acceptance-'))
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-acceptance-'))
   try {
     const validated = await readTaskResult(params.resultPath)
     const [input1, input2, output] = await Promise.all([

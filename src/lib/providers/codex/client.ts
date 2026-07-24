@@ -436,7 +436,7 @@ export async function runCodexTextCompletion(
   const executablePath = resolveCodexExecutablePath(params.codexPath)
   await assertCodexExecutableExists(executablePath)
 
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-codex-'))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-codex-'))
   const outputPath = path.join(tempDir, 'last-message.txt')
   const prompt = buildCodexPrompt(params.messages)
   const args = buildCodexExecArgs({
@@ -763,7 +763,7 @@ export async function runCodexImageGeneration(
   const executablePath = resolveCodexExecutablePath(params.codexPath)
   await assertCodexExecutableExists(executablePath)
 
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-codex-image-'))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-codex-image-'))
   const outputPath = path.join(tempDir, 'last-message.json')
   const cwd = params.cwd || tempDir
   const args = buildCodexImageExecArgs({
@@ -919,7 +919,7 @@ export async function prepareCodexImageInputs(
   inputs: string[],
   normalizer: (input: string) => Promise<string>,
 ): Promise<{ imagePaths: string[]; cleanup: () => Promise<void> }> {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-codex-images-'))
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-codex-images-'))
   const imagePaths: string[] = []
 
   try {

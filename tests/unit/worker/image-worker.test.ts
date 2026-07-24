@@ -157,7 +157,7 @@ function buildJob(type: TaskJobData['type']): Job<TaskJobData> {
       payload: {},
       userId: 'user-1',
     },
-    queueName: 'waoowaoo-image',
+    queueName: 'opendrama-image',
     opts: {
       attempts: 2,
       backoff: { type: 'exponential', delay: 2_000 },

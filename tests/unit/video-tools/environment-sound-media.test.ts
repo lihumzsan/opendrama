@@ -103,7 +103,7 @@ describe('environment sound media analysis', () => {
   })
 
   it('reports a stable error when FFprobe is unavailable', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-environment-sound-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-environment-sound-test-'))
     const originalFfprobePath = process.env.FFPROBE_PATH
     try {
       process.env.FFPROBE_PATH = path.join(directory, 'missing-ffprobe')

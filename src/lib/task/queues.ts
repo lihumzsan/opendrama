@@ -4,10 +4,10 @@ import { QueueType, TaskType, TASK_TYPE, type TaskJobData } from './types'
 import { readImageQueueGlobalConcurrency } from './image-queue-concurrency'
 
 export const QUEUE_NAME = {
-  IMAGE: 'waoowaoo-image',
-  VIDEO: 'waoowaoo-video',
-  VOICE: 'waoowaoo-voice',
-  TEXT: 'waoowaoo-text',
+  IMAGE: 'opendrama-image',
+  VIDEO: 'opendrama-video',
+  VOICE: 'opendrama-voice',
+  TEXT: 'opendrama-text',
 } as const
 
 const defaultJobOptions: JobsOptions = {

@@ -23,7 +23,7 @@ vi.mock('@/lib/storage', () => ({
 const execFileAsync = promisify(execFile)
 
 async function withVideoSeamProbeJson<T>(raw: string, run: (outputPath: string) => Promise<T>): Promise<T> {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
   const executable = path.join(directory, 'ffprobe-fixture')
   const originalProbePath = process.env.FFPROBE_PATH
   const originalRaw = process.env.VIDEO_SEAM_TEST_PROBE_JSON
@@ -252,7 +252,7 @@ describe('video seam local media adapter', () => {
   ] as const)(
     'executes the %s audio policy and caps retained audio to the output timeline',
     async (expectedPolicy, input1HasAudio, input2HasAudio, outputHasAudio) => {
-      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-audio-policy-'))
+      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-audio-policy-'))
       try {
         const input1Path = await createAudioPolicyVideoFixture({
           directory, name: 'input-1', hasAudio: input1HasAudio, frequency: 440,
@@ -292,7 +292,7 @@ describe('video seam local media adapter', () => {
   ] as const)(
     'keeps the central audio interval and output duration aligned when %s audio is shorter than its video',
     async (_shortInput, input1AudioDurationSeconds, input2AudioDurationSeconds) => {
-      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-short-audio-'))
+      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-short-audio-'))
       try {
         const input1Path = await createAudioPolicyVideoFixture({
           directory,
@@ -346,7 +346,7 @@ describe('video seam local media adapter', () => {
   it.each(['atempo', 'apad'])(
     'maps %s filter failures to the stable audio compose code with the original cause',
     async (filterName) => {
-      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-audio-error-'))
+      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-audio-error-'))
       const executable = path.join(directory, 'ffmpeg-audio-failure')
       const originalFfmpegPath = process.env.FFMPEG_PATH
       try {
@@ -384,7 +384,7 @@ describe('video seam local media adapter', () => {
   )
 
   it('does not misclassify a video encoder failure as audio composition', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-video-error-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-video-error-'))
     const executable = path.join(directory, 'ffmpeg-video-failure')
     const originalFfmpegPath = process.env.FFMPEG_PATH
     try {
@@ -441,7 +441,7 @@ describe('video seam local media adapter', () => {
   it.each([90, 270] as const)(
     'probes, extracts, and composes a real %s-degree display-rotated fixture in display orientation',
     async (rotation) => {
-      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-rotation-test-'))
+      const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-rotation-test-'))
       try {
         const inputPath = await createRotatedVideoFixture(directory, rotation)
         const probe = await probeVideoSeamFile(inputPath)
@@ -601,7 +601,7 @@ describe('video seam local media adapter', () => {
       ],
       format: { duration: durations.containerDurationSeconds.toFixed(9) },
     })
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const executable = path.join(directory, 'ffprobe-fixture')
     const originalProbePath = process.env.FFPROBE_PATH
     const originalRaw = process.env.VIDEO_SEAM_TEST_PROBE_JSON
@@ -621,7 +621,7 @@ describe('video seam local media adapter', () => {
   })
 
   it('preserves a pre-existing destination when URL resolution or fetch fails', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const destinationPath = path.join(directory, 'existing.mp4')
     try {
       await fs.writeFile(destinationPath, 'preserve-me')
@@ -642,7 +642,7 @@ describe('video seam local media adapter', () => {
     { name: 'non-numeric declared length', chunks: [[1, 2], [3]], contentLength: 'invalid' },
     { name: 'multiple declared lengths', chunks: [[1, 2], [3]], contentLength: '3, 3' },
   ])('rejects a successful response with an invalid $name', async ({ chunks, contentLength }) => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const destinationPath = path.join(directory, 'invalid.mp4')
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -675,7 +675,7 @@ describe('video seam local media adapter', () => {
     { name: 'an exact declared length', chunks: [[1], [2, 3]], contentLength: '3' },
     { name: 'a nonempty chunked body', chunks: [[4, 5], [6]], contentLength: undefined },
   ])('downloads $name', async ({ chunks, contentLength }) => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const destinationPath = path.join(directory, 'valid.mp4')
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -699,7 +699,7 @@ describe('video seam local media adapter', () => {
   })
 
   it('aborts a hanging media download after the bounded timeout', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const destinationPath = path.join(directory, 'timeout.mp4')
     let capturedSignal: AbortSignal | undefined
     vi.useFakeTimers()
@@ -732,7 +732,7 @@ describe('video seam local media adapter', () => {
   })
 
   it('cancels a non-success response body before reporting a download failure', async () => {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'waoowaoo-video-seam-test-'))
+    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'opendrama-video-seam-test-'))
     const destinationPath = path.join(directory, 'failed.mp4')
     const cancelBody = vi.fn(async () => undefined)
     const body = new ReadableStream<Uint8Array>({ cancel: cancelBody })

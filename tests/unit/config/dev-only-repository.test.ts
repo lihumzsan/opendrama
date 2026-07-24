@@ -45,7 +45,7 @@ describe('remote-only development repository contract', () => {
     const envTemplate = readRootFile('.env.example')
 
     expect(envTemplate).toContain(
-      'DATABASE_URL="mysql://root:waoowaoo123@192.168.0.112:13306/waoowaoo"',
+      'DATABASE_URL="mysql://root:opendrama123@192.168.0.112:13306/opendrama"',
     )
     expect(envTemplate).toContain('REDIS_HOST=192.168.0.112')
     expect(envTemplate).toContain('REDIS_PORT=16379')

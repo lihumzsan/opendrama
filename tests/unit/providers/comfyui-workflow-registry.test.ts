@@ -251,7 +251,7 @@ describe('comfyui workflow registry', () => {
   })
 
   function writeExternalWorkflow(workflowKey: string, workflow: unknown) {
-    workflowRoot = workflowRoot || mkdtempSync(join(tmpdir(), 'waoowaoo-comfyui-workflow-'))
+    workflowRoot = workflowRoot || mkdtempSync(join(tmpdir(), 'opendrama-comfyui-workflow-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
     const filePath = join(workflowRoot, `${workflowKey}.json`)
     mkdirSync(dirname(filePath), { recursive: true })

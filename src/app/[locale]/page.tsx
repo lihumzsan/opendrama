@@ -28,7 +28,7 @@ export default function Home() {
         <div className="flex flex-col items-center gap-4">
           <Image
             src="/logo-small.png"
-            alt="waoowaoo"
+            alt="opendrama"
             width={80}
             height={80}
             priority

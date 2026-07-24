@@ -3,7 +3,7 @@ export interface VoiceDesignDraft {
   previewText: string
 }
 
-const STORAGE_PREFIX = 'waoowaoo:voice-design:draft:'
+const STORAGE_PREFIX = 'opendrama:voice-design:draft:'
 
 function getBrowserStorage(): Storage | null {
   if (typeof window === 'undefined' || !window.localStorage) return null
