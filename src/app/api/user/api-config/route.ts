@@ -177,6 +177,8 @@ const PRICING_PROVIDER_ALIASES: Readonly<Record<string, string>> = {
 const OFFICIAL_ONLY_PROVIDER_KEYS = new Set(['bailian', 'siliconflow'])
 const RETIRED_PROVIDER_KEYS = new Set(['qwen'])
 const MINIMAX_OFFICIAL_BASE_URL = 'https://api.minimaxi.com/v1'
+const ALLOWED_LLM_PROVIDER_KEYS = new Set([CODEX_PROVIDER_KEY])
+const ALLOWED_VIDEO_PROVIDER_KEYS = new Set(['comfyui'])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -1033,7 +1035,19 @@ function validateModelProviderTypeSupport(models: StoredModel[], providers: Stor
     if (!matchedProvider) continue
 
     const providerKey = getProviderKey(matchedProvider.id)
+    if (model.type === 'llm' && !ALLOWED_LLM_PROVIDER_KEYS.has(providerKey)) {
+      throw new ApiError('INVALID_PARAMS', {
+        code: 'MODEL_PROVIDER_TYPE_UNSUPPORTED',
+        field: `models[${index}].provider`,
+      })
+    }
     if (providerKey === CODEX_PROVIDER_KEY && model.type !== 'llm' && model.type !== 'image') {
+      throw new ApiError('INVALID_PARAMS', {
+        code: 'MODEL_PROVIDER_TYPE_UNSUPPORTED',
+        field: `models[${index}].provider`,
+      })
+    }
+    if (model.type === 'video' && !ALLOWED_VIDEO_PROVIDER_KEYS.has(providerKey)) {
       throw new ApiError('INVALID_PARAMS', {
         code: 'MODEL_PROVIDER_TYPE_UNSUPPORTED',
         field: `models[${index}].provider`,
@@ -1473,6 +1487,18 @@ function parseStoredModels(rawModels: string | null | undefined): StoredModel[] 
   return normalized
 }
 
+function filterTextAndComfyUiRuntimeModels(models: StoredModel[]): StoredModel[] {
+  return models.filter((model) => {
+    if (model.type === 'llm') {
+      return ALLOWED_LLM_PROVIDER_KEYS.has(getProviderKey(model.provider))
+    }
+    if (model.type === 'video') {
+      return getProviderKey(model.provider) === 'comfyui'
+    }
+    return true
+  })
+}
+
 function normalizeCapabilitySelectionsInput(
   raw: unknown,
   options?: { allowLegacyAspectRatio?: boolean },
@@ -1648,7 +1674,7 @@ export const GET = apiHandler(async () => {
     apiKey: provider.apiKey ? decryptApiKey(provider.apiKey) : '',
   }))
 
-  const parsedModels = parseStoredModels(pref?.customModels)
+  const parsedModels = filterTextAndComfyUiRuntimeModels(parseStoredModels(pref?.customModels))
   const models = parsedModels
   const pricingDisplay = buildPricingDisplayMap()
   const pricedModels = models.map((model) => withDisplayPricing(model, pricingDisplay))
@@ -1656,20 +1682,12 @@ export const GET = apiHandler(async () => {
   // 对每个 gemini-compatible provider，注入尚未保存过的 Google preset 模型（disabled，带完整 capabilities）
   // gemini-compatible 本质就是改了 baseURL 和 key，模型和能力与 Google 官方完全一致
   const GEMINI_COMPATIBLE_PRESETS: { type: UnifiedModelType; modelId: string; name: string }[] = [
-    { type: 'llm', modelId: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro' },
-    { type: 'llm', modelId: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
-    { type: 'llm', modelId: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite' },
     { type: 'image', modelId: 'gemini-3-pro-image-preview', name: 'Banana Pro' },
     { type: 'image', modelId: 'gemini-3.1-flash-image-preview', name: 'Nano Banana 2' },
     { type: 'image', modelId: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image' },
     { type: 'image', modelId: 'imagen-4.0-generate-001', name: 'Imagen 4' },
     { type: 'image', modelId: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra' },
     { type: 'image', modelId: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast' },
-    { type: 'video', modelId: 'veo-3.1-generate-preview', name: 'Veo 3.1' },
-    { type: 'video', modelId: 'veo-3.1-fast-generate-preview', name: 'Veo 3.1 Fast' },
-    { type: 'video', modelId: 'veo-3.0-generate-001', name: 'Veo 3.0' },
-    { type: 'video', modelId: 'veo-3.0-fast-generate-001', name: 'Veo 3.0 Fast' },
-    { type: 'video', modelId: 'veo-2.0-generate-001', name: 'Veo 2.0' },
   ]
   const savedModelKeys = new Set(pricedModels.map((m) => m.modelKey))
   const disabledPresets: (StoredModel & { enabled: false })[] = []
@@ -1699,7 +1717,7 @@ export const GET = apiHandler(async () => {
     locationModel: pref?.locationModel || '',
     storyboardModel: pref?.storyboardModel || '',
     editModel: pref?.editModel || '',
-    videoModel: pref?.videoModel || '',
+    videoModel: resolveConnectedDefaultModelKey(pref?.videoModel, 'video', models, providers),
     audioModel: pref?.audioModel || '',
     lipSyncModel: resolveConnectedDefaultModelKey(pref?.lipSyncModel, 'lipsync', models, providers),
     voiceDesignModel: pref?.voiceDesignModel || '',
@@ -1758,7 +1776,7 @@ export const PUT = apiHandler(async (request: NextRequest) => {
     },
   })
   const existingProviders = parseStoredProviders(existingPref?.customProviders)
-  const existingModels = parseStoredModels(existingPref?.customModels)
+  const existingModels = filterTextAndComfyUiRuntimeModels(parseStoredModels(existingPref?.customModels))
   const normalizedModels = normalizedModelsInput === undefined
     ? undefined
     : resolveStoredMediaTemplates(resolveStoredLlmProtocols(normalizedModelsInput, existingModels), existingModels)

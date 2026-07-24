@@ -109,7 +109,7 @@ function readProbeFailureCode(value: unknown): string {
   return typeof value === 'string' ? value : 'PROBE_INCONCLUSIVE'
 }
 
-const DEFAULT_PROVIDER_CARD_MODEL_TYPES: ProviderCardModelType[] = ['llm', 'image', 'video', 'audio']
+const DEFAULT_PROVIDER_CARD_MODEL_TYPES: ProviderCardModelType[] = ['image', 'video', 'audio']
 
 export function getProviderCardAllowedModelTypes(params: {
   providerKey: string
@@ -124,7 +124,11 @@ export function getProviderCardAllowedModelTypes(params: {
   }
 
   if (params.providerKey === 'openai-compatible') {
-    return ['llm', 'image', 'video']
+    return ['image', 'video']
+  }
+
+  if (params.providerKey === 'gemini-compatible') {
+    return ['image']
   }
 
   return DEFAULT_PROVIDER_CARD_MODEL_TYPES

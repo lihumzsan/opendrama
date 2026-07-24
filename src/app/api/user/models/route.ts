@@ -250,6 +250,9 @@ function isUserSelectableModel(model: StoredModel): boolean {
   ) {
     return false
   }
+  if (model.type === 'llm') {
+    return getProviderKey(toProvider(model)) === CODEX_PROVIDER_KEY
+  }
   if (model.type !== 'audio') return true
   const modelId = toModelId(model)
   return !AUDIO_MODEL_EXCLUDED_IDS.has(modelId)

@@ -134,7 +134,8 @@ function getAllowedModelTypesForProvider(
   const providerKey = getProviderKey(providerId)
   if (providerKey === CODEX_PROVIDER_KEY) return ['llm', 'image']
   if (providerKey === 'bailian' && options?.isBailianCodingPlan) return ['llm']
-  if (providerKey === 'openai-compatible') return ['llm', 'image', 'video']
+  if (providerKey === 'openai-compatible') return ['image', 'video']
+  if (providerKey === 'gemini-compatible') return ['image']
   return ['llm', 'image', 'video', 'audio']
 }
 

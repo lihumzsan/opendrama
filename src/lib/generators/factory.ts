@@ -7,8 +7,7 @@
 
 import { ImageGenerator, VideoGenerator, AudioGenerator } from './base'
 import { FalBananaGenerator } from './fal'
-import { ArkSeedreamGenerator, ArkSeedanceVideoGenerator } from './ark'
-import { FalVideoGenerator } from './fal'
+import { ArkSeedreamGenerator } from './ark'
 import {
     GoogleGeminiImageGenerator,
     GoogleImagenGenerator,
@@ -17,19 +16,8 @@ import {
     OpenAICompatibleImageGenerator,
     CodexImageGenerator,
 } from './image'
-import { GoogleVeoVideoGenerator } from './video/google'
-import { OpenAICompatibleVideoGenerator } from './video'
-import { MinimaxVideoGenerator } from './minimax'
-import { ViduVideoGenerator } from './vidu'
 import { getProviderKey } from '@/lib/api-config'
-import {
-    BailianAudioGenerator,
-    BailianImageGenerator,
-    BailianVideoGenerator,
-    SiliconFlowAudioGenerator,
-    SiliconFlowImageGenerator,
-    SiliconFlowVideoGenerator,
-} from './official'
+import { BailianAudioGenerator, BailianImageGenerator, SiliconFlowAudioGenerator, SiliconFlowImageGenerator } from './official'
 import { ComfyUIImageGenerator } from './comfyui'
 import { ComfyUIVideoGenerator } from './comfyui-video'
 
@@ -85,24 +73,6 @@ export function createImageGenerator(provider: string, modelId?: string): ImageG
 export function createVideoGenerator(provider: string): VideoGenerator {
     const providerKey = getProviderKey(provider).toLowerCase()
     switch (providerKey) {
-        case 'fal':
-            return new FalVideoGenerator()
-        case 'ark':
-            return new ArkSeedanceVideoGenerator()
-        case 'google':
-            return new GoogleVeoVideoGenerator()
-        case 'gemini-compatible':
-            return new GoogleVeoVideoGenerator(provider)
-        case 'minimax':
-            return new MinimaxVideoGenerator()
-        case 'vidu':
-            return new ViduVideoGenerator()
-        case 'openai-compatible':
-            return new OpenAICompatibleVideoGenerator(provider)
-        case 'bailian':
-            return new BailianVideoGenerator()
-        case 'siliconflow':
-            return new SiliconFlowVideoGenerator()
         case 'comfyui':
             return new ComfyUIVideoGenerator()
         default:

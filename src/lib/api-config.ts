@@ -28,6 +28,8 @@ import {
   CODEX_PROVIDER_KEY,
 } from './providers/codex/constants'
 
+const ALLOWED_LLM_PROVIDER_KEYS = new Set([CODEX_PROVIDER_KEY])
+
 export interface CustomModel {
   modelId: string
   modelKey: string
@@ -187,6 +189,15 @@ function normalizeProviderBaseUrl(providerId: string, rawBaseUrl?: string): stri
     // Keep original value to avoid hiding invalid-config errors.
     return baseUrl
   }
+}
+
+function filterRuntimeSupportedModels(models: CustomModel[]): CustomModel[] {
+  return models.filter((model) => {
+    if (model.type === 'llm') {
+      return ALLOWED_LLM_PROVIDER_KEYS.has(getProviderKey(model.provider))
+    }
+    return true
+  })
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -570,7 +581,10 @@ export async function getProviderConfig(userId: string, providerId: string): Pro
  */
 export async function getUserModels(userId: string): Promise<CustomModel[]> {
   const { models, providers } = await readUserConfig(userId)
-  return injectCodexHelperModels(injectComfyUiHelperModels(models, providers), providers)
+  return injectCodexHelperModels(
+    injectComfyUiHelperModels(filterRuntimeSupportedModels(models), providers),
+    providers,
+  )
 }
 
 /**
@@ -592,7 +606,10 @@ export async function getModelsByType(userId: string, type: ModelMediaType): Pro
 
 export async function getConnectedModelsByType(userId: string, type: ModelMediaType): Promise<CustomModel[]> {
   const { models, providers } = await readUserConfig(userId)
-  const modelsWithHelpers = injectCodexHelperModels(injectComfyUiHelperModels(models, providers), providers)
+  const modelsWithHelpers = injectCodexHelperModels(
+    injectComfyUiHelperModels(filterRuntimeSupportedModels(models), providers),
+    providers,
+  )
   const providersById = new Map(providers.map((provider) => [provider.id, provider] as const))
   return modelsWithHelpers.filter((model) => {
     if (model.type !== type) return false

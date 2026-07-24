@@ -98,39 +98,6 @@ type PresetModel = Omit<CustomModel, 'enabled' | 'modelKey' | 'price'>
 export const PRESET_MODELS: PresetModel[] = [
     // 文本模型
     { modelId: CODEX_DEFAULT_MODEL_ID, name: 'Codex GPT-5.5', type: 'llm', provider: CODEX_PROVIDER_KEY },
-    { modelId: 'x-ai/grok-4.1-fast', name: 'Grok 4.1 Fast', type: 'llm', provider: 'openrouter' },
-    { modelId: '~openai/gpt-latest', name: 'OpenAI GPT Latest', type: 'llm', provider: 'openrouter' },
-    { modelId: 'openai/gpt-5.5-pro', name: 'GPT-5.5 Pro', type: 'llm', provider: 'openrouter' },
-    { modelId: 'openai/gpt-5.5', name: 'GPT-5.5', type: 'llm', provider: 'openrouter' },
-    { modelId: 'google/gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', type: 'llm', provider: 'openrouter' },
-    { modelId: 'google/gemini-3-pro-preview', name: 'Gemini 3 Pro', type: 'llm', provider: 'openrouter' },
-    { modelId: 'google/gemini-3-flash-preview', name: 'Gemini 3 Flash', type: 'llm', provider: 'openrouter' },
-    { modelId: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', type: 'llm', provider: 'openrouter' },
-    { modelId: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', type: 'llm', provider: 'openrouter' },
-    { modelId: 'openai/gpt-5.4', name: 'GPT-5.4', type: 'llm', provider: 'openrouter' },
-    { modelId: 'google/gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite', type: 'llm', provider: 'openrouter' },
-    // Google AI Studio 文本模型
-    { modelId: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', type: 'llm', provider: 'google' },
-    { modelId: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', type: 'llm', provider: 'google' },
-    { modelId: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash-Lite', type: 'llm', provider: 'google' },
-    // 火山引擎 Doubao 文本模型
-    { modelId: 'doubao-seed-1-8-251228', name: 'Doubao Seed 1.8', type: 'llm', provider: 'ark' },
-    { modelId: 'doubao-seed-2-0-pro-260215', name: 'Doubao Seed 2.0 Pro', type: 'llm', provider: 'ark' },
-    { modelId: 'doubao-seed-2-0-lite-260215', name: 'Doubao Seed 2.0 Lite', type: 'llm', provider: 'ark' },
-    { modelId: 'doubao-seed-2-0-mini-260215', name: 'Doubao Seed 2.0 Mini', type: 'llm', provider: 'ark' },
-    { modelId: 'doubao-seed-1-6-251015', name: 'Doubao Seed 1.6', type: 'llm', provider: 'ark' },
-    { modelId: 'doubao-seed-1-6-lite-251015', name: 'Doubao Seed 1.6 Lite', type: 'llm', provider: 'ark' },
-    // 阿里云百炼文本模型
-    { modelId: 'qwen3.5-plus', name: 'Qwen 3.5 Plus', type: 'llm', provider: 'bailian' },
-    { modelId: 'glm-5', name: 'GLM 5', type: 'llm', provider: 'bailian' },
-    { modelId: 'kimi-k2.5', name: 'Kimi K2.5', type: 'llm', provider: 'bailian' },
-    { modelId: 'qwen3.5-flash', name: 'Qwen 3.5 Flash', type: 'llm', provider: 'bailian' },
-    // MiniMax 官方文本模型
-    { modelId: 'MiniMax-M2.5', name: 'MiniMax M2.5', type: 'llm', provider: 'minimax' },
-    { modelId: 'MiniMax-M2.5-highspeed', name: 'MiniMax M2.5 Highspeed', type: 'llm', provider: 'minimax' },
-    { modelId: 'MiniMax-M2.1', name: 'MiniMax M2.1', type: 'llm', provider: 'minimax' },
-    { modelId: 'MiniMax-M2.1-highspeed', name: 'MiniMax M2.1 Highspeed', type: 'llm', provider: 'minimax' },
-    { modelId: 'MiniMax-M2', name: 'MiniMax M2', type: 'llm', provider: 'minimax' },
 
     // 图像模型
     { modelId: CODEX_DEFAULT_IMAGE_MODEL_ID, name: 'Codex Image', type: 'image', provider: CODEX_PROVIDER_KEY },
@@ -158,33 +125,6 @@ export const PRESET_MODELS: PresetModel[] = [
     { modelId: 'basevideo/seedance2/bernini-480p-i2v-audio-lipsync', name: 'ComfyUI · Seedance2.0 Bernini 480p I2V Audio LipSync', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage', name: 'ComfyUI · LTX2.3 Goon First/Last Frame', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2', name: 'ComfyUI · LTX2.3 Smart VBVR I2V Audio', type: 'video', provider: 'comfyui' },
-    { modelId: 'doubao-seedance-1-0-pro-fast-251015', name: 'Seedance 1.0 Pro Fast', type: 'video', provider: 'ark' },
-    { modelId: 'doubao-seedance-1-0-lite-i2v-250428', name: 'Seedance 1.0 Lite', type: 'video', provider: 'ark' },
-    { modelId: 'doubao-seedance-1-5-pro-251215', name: 'Seedance 1.5 Pro', type: 'video', provider: 'ark' },
-    { modelId: 'doubao-seedance-2-0-260128', name: 'Seedance 2.0', type: 'video', provider: 'ark' },
-    { modelId: 'doubao-seedance-2-0-fast-260128', name: 'Seedance 2.0 Fast', type: 'video', provider: 'ark' },
-    { modelId: 'doubao-seedance-1-0-pro-250528', name: 'Seedance 1.0 Pro', type: 'video', provider: 'ark' },
-    // Google Veo
-    { modelId: 'veo-3.1-generate-preview', name: 'Veo 3.1', type: 'video', provider: 'google' },
-    { modelId: 'veo-3.1-fast-generate-preview', name: 'Veo 3.1 Fast', type: 'video', provider: 'google' },
-    { modelId: 'veo-3.0-generate-001', name: 'Veo 3.0', type: 'video', provider: 'google' },
-    { modelId: 'veo-3.0-fast-generate-001', name: 'Veo 3.0 Fast', type: 'video', provider: 'google' },
-    { modelId: 'veo-2.0-generate-001', name: 'Veo 2.0', type: 'video', provider: 'google' },
-    // 阿里云百炼图生视频模型
-    { modelId: 'wan2.7-i2v', name: 'Wan2.7 I2V', type: 'video', provider: 'bailian' },
-    { modelId: 'wan2.6-i2v-flash', name: 'Wan2.6 I2V Flash', type: 'video', provider: 'bailian' },
-    { modelId: 'wan2.6-i2v', name: 'Wan2.6 I2V', type: 'video', provider: 'bailian' },
-    { modelId: 'wan2.5-i2v-preview', name: 'Wan2.5 I2V Preview', type: 'video', provider: 'bailian' },
-    { modelId: 'wan2.2-i2v-plus', name: 'Wan2.2 I2V Plus', type: 'video', provider: 'bailian' },
-    { modelId: 'wan2.2-kf2v-flash', name: 'Wan2.2 KF2V Flash', type: 'video', provider: 'bailian' },
-    { modelId: 'wanx2.1-kf2v-plus', name: 'WanX2.1 KF2V Plus', type: 'video', provider: 'bailian' },
-    { modelId: 'fal-wan25', name: 'Wan 2.6', type: 'video', provider: 'fal' },
-    { modelId: 'fal-veo31', name: 'Veo 3.1', type: 'video', provider: 'fal' },
-    { modelId: 'fal-sora2', name: 'Sora 2', type: 'video', provider: 'fal' },
-    { modelId: 'fal-ai/kling-video/v2.5-turbo/pro/image-to-video', name: 'Kling 2.5 Turbo Pro', type: 'video', provider: 'fal' },
-    { modelId: 'fal-ai/kling-video/v3/standard/image-to-video', name: 'Kling 3 Standard', type: 'video', provider: 'fal' },
-    { modelId: 'fal-ai/kling-video/v3/pro/image-to-video', name: 'Kling 3 Pro', type: 'video', provider: 'fal' },
-
     // 音频模型
     { modelId: 'baseaudio/单人/LongCat-one', name: 'ComfyUI · LongCat 单人', type: 'audio', provider: 'comfyui' },
     { modelId: 'baseaudio/单人/s2-one', name: 'ComfyUI · S2 单人', type: 'audio', provider: 'comfyui' },
@@ -199,21 +139,6 @@ export const PRESET_MODELS: PresetModel[] = [
     { modelId: 'vidu-lipsync', name: 'Vidu Lip Sync', type: 'lipsync', provider: 'vidu' },
     { modelId: 'videoretalk', name: 'VideoRetalk Lip Sync', type: 'lipsync', provider: 'bailian' },
 
-    // MiniMax 视频模型
-    { modelId: 'minimax-hailuo-2.3', name: 'Hailuo 2.3', type: 'video', provider: 'minimax' },
-    { modelId: 'minimax-hailuo-2.3-fast', name: 'Hailuo 2.3 Fast', type: 'video', provider: 'minimax' },
-    { modelId: 'minimax-hailuo-02', name: 'Hailuo 02', type: 'video', provider: 'minimax' },
-    { modelId: 't2v-01', name: 'T2V-01', type: 'video', provider: 'minimax' },
-    { modelId: 't2v-01-director', name: 'T2V-01 Director', type: 'video', provider: 'minimax' },
-
-    // Vidu 视频模型
-    { modelId: 'viduq3-pro', name: 'Vidu Q3 Pro', type: 'video', provider: 'vidu' },
-    { modelId: 'viduq2-pro-fast', name: 'Vidu Q2 Pro Fast', type: 'video', provider: 'vidu' },
-    { modelId: 'viduq2-pro', name: 'Vidu Q2 Pro', type: 'video', provider: 'vidu' },
-    { modelId: 'viduq2-turbo', name: 'Vidu Q2 Turbo', type: 'video', provider: 'vidu' },
-    { modelId: 'viduq1', name: 'Vidu Q1', type: 'video', provider: 'vidu' },
-    { modelId: 'viduq1-classic', name: 'Vidu Q1 Classic', type: 'video', provider: 'vidu' },
-    { modelId: 'vidu2.0', name: 'Vidu 2.0', type: 'video', provider: 'vidu' },
 ]
 
 const PRESET_COMING_SOON_MODEL_KEYS = new Set<string>([])

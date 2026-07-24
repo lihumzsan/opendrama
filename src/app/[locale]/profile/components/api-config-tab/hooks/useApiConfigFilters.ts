@@ -124,6 +124,8 @@ export function useApiConfigFilters({
     const providersById = new Map(providers.map((provider) => [provider.id, provider] as const))
 
     for (const model of models) {
+      if (model.type === 'video' && getProviderKey(model.provider) !== 'comfyui') continue
+      if (model.type === 'llm' && getProviderKey(model.provider) !== CODEX_PROVIDER_KEY) continue
       if (!model.enabled) continue
       if (!isDefaultModelType(model.type)) continue
       const provider = providersById.get(model.provider)
