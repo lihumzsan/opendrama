@@ -24,18 +24,6 @@ vi.mock('@/components/LanguageSwitcher', () => ({
   default: () => createElement('div', null, 'LanguageSwitcher'),
 }))
 
-vi.mock('@/hooks/common/useGithubReleaseUpdate', () => ({
-  useGithubReleaseUpdate: () => ({
-    currentVersion: '0.3.0',
-    update: null,
-    shouldPulse: false,
-    showModal: false,
-    openModal: () => undefined,
-    dismissCurrentUpdate: () => undefined,
-    checkNow: async () => undefined,
-  }),
-}))
-
 vi.mock('@/i18n/navigation', () => ({
   Link: ({
     href,
@@ -63,12 +51,6 @@ const messages = {
   common: {
     appName: 'opendrama',
     betaVersion: 'Beta v{version}',
-    updateNotice: {
-      openDialog: '打开更新弹窗',
-      updateTag: '更新',
-      checkUpdate: '检查更新',
-      upToDate: '已是最新版本',
-    },
   },
 } as const
 
