@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { createAudioGenerator, createImageGenerator, createVideoGenerator } from '@/lib/generators/factory'
-import { GoogleVeoVideoGenerator } from '@/lib/generators/video/google'
-import { BailianAudioGenerator, BailianImageGenerator, BailianVideoGenerator, SiliconFlowAudioGenerator } from '@/lib/generators/official'
+import { BailianAudioGenerator, BailianImageGenerator, SiliconFlowAudioGenerator } from '@/lib/generators/official'
 import { CodexImageGenerator } from '@/lib/generators/image/codex'
+import { ComfyUIVideoGenerator } from '@/lib/generators/comfyui-video'
 
 describe('generator factory', () => {
-  it('routes gemini-compatible video provider to Google video generator', () => {
-    const generator = createVideoGenerator('gemini-compatible:gm-1')
-    expect(generator).toBeInstanceOf(GoogleVeoVideoGenerator)
+  it('creates video generators only for ComfyUI', () => {
+    expect(createVideoGenerator('comfyui')).toBeInstanceOf(ComfyUIVideoGenerator)
   })
 
-  it('routes bailian official providers to official generators', () => {
+  it.each(['gemini-compatible:gm-1', 'bailian'])('rejects disabled video provider %s', (provider) => {
+    expect(() => createVideoGenerator(provider)).toThrow(`Unknown video generator provider: ${provider}`)
+  })
+
+  it('routes supported Bailian image and audio providers to official generators', () => {
     expect(createImageGenerator('bailian')).toBeInstanceOf(BailianImageGenerator)
-    expect(createVideoGenerator('bailian')).toBeInstanceOf(BailianVideoGenerator)
     expect(createAudioGenerator('bailian')).toBeInstanceOf(BailianAudioGenerator)
   })
 

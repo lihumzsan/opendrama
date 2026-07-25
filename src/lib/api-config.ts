@@ -71,22 +71,6 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
     price: 0,
   },
   {
-    modelId: 'basevideo/seedance2/bernini-480p-i2v',
-    modelKey: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
-    name: 'ComfyUI · Seedance2.0 Bernini 480p I2V',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
-    modelId: 'basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
-    modelKey: 'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
-    name: 'ComfyUI · Seedance2.0 Bernini 480p I2V Audio LipSync',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
     modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     modelKey: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     name: 'ComfyUI · LTX2.3 Goon First/Last Frame',

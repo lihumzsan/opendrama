@@ -11,8 +11,8 @@ describe('video model defaults', () => {
   const LEGACY_FIRST_LAST_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame'
   const GOON_FIRST_LAST_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage'
 
-  it('uses Bernini as the only default video model', () => {
-    expect(DEFAULT_VIDEO_MODEL_KEY).toBe('comfyui::basevideo/seedance2/bernini-480p-i2v')
+  it('uses the T8 single-image workflow as the default video model', () => {
+    expect(DEFAULT_VIDEO_MODEL_KEY).toBe('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
     expect(normalizeDefaultVideoModel(null)).toBe(DEFAULT_VIDEO_MODEL_KEY)
     expect(normalizeDefaultVideoModel('')).toBe(DEFAULT_VIDEO_MODEL_KEY)
   })
@@ -25,7 +25,7 @@ describe('video model defaults', () => {
     )
   })
 
-  it('normalizes removed LTX2.3 workflow keys to Bernini', () => {
+  it('normalizes removed video workflow keys to the T8 default', () => {
     for (const legacyKey of LEGACY_LTX23_VIDEO_MODEL_KEYS) {
       expect(normalizeVideoModelKey(legacyKey)).toBe(DEFAULT_VIDEO_MODEL_KEY)
       expect(normalizeVideoModelKey(legacyKey.replace('comfyui::', ''))).toBe(DEFAULT_VIDEO_MODEL_KEY)
@@ -40,7 +40,9 @@ describe('video model defaults', () => {
     )
   })
 
-  it('normalizes the Bernini audio lipsync workflow key to the base Bernini model', () => {
+  it('migrates removed Bernini workflow keys to the T8 default', () => {
+    expect(normalizeVideoModelKey('comfyui::basevideo/seedance2/bernini-480p-i2v')).toBe(DEFAULT_VIDEO_MODEL_KEY)
+    expect(normalizeVideoModelKey('basevideo/seedance2/bernini-480p-i2v')).toBe(DEFAULT_VIDEO_MODEL_KEY)
     expect(normalizeVideoModelKey('comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync')).toBe(DEFAULT_VIDEO_MODEL_KEY)
     expect(normalizeVideoModelKey('basevideo/seedance2/bernini-480p-i2v-audio-lipsync')).toBe(DEFAULT_VIDEO_MODEL_KEY)
   })

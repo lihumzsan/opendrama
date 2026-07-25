@@ -378,7 +378,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('accepts openai-compatible provider image/video models', async () => {
+  it('rejects an openai-compatible video model even when its image model is configured', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     const route = await import('@/app/api/user/api-config/route')
@@ -416,8 +416,8 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-    expect(prismaMock.userPreference.upsert).toHaveBeenCalledTimes(1)
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
   it('accepts codex image models and persists them without an api key', async () => {
@@ -547,7 +547,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('persists llmProtocol for openai-compatible llm models', async () => {
+  it('rejects llmProtocol configuration for an unsupported openai-compatible text model', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     const route = await import('@/app/api/user/api-config/route')
@@ -573,12 +573,8 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-
-    const savedModels = readSavedModelsFromUpsert()
-    expect(savedModels).toHaveLength(1)
-    expect(savedModels[0]?.llmProtocol).toBe('responses')
-    expect(typeof savedModels[0]?.llmProtocolCheckedAt).toBe('string')
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
   it('rejects llmProtocol on non-openai-compatible or non-llm models', async () => {
@@ -611,7 +607,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('backfills historical openai-compatible llm models missing llmProtocol during PUT', async () => {
+  it('rejects historical openai-compatible text models during PUT', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     prismaMock.userPreference.findUnique.mockResolvedValue({
@@ -650,12 +646,8 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-
-    const savedModels = readSavedModelsFromUpsert()
-    expect(savedModels).toHaveLength(1)
-    expect(savedModels[0]?.llmProtocol).toBe('chat-completions')
-    expect(typeof savedModels[0]?.llmProtocolCheckedAt).toBe('string')
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
   it('rejects invalid custom pricing structure', async () => {
@@ -708,9 +700,9 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
           {
             type: 'video',
             provider: 'comfyui',
-            modelId: 'basevideo/seedance2/bernini-480p-i2v',
-            modelKey: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
-            name: 'ComfyUI · Seedance2.0 Bernini 480p I2V',
+            modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+            modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+            name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
             customPricing: {
               video: {
                 basePrice: 0.5,
@@ -731,7 +723,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('maps legacy customPricing input/output to llm pricing on GET', async () => {
+  it('hides legacy openai-compatible text-model pricing on GET', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     prismaMock.userPreference.findUnique.mockResolvedValue({
@@ -761,10 +753,8 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
 
     const res = await route.GET(req, routeContext)
     expect(res.status).toBe(200)
-    const json = await res.json() as { models?: Array<{ customPricing?: { llm?: { inputPerMillion?: number; outputPerMillion?: number } } }> }
-    const model = Array.isArray(json.models) ? json.models[0] : null
-    expect(model?.customPricing?.llm?.inputPerMillion).toBe(2.5)
-    expect(model?.customPricing?.llm?.outputPerMillion).toBe(5.5)
+    const json = await res.json() as { models?: Array<{ modelKey?: string }> }
+    expect(json.models).toEqual([])
   })
 
   it('defaults gemini-compatible provider to official route when apiMode is gemini-sdk', async () => {
@@ -970,7 +960,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('allows enabled default model without requiring billing pricing entries', async () => {
+  it('rejects a non-Codex default text model even without billing pricing entries', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     const route = await import('@/app/api/user/api-config/route')
@@ -998,11 +988,8 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-    const firstCall = prismaMock.userPreference.upsert.mock.calls[0]?.[0] as {
-      update?: { analysisModel?: unknown }
-    }
-    expect(firstCall?.update?.analysisModel).toBe('bailian::qwen3.5-flash')
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
   it('allows enabled lipsync model after billing pricing validation is removed', async () => {
@@ -1077,7 +1064,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(firstCall?.update?.audioModel).toBe('comfyui::baseaudio/单人/LongCat-one')
   })
 
-  it('keeps stored model and default model in GET flow without billing sanitization', async () => {
+  it('keeps the stored default but filters its unsupported text model in GET flow', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     prismaMock.userPreference.findUnique.mockResolvedValue({
@@ -1109,7 +1096,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
       models?: Array<{ modelKey?: string }>
     }
     expect(json.defaultModels?.analysisModel).toBe('bailian::qwen3.5-flash')
-    expect(json.models?.some((model) => model.modelKey === 'bailian::qwen3.5-flash')).toBe(true)
+    expect(json.models?.some((model) => model.modelKey === 'bailian::qwen3.5-flash')).toBe(false)
   })
 
   it('accepts workflow concurrency payload and returns normalized values on GET', async () => {
@@ -1282,7 +1269,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     expect(typeof savedModel?.compatMediaTemplateCheckedAt).toBe('string')
   })
 
-  it('backfills default compatMediaTemplate for openai-compatible video model when missing', async () => {
+  it('rejects a default compatMediaTemplate for an unsupported openai-compatible video model', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     const route = await import('@/app/api/user/api-config/route')
@@ -1307,41 +1294,11 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-    const savedModels = readSavedModelsFromUpsert()
-    const savedModel = savedModels.find((item) => item.modelKey === 'openai-compatible:oa-1::veo-2')
-    expect(savedModel?.compatMediaTemplate).toMatchObject({
-      version: 1,
-      mediaType: 'video',
-      mode: 'async',
-      create: {
-        path: '/videos',
-        contentType: 'multipart/form-data',
-        multipartFileFields: ['input_reference'],
-        bodyTemplate: {
-          model: '{{model}}',
-          prompt: '{{prompt}}',
-          seconds: '{{duration}}',
-          size: '{{size}}',
-          input_reference: '{{image}}',
-        },
-      },
-      status: {
-        path: '/videos/{{task_id}}',
-      },
-      content: {
-        path: '/videos/{{task_id}}/content',
-      },
-      response: {
-        taskIdPath: '$.id',
-        statusPath: '$.status',
-      },
-    })
-    expect(savedModel?.compatMediaTemplateSource).toBe('manual')
-    expect(typeof savedModel?.compatMediaTemplateCheckedAt).toBe('string')
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 
-  it('keeps explicit compatMediaTemplate for openai-compatible video model', async () => {
+  it('rejects an explicit compatMediaTemplate for an unsupported openai-compatible video model', async () => {
     installAuthMocks()
     mockAuthenticated('user-1')
     const route = await import('@/app/api/user/api-config/route')
@@ -1396,16 +1353,7 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
     })
 
     const res = await route.PUT(req, routeContext)
-    expect(res.status).toBe(200)
-    const savedModels = readSavedModelsFromUpsert()
-    const savedModel = savedModels.find((item) => item.modelKey === 'openai-compatible:oa-1::veo3.1')
-    expect(savedModel?.compatMediaTemplate).toMatchObject({
-      mediaType: 'video',
-      mode: 'async',
-      create: {
-        path: '/v2/videos/generations',
-      },
-    })
-    expect(savedModel?.compatMediaTemplateSource).toBe('ai')
+    expect(res.status).toBe(400)
+    expect(prismaMock.userPreference.upsert).not.toHaveBeenCalled()
   })
 })

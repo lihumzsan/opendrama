@@ -6,12 +6,17 @@ import {
   createFixtureProject,
   createFixtureUser,
 } from '../../helpers/fixtures'
+import {
+  CODEX_DEFAULT_MODEL_ID,
+  CODEX_DEFAULT_MODEL_KEY,
+  CODEX_PROVIDER_KEY,
+} from '@/lib/providers/codex/constants'
 
 function nextSuffix() {
   return randomUUID().slice(0, 8)
 }
 
-const TEST_ANALYSIS_MODEL_KEY = 'openrouter::anthropic/claude-sonnet-4'
+const TEST_ANALYSIS_MODEL_KEY = CODEX_DEFAULT_MODEL_KEY
 
 export async function seedAnalysisModelConfig(userId: string) {
   await prisma.userPreference.upsert({
@@ -20,11 +25,11 @@ export async function seedAnalysisModelConfig(userId: string) {
       analysisModel: TEST_ANALYSIS_MODEL_KEY,
       customModels: JSON.stringify([
         {
-          modelId: 'anthropic/claude-sonnet-4',
+          modelId: CODEX_DEFAULT_MODEL_ID,
           modelKey: TEST_ANALYSIS_MODEL_KEY,
-          name: 'Claude Sonnet 4',
+          name: 'Codex GPT-5.5',
           type: 'llm',
-          provider: 'openrouter',
+          provider: CODEX_PROVIDER_KEY,
           price: 0,
         },
       ]),
@@ -34,11 +39,11 @@ export async function seedAnalysisModelConfig(userId: string) {
       analysisModel: TEST_ANALYSIS_MODEL_KEY,
       customModels: JSON.stringify([
         {
-          modelId: 'anthropic/claude-sonnet-4',
+          modelId: CODEX_DEFAULT_MODEL_ID,
           modelKey: TEST_ANALYSIS_MODEL_KEY,
-          name: 'Claude Sonnet 4',
+          name: 'Codex GPT-5.5',
           type: 'llm',
-          provider: 'openrouter',
+          provider: CODEX_PROVIDER_KEY,
           price: 0,
         },
       ]),

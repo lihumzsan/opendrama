@@ -230,9 +230,9 @@ describe('useProviders provider order merge', () => {
           enabled: false,
         },
         {
-          modelId: 'basevideo/seedance2/bernini-480p-i2v',
-          modelKey: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
-          name: 'ComfyUI · Seedance2.0 Bernini 480p I2V',
+          modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+          modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+          name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
           type: 'video',
           provider: 'comfyui',
           price: 0,
@@ -266,12 +266,12 @@ describe('useProviders provider order merge', () => {
       locationModel: 'comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
       storyboardModel: 'comfyui::baseimage/\u56fe\u7247\u5206\u955c/Qwen\u5267\u60c5\u5206\u955c\u5236\u4f5c',
       editModel: 'comfyui::baseimage/\u56fe\u7247\u7f16\u8f91/qwen\u5355\u56fe\u7f16\u8f91',
-      videoModel: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       audioModel: 'comfyui::baseaudio/单人/LongCat-one',
       voiceDesignModel: 'comfyui::baseaudio/\u97f3\u8272/s2-se',
     })
     const enabledByKey = new Map(result.models.map((model) => [model.modelKey, model.enabled]))
-    expect(enabledByKey.get('comfyui::basevideo/seedance2/bernini-480p-i2v')).toBe(true)
+    expect(enabledByKey.get('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')).toBe(true)
     expect(enabledByKey.get('comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe')).toBe(true)
   })
 

@@ -1,14 +1,10 @@
 import {
-  COMFYUI_SEEDANCE2_BERNINI_AUDIO_WORKFLOW_ID,
-  COMFYUI_SEEDANCE2_BERNINI_MODEL_KEY,
-} from '@/lib/providers/comfyui/seedance2-bernini-workflow'
-import {
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
   COMFYUI_LTX23_WORKFLOW_KEYS,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 
-export const DEFAULT_VIDEO_MODEL_KEY = COMFYUI_SEEDANCE2_BERNINI_MODEL_KEY
+export const DEFAULT_VIDEO_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 
 export const CURRENT_LTX23_VIDEO_MODEL_KEYS = [
   `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`,
@@ -30,8 +26,9 @@ const LEGACY_LTX23_WORKFLOW_IDS = new Set(
 const LEGACY_LTX23_SMOOTH_FIRST_LAST_FRAME_WORKFLOW_ID =
   'basevideo/ltx23-profiles/t8-smooth-first-last-frame'
 
-const BERNINI_AUDIO_LIPSYNC_WORKFLOW_IDS = new Set([
-  COMFYUI_SEEDANCE2_BERNINI_AUDIO_WORKFLOW_ID,
+const RETIRED_BERNINI_WORKFLOW_IDS = new Set([
+  'basevideo/seedance2/bernini-480p-i2v',
+  'basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
 ])
 
 function readTrimmedModelKey(raw: string | null | undefined): string {
@@ -55,10 +52,22 @@ export function isLegacyLtx23SmoothFirstLastFrameModelKey(
   return !!modelKey && toWorkflowId(modelKey) === LEGACY_LTX23_SMOOTH_FIRST_LAST_FRAME_WORKFLOW_ID
 }
 
-export function isBerniniAudioLipsyncVideoModelKey(raw: string | null | undefined): boolean {
+export function isRetiredBerniniVideoModelKey(raw: string | null | undefined): boolean {
   const modelKey = readTrimmedModelKey(raw)
   if (!modelKey) return false
-  return BERNINI_AUDIO_LIPSYNC_WORKFLOW_IDS.has(toWorkflowId(modelKey))
+  return RETIRED_BERNINI_WORKFLOW_IDS.has(toWorkflowId(modelKey))
+}
+
+export function normalizeRetiredBerniniVideoGenerationOptions<T extends Record<string, unknown>>(
+  rawModelKey: string | null | undefined,
+  generationOptions: T,
+): T {
+  if (!isRetiredBerniniVideoModelKey(rawModelKey)) return generationOptions
+  return {
+    ...generationOptions,
+    fps: 25,
+    resolution: '720p',
+  } as T
 }
 
 export function normalizeVideoModelKey(raw: string | null | undefined): string {
@@ -69,7 +78,7 @@ export function normalizeVideoModelKey(raw: string | null | undefined): string {
       ? COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY
       : COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID
   }
-  return isLegacyLtx23VideoModelKey(modelKey) || isBerniniAudioLipsyncVideoModelKey(modelKey)
+  return isLegacyLtx23VideoModelKey(modelKey) || isRetiredBerniniVideoModelKey(modelKey)
     ? DEFAULT_VIDEO_MODEL_KEY
     : modelKey
 }

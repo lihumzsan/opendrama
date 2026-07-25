@@ -64,6 +64,8 @@ export function loadTestEnv() {
 
   setIfMissing('NODE_ENV', 'test')
   setIfMissing('BILLING_MODE', 'OFF')
+  setIfMissing('NEXT_PUBLIC_APP_VERSION', '0.4.1-test')
+  setIfMissing('QUEUE_NAME_PREFIX', `opendrama-test-${process.pid}`)
   const baseDatabaseUrl = mutableEnv.DATABASE_URL || 'mysql://root:opendrama123@127.0.0.1:13306/opendrama'
   mutableEnv.DATABASE_URL = deriveTestDatabaseUrl(baseDatabaseUrl)
   setIfMissing('REDIS_HOST', '127.0.0.1')

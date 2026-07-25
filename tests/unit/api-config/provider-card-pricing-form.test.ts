@@ -12,11 +12,11 @@ import {
 } from '@/app/[locale]/profile/components/api-config/provider-card/hooks/useProviderCardState'
 
 describe('provider card pricing form behavior', () => {
-  it('allows openai-compatible provider to add llm/image/video', () => {
-    expect(getAddableModelTypesForProvider('openai-compatible:oa-1')).toEqual(['llm', 'image', 'video'])
+  it('allows openai-compatible provider to add image and video but not text models', () => {
+    expect(getAddableModelTypesForProvider('openai-compatible:oa-1')).toEqual(['image', 'video'])
   })
 
-  it('shows llm/image/video tabs by default for openai-compatible even with only image models', () => {
+  it('shows image and video tabs by default for openai-compatible even with only image models', () => {
     const visible = getVisibleModelTypesForProvider(
       'openai-compatible:oa-1',
       {
@@ -34,7 +34,7 @@ describe('provider card pricing form behavior', () => {
       },
     )
 
-    expect(visible).toEqual(['llm', 'image', 'video'])
+    expect(visible).toEqual(['image', 'video'])
   })
 
   it('shows the openai-compatible video hint only for openai-compatible video add forms', () => {

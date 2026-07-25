@@ -45,7 +45,8 @@ import {
 } from '@/lib/novel-promotion/panel-continuity'
 import {
   DEFAULT_VIDEO_MODEL_KEY,
-  isBerniniAudioLipsyncVideoModelKey,
+  isRetiredBerniniVideoModelKey,
+  normalizeRetiredBerniniVideoGenerationOptions,
   normalizeVideoModelKey,
 } from '@/lib/novel-promotion/video-model-defaults'
 import {
@@ -55,11 +56,6 @@ import {
   normalizeLtx23GoonDurationSeconds,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
-import {
-  SEEDANCE2_BERNINI_DEFAULT_DURATION_SECONDS,
-  SEEDANCE2_BERNINI_DEFAULT_FPS,
-  isSeedance2BerniniWorkflowKey,
-} from '@/lib/providers/comfyui/seedance2-bernini-workflow'
 
 type AnyObj = Record<string, unknown>
 type VideoOptionValue = string | number | boolean
@@ -86,9 +82,7 @@ function normalizeWorkerVideoModelKey(raw: string | null | undefined): string {
   ) {
     return normalized
   }
-  return isBerniniAudioLipsyncVideoModelKey(trimmed)
-    ? DEFAULT_VIDEO_MODEL_KEY
-    : trimmed
+  return isRetiredBerniniVideoModelKey(trimmed) ? DEFAULT_VIDEO_MODEL_KEY : trimmed
 }
 
 function readPositiveFiniteNumber(value: unknown): number | null {
@@ -180,20 +174,10 @@ function withVideoWorkflowTimingDefaults(
     generationMode: WorkflowVideoGenerationMode
   },
 ): VideoOptionMap {
-  if (!isSeedance2BerniniWorkflowKey(params.modelId)) {
-    return withLtx23ProfileTiming(options, params)
-  }
-
-  const next: VideoOptionMap = { ...options }
-  if (typeof next.duration !== 'number' || !Number.isFinite(next.duration) || next.duration <= 0) {
-    next.duration = SEEDANCE2_BERNINI_DEFAULT_DURATION_SECONDS
-  }
-  next.fps = SEEDANCE2_BERNINI_DEFAULT_FPS
-  return next
+  return withLtx23ProfileTiming(options, params)
 }
 
 function allowsCustomVideoWorkflowDuration(modelId: string, hasExactTimingOverride: boolean): boolean {
-  if (isSeedance2BerniniWorkflowKey(modelId)) return true
   return hasExactTimingOverride && isLtx23VideoModel(modelId)
 }
 
@@ -484,88 +468,6 @@ function omitPanelDialogueText<T extends { srtSegment?: string | null } | null |
   }
 }
 
-const BERNINI_AUDIO_VISUAL_SPEAKING_PHRASE =
-  'the subject faces the camera and performs natural rhythmic mouth movement with subtle head motion, restrained eye movement, and small body-language gestures while the spoken words stay in the audio track'
-
-const BERNINI_AUDIO_SPEAKING_INTENT_PATTERN =
-  /\b(?:says?|speaks?|talks?|asks?|answers?|utters?|dialogue|voice|mouth)\b|[\u8bf4\u8bb2\u95ee\u7b54]|\u53e3\u64ad|\u5bf9\u767d|\u53f0\u8bcd|\u4ea4\u8c08/i
-
-const BERNINI_AUDIO_QUOTED_DIALOGUE_PATTERNS = [
-  /"[^"\n]{1,320}"/g,
-  /\u201c[^\u201d\n]{1,320}\u201d/g,
-  /\u300c[^\u300d\n]{1,320}\u300d/g,
-  /\u300e[^\u300f\n]{1,320}\u300f/g,
-]
-
-const BERNINI_AUDIO_SPEECH_CUE_PAYLOAD_PATTERNS = [
-  /\b(says?|speaks?|talks?|asks?|answers?|utters?)\s*[:\uff1a]\s*[^.\n]+/gi,
-  /((?:\u5bf9[^\n:\uff1a]{0,32})?[\u8bf4\u95ee\u7b54]\u9053?)\s*[:\uff1a]\s*[^.\u3002\n]+/g,
-]
-
-const BERNINI_AUDIO_POSITIVE_TEXT_GUARD_LINE_PATTERN =
-  /^\s*(?:do not add|do not render|never convert|hard visual constraint:|dialogue must stay)\b.*\b(?:subtitles?|captions?|text overlays?|readable text|chinese characters|on-screen text|prompt text|ui text)\b/i
-
-const BERNINI_AUDIO_POSITIVE_TEXT_TERM_PATTERNS = [
-  /\b(?:no|without|avoid|never render|do not render|do not add)\s+(?:subtitles?|captions?|closed captions?|text overlays?|watermarks?|logos?|signs?|labels?|ui text|readable text|chinese characters|english letters|lower thirds?)\b/gi,
-  /\b(?:subtitles?|captions?|closed captions?|text overlays?|watermarks?|logos?|ui text|readable text|chinese characters|english letters|lower thirds?|karaoke text|lyrics text|dialogue text|speech bubbles|on-screen text)\b/gi,
-]
-
-function stripBerniniAudioQuotedDialogue(value: string): string {
-  let next = value
-  for (const pattern of BERNINI_AUDIO_QUOTED_DIALOGUE_PATTERNS) {
-    next = next.replace(pattern, '')
-  }
-  for (const pattern of BERNINI_AUDIO_SPEECH_CUE_PAYLOAD_PATTERNS) {
-    next = next.replace(pattern, '$1')
-  }
-  return next
-}
-
-function removeBerniniAudioPositiveTextTerms(value: string): string {
-  let next = value
-    .split('\n')
-    .filter((line) => !BERNINI_AUDIO_POSITIVE_TEXT_GUARD_LINE_PATTERN.test(line))
-    .join('\n')
-    .replace(/^Source text:/gim, 'Source cue:')
-
-  for (const pattern of BERNINI_AUDIO_POSITIVE_TEXT_TERM_PATTERNS) {
-    next = next.replace(pattern, '')
-  }
-
-  return next
-    .replace(/[ \t]+/g, ' ')
-    .replace(/[ \t]*,[ \t]*(?=[,.;:\n])/g, '')
-    .replace(/(?:,[ \t]*){2,}/g, ', ')
-    .replace(/[ \t]+([,.;:])/g, '$1')
-    .replace(/^[\s,.;:-]+$/gm, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join('\n')
-    .trim()
-}
-
-function buildBerniniAudioLtxStylePrompt(params: {
-  basePrompt: string
-  continuityPrompt: string
-}): string {
-  const sourcePrompt = params.continuityPrompt.trim() || params.basePrompt.trim()
-  const hasSpeakingIntent =
-    BERNINI_AUDIO_SPEAKING_INTENT_PATTERN.test(sourcePrompt)
-    || BERNINI_AUDIO_SPEAKING_INTENT_PATTERN.test(params.basePrompt)
-
-  let prompt = stripBerniniAudioQuotedDialogue(sourcePrompt)
-  prompt = removeBerniniAudioPositiveTextTerms(prompt)
-
-  if (hasSpeakingIntent && !/natural rhythmic mouth movement/i.test(prompt)) {
-    prompt = [prompt, `Audio performance: ${BERNINI_AUDIO_VISUAL_SPEAKING_PHRASE}.`]
-      .filter(Boolean)
-      .join('\n')
-  }
-
-  return prompt || (hasSpeakingIntent ? BERNINI_AUDIO_VISUAL_SPEAKING_PHRASE : sourcePrompt)
-}
-
 async function generateVideoForPanel(
   job: Job<TaskJobData>,
   panel: PanelRecord,
@@ -731,9 +633,8 @@ async function generateVideoForPanel(
   if (audioDrivenDuration && !audioDrivenDuration.canGenerate) {
     throwBlockedAudioTiming(audioDrivenDuration)
   }
-  const isBerniniAudioDriven = isSeedance2BerniniWorkflowKey(model) && referenceAudioUrls.length > 0
   const shouldKeepDialogueAudioOnly = referenceAudioUrls.length > 0
-    && (isBerniniAudioDriven || isLtx23VideoModel(model))
+    && isLtx23VideoModel(model)
   const effectiveGenerationOptions = withVideoWorkflowTimingDefaults({
     ...routedGenerationOptions,
     ...(audioDrivenDuration ? {
@@ -797,9 +698,7 @@ async function generateVideoForPanel(
           continuity: continuityPacket,
         })
       ).prompt
-    : isBerniniAudioDriven
-      ? buildBerniniAudioLtxStylePrompt({ basePrompt, continuityPrompt })
-      : continuityPrompt
+    : continuityPrompt
 
   const generatedVideo = await resolveVideoSourceFromGeneration(job, {
     userId: job.data.userId,
@@ -866,7 +765,10 @@ async function handleVideoPanelTask(job: Job<TaskJobData>) {
 
   const panel = await getPanelForVideoTask(job)
 
-  const generationOptions = extractGenerationOptions(payload)
+  const generationOptions = normalizeRetiredBerniniVideoGenerationOptions(
+    rawModelId,
+    extractGenerationOptions(payload),
+  )
 
   await reportTaskProgress(job, 10, {
     stage: 'generate_panel_video',

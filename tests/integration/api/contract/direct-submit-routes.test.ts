@@ -1097,7 +1097,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     }))
   })
 
-  it('single generate-video normalizes the Bernini audio lipsync key and stale fps before submit', async () => {
+  it('single generate-video migrates retired Bernini audio lipsync options to T8 before submit', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1126,18 +1126,18 @@ describe('api contract - direct submit routes (behavior)', () => {
     configServiceMock.resolveProjectModelCapabilityGenerationOptions.mockImplementationOnce(async (
       input?: CapabilityGenerationOptionsInput & { modelKey?: string },
     ): Promise<CapabilityGenerationOptions> => {
-      expect(input?.modelKey).toBe('comfyui::basevideo/seedance2/bernini-480p-i2v')
+      expect(input?.modelKey).toBe('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
       expect(input?.runtimeSelections).toEqual(expect.objectContaining({
         duration: 5,
-        fps: 24,
-        resolution: '480p',
+        fps: 25,
+        resolution: '720p',
         generationMode: 'normal',
         motionStrength: 2,
       }))
       return {
         duration: 5,
-        fps: 24,
-        resolution: '480p',
+        fps: 25,
+        resolution: '720p',
         generationMode: 'normal',
         motionStrength: 2,
       }
@@ -1151,7 +1151,7 @@ describe('api contract - direct submit routes (behavior)', () => {
         panelIndex: 0,
         generationOptions: {
           duration: 5,
-          fps: 25,
+          fps: 24,
           resolution: '480p',
           motionStrength: 2,
         },
@@ -1165,17 +1165,17 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(res.status).toBe(200)
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       generationOptions: expect.objectContaining({
         duration: 5,
-        fps: 24,
-        resolution: '480p',
+        fps: 25,
+        resolution: '720p',
         motionStrength: 2,
       }),
     }))
   })
 
-  it('single generate-video accepts an exact Bernini card duration outside the catalog presets', async () => {
+  it('single generate-video migrates retired Bernini options to T8 before capability validation', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1207,9 +1207,9 @@ describe('api contract - direct submit routes (behavior)', () => {
     ): Promise<CapabilityGenerationOptions> => {
       capabilityInput = input
       return {
-        duration: 10,
-        fps: 24,
-        resolution: '480p',
+        duration: 6,
+        fps: 25,
+        resolution: '720p',
         generationMode: 'normal',
         motionStrength: 1,
       }
@@ -1240,21 +1240,21 @@ describe('api contract - direct submit routes (behavior)', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(capabilityInput?.modelKey).toBe('comfyui::basevideo/seedance2/bernini-480p-i2v')
+    expect(capabilityInput?.modelKey).toBe('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
     expect(capabilityInput?.runtimeSelections).toEqual(expect.objectContaining({
-      duration: 10,
-      fps: 24,
-      resolution: '480p',
+      duration: 6,
+      fps: 25,
+      resolution: '720p',
       generationMode: 'normal',
       motionStrength: 1,
     }))
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       generationOptions: expect.objectContaining({
         duration: 6,
-        fps: 24,
-        resolution: '480p',
+        fps: 25,
+        resolution: '720p',
         motionStrength: 1,
       }),
     }))

@@ -140,7 +140,6 @@ export default function FreeVoiceToolCard() {
       if (!response.ok) throw new Error(await readApiErrorMessage(response, t('errors.submitFailed')))
       const data = await response.json() as { record: FreeVoiceRecord }
       setRecords((current) => [data.record, ...current.filter((record) => record.id !== data.record.id)])
-      setText('')
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : t('errors.submitFailed'))
     } finally {

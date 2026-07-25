@@ -121,8 +121,6 @@ export const PRESET_MODELS: PresetModel[] = [
     { modelId: 'baseimage/图片编辑/qwen三图编辑', name: 'ComfyUI · Qwen 三图编辑', type: 'image', provider: 'comfyui' },
     { modelId: 'baseimage/图片编辑/Flux2多图编辑', name: 'ComfyUI · Flux2 多图编辑', type: 'image', provider: 'comfyui' },
     // 视频模型
-    { modelId: 'basevideo/seedance2/bernini-480p-i2v', name: 'ComfyUI · Seedance2.0 Bernini 480p I2V', type: 'video', provider: 'comfyui' },
-    { modelId: 'basevideo/seedance2/bernini-480p-i2v-audio-lipsync', name: 'ComfyUI · Seedance2.0 Bernini 480p I2V Audio LipSync', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage', name: 'ComfyUI · LTX2.3 Goon First/Last Frame', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2', name: 'ComfyUI · LTX2.3 Smart VBVR I2V Audio', type: 'video', provider: 'comfyui' },
     // 音频模型

@@ -4,7 +4,7 @@ import { buildGenerateVideoRequestBody } from '@/lib/novel-promotion/video-gener
 describe('video generate request body', () => {
   const SMART_VBVR_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
   const LEGACY_LTX23_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-sulphur2-promptrelay-micro'
-  const BERNINI_MODEL_KEY = 'comfyui::basevideo/seedance2/bernini-480p-i2v'
+  const T8_PROMPTRELAY_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 
   it('includes the visible panel prompt as a root custom prompt when provided', () => {
     expect(buildGenerateVideoRequestBody({
@@ -20,20 +20,34 @@ describe('video generate request body', () => {
     })
   })
 
-  it('normalizes removed LTX2.3 video model keys to Bernini before submit', () => {
+  it('normalizes removed LTX2.3 video model keys to T8 before submit', () => {
     expect(buildGenerateVideoRequestBody({
       storyboardId: 'storyboard-1',
       panelIndex: 2,
       videoModel: LEGACY_LTX23_MODEL_KEY,
-    }).videoModel).toBe(BERNINI_MODEL_KEY)
+    }).videoModel).toBe(T8_PROMPTRELAY_MODEL_KEY)
   })
 
-  it('submits the Bernini audio lipsync workflow through the base Bernini model key', () => {
+  it('migrates retired Bernini audio options to T8 before submit', () => {
     expect(buildGenerateVideoRequestBody({
       storyboardId: 'storyboard-1',
       panelIndex: 2,
       videoModel: 'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
-    }).videoModel).toBe(BERNINI_MODEL_KEY)
+      generationOptions: {
+        duration: 5,
+        fps: 24,
+        resolution: '480p',
+        motionStrength: 2,
+      },
+    })).toMatchObject({
+      videoModel: T8_PROMPTRELAY_MODEL_KEY,
+      generationOptions: {
+        duration: 5,
+        fps: 25,
+        resolution: '720p',
+        motionStrength: 2,
+      },
+    })
   })
 
   it('includes a preceding-output continuity relay when provided', () => {

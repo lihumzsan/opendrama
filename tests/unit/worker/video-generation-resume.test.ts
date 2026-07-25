@@ -138,7 +138,7 @@ describe('worker utils video generation resume', () => {
 
     const result = await resolveVideoSourceFromGeneration(buildJob(), {
       userId: 'user-1',
-      modelId: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       imageUrl: 'data:image/png;base64,QQ==',
       options: {
         prompt: 'animate this frame',
@@ -241,111 +241,111 @@ describe('worker utils video generation resume', () => {
   })
 
   it.each([6, 16])(
-    'validates exact Bernini duration %ss with a catalog preset but submits the exact duration',
+    'passes supported T8 duration %ss through worker capability validation',
     async (duration) => {
       configServiceMock.resolveProjectModelCapabilityGenerationOptions.mockImplementationOnce(async (input: {
         runtimeSelections?: Record<string, unknown>
       }) => {
         expect(input.runtimeSelections).toEqual(expect.objectContaining({
-          duration: 10,
-          fps: 24,
+          duration,
+          fps: 25,
           generationMode: 'normal',
           motionStrength: 1,
-          resolution: '480p',
+          resolution: '720p',
         }))
         return {
-          duration: 10,
-          fps: 24,
+          duration,
+          fps: 25,
           generationMode: 'normal',
           motionStrength: 1,
-          resolution: '480p',
+          resolution: '720p',
         }
       })
       generatorApiMock.generateVideo.mockResolvedValueOnce({
         success: true,
-        videoUrl: `https://comfy.test/seedance2-bernini-${duration}s.mp4`,
+        videoUrl: `https://comfy.test/t8-promptrelay-${duration}s.mp4`,
       })
 
       const result = await resolveVideoSourceFromGeneration(buildJob(), {
         userId: 'user-1',
-        modelId: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+        modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
         imageUrl: 'data:image/png;base64,QQ==',
         allowCustomDuration: true,
         options: {
           prompt: 'animate this frame',
           duration,
-          fps: 24,
+          fps: 25,
           generationMode: 'normal',
           motionStrength: 1,
-          resolution: '480p',
+          resolution: '720p',
         },
       })
 
-      expect(result).toEqual({ url: `https://comfy.test/seedance2-bernini-${duration}s.mp4` })
+      expect(result).toEqual({ url: `https://comfy.test/t8-promptrelay-${duration}s.mp4` })
       expect(generatorApiMock.generateVideo).toHaveBeenCalledWith(
         'user-1',
-        'comfyui::basevideo/seedance2/bernini-480p-i2v',
+        'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
         'data:image/png;base64,QQ==',
         expect.objectContaining({
           duration,
-          fps: 24,
+          fps: 25,
           motionStrength: 1,
           prompt: 'animate this frame',
-          resolution: '480p',
+          resolution: '720p',
         }),
       )
     },
   )
 
-  it('passes Seedance2 Bernini fps and motion strength into worker capability validation', async () => {
+  it('passes T8 fps and motion strength into worker capability validation', async () => {
     configServiceMock.resolveProjectModelCapabilityGenerationOptions.mockImplementationOnce(async (input: {
       runtimeSelections?: Record<string, unknown>
     }) => {
       expect(input.runtimeSelections).toEqual(expect.objectContaining({
         duration: 5,
-        fps: 24,
+        fps: 25,
         generationMode: 'normal',
         motionStrength: 2,
-        resolution: '480p',
+        resolution: '720p',
       }))
       return {
         duration: 5,
-        fps: 24,
+        fps: 25,
         generationMode: 'normal',
         motionStrength: 2,
-        resolution: '480p',
+        resolution: '720p',
       }
     })
     generatorApiMock.generateVideo.mockResolvedValueOnce({
       success: true,
-      videoUrl: 'https://comfy.test/seedance2-bernini.mp4',
+      videoUrl: 'https://comfy.test/t8-promptrelay.mp4',
     })
 
     const result = await resolveVideoSourceFromGeneration(buildJob(), {
       userId: 'user-1',
-      modelId: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       imageUrl: 'data:image/png;base64,QQ==',
       options: {
         prompt: 'animate this frame',
         duration: 5,
-        fps: 24,
+        fps: 25,
         generationMode: 'normal',
         motionStrength: 2,
-        resolution: '480p',
+        resolution: '720p',
       },
     })
 
-    expect(result).toEqual({ url: 'https://comfy.test/seedance2-bernini.mp4' })
+    expect(result).toEqual({ url: 'https://comfy.test/t8-promptrelay.mp4' })
     expect(generatorApiMock.generateVideo).toHaveBeenCalledWith(
       'user-1',
-      'comfyui::basevideo/seedance2/bernini-480p-i2v',
+      'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       'data:image/png;base64,QQ==',
       expect.objectContaining({
         duration: 5,
-        fps: 24,
+        fps: 25,
         motionStrength: 2,
         prompt: 'animate this frame',
-        resolution: '480p',
+        resolution: '720p',
       }),
     )
   })

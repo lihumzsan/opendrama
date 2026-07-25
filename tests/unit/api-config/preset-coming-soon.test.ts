@@ -15,48 +15,30 @@ describe('api-config preset coming soon', () => {
     expect(model?.name).toBe('Nano Banana 2')
   })
 
-  it('registers Seedance 2.0 and Seedance 2.0 Fast as preset video models', () => {
+  it('does not expose Ark video presets when video generation is restricted to ComfyUI', () => {
     const modelIds = PRESET_MODELS
       .filter((entry) => entry.provider === 'ark' && entry.type === 'video')
       .map((entry) => entry.modelId)
 
-    expect(modelIds).toEqual(expect.arrayContaining([
-      'doubao-seedance-2-0-260128',
-      'doubao-seedance-2-0-fast-260128',
-    ]))
+    expect(modelIds).toEqual([])
   })
 
-  it('does not mark live preset models as coming soon', () => {
-    const modelKey = encodeModelKey('ark', 'doubao-seedance-2-0-260128')
-    expect(isPresetComingSoonModel('ark', 'doubao-seedance-2-0-260128')).toBe(false)
+  it('keeps the supported ComfyUI video preset available and non-coming-soon', () => {
+    const modelKey = encodeModelKey('comfyui', 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')
+    expect(PRESET_MODELS).toContainEqual(expect.objectContaining({
+      provider: 'comfyui',
+      modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      type: 'video',
+    }))
+    expect(isPresetComingSoonModel('comfyui', 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')).toBe(false)
     expect(isPresetComingSoonModelKey(modelKey)).toBe(false)
   })
 
-  it('does not mark normal preset models as coming soon', () => {
-    const modelKey = encodeModelKey('ark', 'doubao-seedance-2-0-fast-260128')
-    expect(isPresetComingSoonModel('ark', 'doubao-seedance-2-0-fast-260128')).toBe(false)
-    expect(isPresetComingSoonModelKey(modelKey)).toBe(false)
-  })
-
-  it('keeps existing live preset models non-coming-soon', () => {
-    const modelKey = encodeModelKey('ark', 'doubao-seedance-1-5-pro-251215')
-    expect(isPresetComingSoonModel('ark', 'doubao-seedance-1-5-pro-251215')).toBe(false)
-    expect(isPresetComingSoonModelKey(modelKey)).toBe(false)
-  })
-
-  it('registers Bailian Wan i2v preset models', () => {
+  it('does not expose Bailian Wan video presets when video generation is restricted to ComfyUI', () => {
     const modelIds = PRESET_MODELS
       .filter((entry) => entry.provider === 'bailian' && entry.type === 'video')
       .map((entry) => entry.modelId)
 
-    expect(modelIds).toEqual(expect.arrayContaining([
-      'wan2.7-i2v',
-      'wan2.6-i2v-flash',
-      'wan2.6-i2v',
-      'wan2.5-i2v-preview',
-      'wan2.2-i2v-plus',
-      'wan2.2-kf2v-flash',
-      'wanx2.1-kf2v-plus',
-    ]))
+    expect(modelIds).toEqual([])
   })
 })

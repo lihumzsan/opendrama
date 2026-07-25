@@ -70,25 +70,4 @@ describe('comfyui video capabilities catalog', () => {
     expect(normalizeVideoGenerationSelections({ definitions }).motionStrength).toBe(1)
   })
 
-  it('registers Seedance2 Bernini 480p with motion strength controls', () => {
-    for (const modelId of [
-      'basevideo/seedance2/bernini-480p-i2v',
-      'basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
-    ]) {
-      const capabilities = findBuiltinCapabilities('video', 'comfyui', modelId)
-
-      expect(capabilities?.video?.generationModeOptions).toEqual(['normal'])
-      expect(capabilities?.video?.durationOptions).toEqual([5, 10])
-      expect(capabilities?.video?.fpsOptions).toEqual([24])
-      expect(capabilities?.video?.resolutionOptions).toEqual(['480p'])
-      expect(capabilities?.video?.motionStrengthOptions).toEqual([1, 2, 3])
-      expect(capabilities?.video?.firstlastframe).toBe(false)
-      expect(capabilities?.video?.supportGenerateAudio).toBe(false)
-      expect(capabilities?.video?.fieldI18n?.motionStrength?.optionLabelKeys).toEqual({
-        1: 'capability.motionStrengthOption.1',
-        2: 'capability.motionStrengthOption.2',
-        3: 'capability.motionStrengthOption.3',
-      })
-    }
-  })
 })

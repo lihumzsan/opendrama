@@ -47,9 +47,9 @@ describe('api config filters', () => {
         enabled: true,
       },
       {
-        modelId: 'basevideo/seedance2/bernini-480p-i2v',
-        modelKey: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
-        name: 'ComfyUI · Seedance2.0 Bernini 480p I2V',
+        modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+        modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+        name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
         type: 'video',
         provider: 'comfyui',
         price: 0,
@@ -149,7 +149,7 @@ describe('api config filters', () => {
     ])
   })
 
-  it('limits bailian coding plan providers to supported text models only', () => {
+  it('excludes Bailian text and video models from default selections', () => {
     const providers: Provider[] = [
       { id: 'bailian', name: 'Alibaba Bailian', hasApiKey: true, apiKey: 'sk-sp-demo' },
     ]
@@ -185,7 +185,7 @@ describe('api config filters', () => {
 
     const result = useApiConfigFilters({ providers, models })
 
-    expect(result.getEnabledModelsByType('llm').map((model) => model.modelId)).toEqual(['qwen3.5-plus'])
+    expect(result.getEnabledModelsByType('llm')).toEqual([])
     expect(result.getEnabledModelsByType('video')).toEqual([])
   })
 

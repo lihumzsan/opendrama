@@ -3,11 +3,13 @@ import { queueRedis } from '@/lib/redis'
 import { QueueType, TaskType, TASK_TYPE, type TaskJobData } from './types'
 import { readImageQueueGlobalConcurrency } from './image-queue-concurrency'
 
+const queueNamePrefix = process.env.QUEUE_NAME_PREFIX?.trim() || 'opendrama'
+
 export const QUEUE_NAME = {
-  IMAGE: 'opendrama-image',
-  VIDEO: 'opendrama-video',
-  VOICE: 'opendrama-voice',
-  TEXT: 'opendrama-text',
+  IMAGE: `${queueNamePrefix}-image`,
+  VIDEO: `${queueNamePrefix}-video`,
+  VOICE: `${queueNamePrefix}-voice`,
+  TEXT: `${queueNamePrefix}-text`,
 } as const
 
 const defaultJobOptions: JobsOptions = {

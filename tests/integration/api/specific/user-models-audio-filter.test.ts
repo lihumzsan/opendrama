@@ -71,8 +71,6 @@ describe('api specific - user models audio filter', () => {
       'comfyui::baseaudio/单人/LongCat-one',
     ])
     expect(body.video.map((item) => item.value)).toEqual([
-      'comfyui::basevideo/seedance2/bernini-480p-i2v',
-      'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
       'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
       'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
       'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',

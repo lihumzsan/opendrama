@@ -43,8 +43,8 @@ describe('video model options partition', () => {
       label: 'custom-no-capability',
     },
     {
-      value: 'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync',
-      label: 'Bernini Audio LipSync',
+      value: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+      label: 'T8 PromptRelay',
       capabilities: {
         video: {
           generationModeOptions: ['normal'],
@@ -74,6 +74,7 @@ describe('video model options partition', () => {
       'p::normal',
       'p::both',
       'p::custom-no-capability',
+      'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     ])
   })
 })

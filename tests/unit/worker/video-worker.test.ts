@@ -42,6 +42,7 @@ const LEGACY_LTX23_FIRST_LAST_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-smoo
 const LTX23_LARGE_MOTION_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-single-image-large-motion-4stage'
 const BERNINI_MODEL = 'comfyui::basevideo/seedance2/bernini-480p-i2v'
 const BERNINI_AUDIO_MODEL = 'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync'
+const T8_PROMPTRELAY_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 
 const reportTaskProgressMock = vi.hoisted(() => vi.fn(async () => undefined))
 const videoSeamConcatHandlerMock = vi.hoisted(() => vi.fn(async () => ({ videoKey: 'output.mp4' })))
@@ -462,7 +463,7 @@ describe('worker video processor behavior', () => {
     )
   })
 
-  it('VIDEO_PANEL: normalizes Bernini audio-lipsync payloads and stale fps before generation', async () => {
+  it('VIDEO_PANEL: migrates retired Bernini audio-lipsync payload options to T8 before generation', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -502,32 +503,19 @@ describe('worker video processor behavior', () => {
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        modelId: BERNINI_MODEL,
+        modelId: T8_PROMPTRELAY_MODEL,
         allowCustomDuration: true,
         options: expect.objectContaining({
-          duration: 4.8,
-          fps: 24,
+          duration: 5,
+          fps: 25,
           generationMode: 'normal',
           motionStrength: 2,
           referenceAudioUrls: ['https://signed.example/cos/line-1.mp3'],
-          resolution: '480p',
+          resolution: '720p',
         }),
       }),
     )
 
-    const generationCall = utilsMock.resolveVideoSourceFromGeneration.mock.calls[0]?.[1] as {
-      options?: { prompt?: string }
-    }
-    const prompt = generationCall.options?.prompt || ''
-    expect(prompt).toContain('Dialogue lines: none')
-    expect(prompt.toLowerCase()).toContain('natural rhythmic mouth movement')
-    expect(prompt).not.toContain('Please answer clearly so the lip sync can follow the voice.')
-    expect(prompt).not.toContain('Spoken subtitle text that must remain audio-only.')
-    expect(prompt).not.toContain('If dialogue is listed')
-    expect(prompt.toLowerCase()).not.toContain('subtitles')
-    expect(prompt.toLowerCase()).not.toContain('caption')
-    expect(prompt.toLowerCase()).not.toContain('text overlay')
-    expect(prompt.toLowerCase()).not.toContain('readable text')
   })
 
   it('VIDEO_PANEL: blocks overlong audio-backed Smart VBVR requests instead of routing away', async () => {
@@ -996,7 +984,7 @@ describe('worker video processor behavior', () => {
     })
   })
 
-  it('VIDEO_PANEL: sends Seedance2 Bernini motion strength and exact timing without LTX prompt enhancement', async () => {
+  it('VIDEO_PANEL: migrates retired Bernini motion strength and timing to T8', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -1015,18 +1003,17 @@ describe('worker video processor behavior', () => {
 
     await processor!(job)
 
-    expect(ltxPromptEnhanceMock.enhanceLtx23VideoPrompt).not.toHaveBeenCalled()
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        modelId: BERNINI_MODEL,
+        modelId: T8_PROMPTRELAY_MODEL,
         imageUrl: 'https://signed.example/cos/panel-image.png',
         allowCustomDuration: true,
         options: expect.objectContaining({
           duration: 5,
-          fps: 24,
+          fps: 25,
           motionStrength: 1,
-          resolution: '480p',
+          resolution: '720p',
           generationMode: 'normal',
           prompt: expect.stringContaining('panel prompt'),
         }),
@@ -1034,7 +1021,7 @@ describe('worker video processor behavior', () => {
     )
   })
 
-  it('VIDEO_PANEL: uses Bernini capability fps for audio-matched timing', async () => {
+  it('VIDEO_PANEL: uses T8 capability fps for retired Bernini audio-matched timing', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -1069,13 +1056,13 @@ describe('worker video processor behavior', () => {
     expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        modelId: BERNINI_MODEL,
+        modelId: T8_PROMPTRELAY_MODEL,
         allowCustomDuration: true,
         options: expect.objectContaining({
-          duration: 3.6,
-          fps: 24,
+          duration: 5,
+          fps: 25,
           motionStrength: 2,
-          resolution: '480p',
+          resolution: '720p',
           generationMode: 'normal',
           referenceAudioUrls: ['https://signed.example/cos/line-1.mp3'],
         }),

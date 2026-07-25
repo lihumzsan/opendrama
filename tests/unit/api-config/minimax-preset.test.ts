@@ -8,15 +8,11 @@ describe('api-config minimax preset', () => {
     expect(minimaxProvider?.baseUrl).toBe('https://api.minimaxi.com/v1')
   })
 
-  it('includes all required minimax official llm preset models', () => {
+  it('does not expose minimax text models when text generation is restricted to Codex', () => {
     const minimaxLlmModelIds = PRESET_MODELS
       .filter((model) => model.provider === 'minimax' && model.type === 'llm')
       .map((model) => model.modelId)
 
-    expect(minimaxLlmModelIds).toContain('MiniMax-M2.5')
-    expect(minimaxLlmModelIds).toContain('MiniMax-M2.5-highspeed')
-    expect(minimaxLlmModelIds).toContain('MiniMax-M2.1')
-    expect(minimaxLlmModelIds).toContain('MiniMax-M2.1-highspeed')
-    expect(minimaxLlmModelIds).toContain('MiniMax-M2')
+    expect(minimaxLlmModelIds).toEqual([])
   })
 })

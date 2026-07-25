@@ -8,8 +8,10 @@ import { TASK_TYPE } from '@/lib/task/types'
 import { hasPanelVideoOutput } from '@/lib/task/has-output'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
 import { parseModelKeyStrict, type CapabilityValue } from '@/lib/model-config-contract'
-import { normalizeVideoModelKey } from '@/lib/novel-promotion/video-model-defaults'
-import { resolveBerniniCapabilityValidationDuration } from '@/lib/model-capabilities/video-recommended-duration'
+import {
+  normalizeRetiredBerniniVideoGenerationOptions,
+  normalizeVideoModelKey,
+} from '@/lib/novel-promotion/video-model-defaults'
 import {
   resolveBuiltinCapabilitiesByModelKey,
 } from '@/lib/model-capabilities/lookup'
@@ -28,10 +30,6 @@ import {
 } from '@/lib/providers/comfyui/ltx23-workflow-router'
 import { normalizeLtx23GoonDurationSeconds } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { isRemovedLegacyLtx23WorkflowKey } from '@/lib/providers/comfyui/ltx23-legacy'
-import {
-  SEEDANCE2_BERNINI_DEFAULT_FPS,
-  isSeedance2BerniniWorkflowKey,
-} from '@/lib/providers/comfyui/seedance2-bernini-workflow'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -108,6 +106,12 @@ function normalizeVideoPayloadModelKeys(payload: unknown): Record<string, unknow
 
   const normalized: Record<string, unknown> = { ...payload }
   if (typeof normalized.videoModel === 'string') {
+    if (isRecord(normalized.generationOptions)) {
+      normalized.generationOptions = normalizeRetiredBerniniVideoGenerationOptions(
+        normalized.videoModel,
+        normalized.generationOptions,
+      )
+    }
     normalized.videoModel = normalizeVideoModelKey(normalized.videoModel)
   }
   if (isRecord(normalized.firstLastFrame) && typeof normalized.firstLastFrame.flModel === 'string') {
@@ -116,50 +120,9 @@ function normalizeVideoPayloadModelKeys(payload: unknown): Record<string, unknow
       flModel: normalizeVideoModelKey(normalized.firstLastFrame.flModel),
     }
   }
-  if (isRecord(normalized.generationOptions) && typeof normalized.videoModel === 'string') {
-    normalized.generationOptions = normalizeVideoGenerationOptionsForModel(
-      normalized.videoModel,
-      normalized.generationOptions,
-    )
-  }
   return normalized
 }
 
-function normalizeVideoGenerationOptionsForModel(
-  modelKey: string,
-  generationOptions: Record<string, unknown>,
-): Record<string, unknown> {
-  if (!isSeedance2BerniniWorkflowKey(modelKey)) return generationOptions
-
-  return {
-    ...generationOptions,
-    fps: SEEDANCE2_BERNINI_DEFAULT_FPS,
-  }
-}
-
-function normalizeVideoRuntimeSelectionsForModel(
-  modelKey: string,
-  runtimeSelections: Record<string, CapabilityValue>,
-): Record<string, CapabilityValue> {
-  if (!isSeedance2BerniniWorkflowKey(modelKey)) return runtimeSelections
-
-  const requestedDuration = readPositiveFiniteNumber(runtimeSelections.duration)
-  const durationOptions = resolveBuiltinCapabilitiesByModelKey('video', modelKey)?.video?.durationOptions
-
-  return {
-    ...runtimeSelections,
-    ...(requestedDuration !== null
-      ? {
-          duration: resolveBerniniCapabilityValidationDuration(
-            modelKey,
-            requestedDuration,
-            durationOptions,
-          ),
-        }
-      : {}),
-    fps: SEEDANCE2_BERNINI_DEFAULT_FPS,
-  }
-}
 
 function validateFirstLastFrameModel(input: unknown) {
   if (input === undefined || input === null) return
@@ -203,11 +166,11 @@ async function validateVideoCapabilityCombination(input: {
 
   const routing = isRecord(payload.ltx23WorkflowRouting) ? payload.ltx23WorkflowRouting : null
   const capabilityDurationSeconds = readPositiveFiniteNumber(routing?.capabilityDurationSeconds)
-  const runtimeSelections = normalizeVideoRuntimeSelectionsForModel(modelKey, {
+  const runtimeSelections = {
     ...toVideoRuntimeSelections(payload.generationOptions),
     ...(capabilityDurationSeconds !== null ? { duration: capabilityDurationSeconds } : {}),
     generationMode: resolveVideoGenerationMode(payload),
-  })
+  }
 
   let resolvedOptions: Record<string, CapabilityValue>
   try {

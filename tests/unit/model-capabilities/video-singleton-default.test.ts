@@ -7,13 +7,13 @@ import {
 } from '@/lib/model-capabilities/video-effective'
 
 describe('model-capabilities/lookup - video singleton defaults', () => {
-  const modelKey = 'comfyui::basevideo/seedance2/bernini-480p-i2v'
+  const modelKey = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
   const capabilities: ModelCapabilities = {
     video: {
       generationModeOptions: ['normal'],
-      durationOptions: [5, 10],
-      fpsOptions: [24],
-      resolutionOptions: ['480p'],
+      durationOptions: [4, 5, 6, 8, 10, 12, 16, 20],
+      fpsOptions: [25],
+      resolutionOptions: ['720p'],
       motionStrengthOptions: [1, 2, 3],
     },
   }
@@ -23,7 +23,7 @@ describe('model-capabilities/lookup - video singleton defaults', () => {
       [modelKey]: {
         generationMode: 'normal',
         duration: 10,
-        resolution: '480p',
+        resolution: '720p',
         motionStrength: 2,
       },
     }
@@ -40,8 +40,8 @@ describe('model-capabilities/lookup - video singleton defaults', () => {
     expect(result.options).toEqual({
       generationMode: 'normal',
       duration: 10,
-      fps: 24,
-      resolution: '480p',
+      fps: 25,
+      resolution: '720p',
       motionStrength: 2,
     })
   })

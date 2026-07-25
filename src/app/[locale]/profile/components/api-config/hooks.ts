@@ -148,7 +148,7 @@ const COMFYUI_PRESET_DEFAULT_MODEL_IDS = {
     locationModel: 'baseimage/图片生成/Flux2Klein文生图',
     storyboardModel: 'baseimage/图片分镜/Qwen剧情分镜制作',
     editModel: 'baseimage/图片编辑/qwen单图编辑',
-    videoModel: 'basevideo/seedance2/bernini-480p-i2v',
+    videoModel: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     audioModel: 'baseaudio/单人/LongCat-one',
     voiceDesignModel: 'baseaudio/\u97f3\u8272/s2-se',
 } as const
