@@ -7,6 +7,7 @@ import type {
   VideoPanel,
 } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/video'
 import { parseVideoDurationBinding } from '@/lib/video-duration/audio-binding'
+import { buildVideoPanelGroups } from './video-panel-groups'
 
 interface TaskStateLike {
   phase?: string | null
@@ -147,8 +148,14 @@ export function useVideoPanelsProjection({
     return panels
   }, [panelLipStates, panelVideoStates, sortedStoryboards])
 
+  const panelGroups = useMemo(
+    () => buildVideoPanelGroups(sortedStoryboards, clips, allPanels),
+    [allPanels, clips, sortedStoryboards],
+  )
+
   return {
     sortedStoryboards,
     allPanels,
+    panelGroups,
   }
 }

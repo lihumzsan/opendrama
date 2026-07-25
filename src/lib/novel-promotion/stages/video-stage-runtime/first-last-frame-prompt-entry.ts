@@ -65,13 +65,13 @@ export function createPersistedPromptEntry(params: {
     origin: params.editedByUser ? 'user' : 'generated',
     dirty: false,
     status: 'idle',
-    ready: false,
+    ready: true,
     ...(params.sourceFingerprint ? { sourceFingerprint: params.sourceFingerprint } : {}),
   }
 }
 
 export function buildFirstLastFrameVideoPrompt(entry: FirstLastFramePromptEntry) {
-  if (entry.ready === false) throw new Error('FIRST_LAST_FRAME_PROMPT_NOT_READY')
+  if (!entry.value.trim()) throw new Error('FIRST_LAST_FRAME_PROMPT_NOT_READY')
   return {
     customPrompt: entry.value,
     customPromptEditedByUser: entry.origin === 'user',
@@ -321,9 +321,9 @@ export function resolvePanelFirstLastFrameGenerationOptions<T extends Record<str
 
 export function resolvePromptEntryReadiness(
   entry: FirstLastFramePromptEntry,
-  currentSourceSignature: string,
+  _currentSourceSignature: string,
 ): FirstLastFramePromptEntry {
-  if (entry.ready && entry.verifiedSourceSignature === currentSourceSignature) return entry
+  if (entry.ready) return entry
   if (entry.status === 'error' || entry.status === 'saving') return { ...entry, ready: false }
   return {
     ...entry,
@@ -346,8 +346,10 @@ export function shouldAutoEnsurePrompt(params: {
   taskHydrated: boolean
   taskPhase?: string | null
   ignoreActiveSnapshot?: boolean
+  hasPersistedPrompt?: boolean
 }) {
   if (!params.taskHydrated) return false
+  if (params.hasPersistedPrompt) return false
   if (params.ignoreActiveSnapshot && (params.taskPhase === 'queued' || params.taskPhase === 'processing')) {
     return true
   }

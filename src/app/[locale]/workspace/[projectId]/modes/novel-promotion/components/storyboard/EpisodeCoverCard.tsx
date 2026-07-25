@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTranslations } from 'next-intl'
-import { MediaImageWithLoading } from '@/components/media/MediaImageWithLoading'
+import { MediaImage } from '@/components/media/MediaImage'
 import { AppIcon } from '@/components/ui/icons'
 import { GlassButton, GlassSurface } from '@/components/ui/primitives'
+import ImagePreviewModal from '@/components/ui/ImagePreviewModal'
 import { useGenerateEpisodeCover } from '@/lib/query/hooks'
 import { useTaskTargetStateMap } from '@/lib/query/hooks/useTaskTargetStateMap'
 import { invalidateEpisodeQueries } from '@/lib/query/episode-cache'
@@ -14,6 +15,7 @@ import { resolveTaskPresentationState, type TaskPresentationState } from '@/lib/
 import { TASK_TYPE } from '@/lib/task/types'
 
 interface EpisodeCoverCardProps {
+  episodeId: string
   coverImageUrl?: string | null
   videoRatio: string
   taskState: TaskPresentationState | null
@@ -30,6 +32,20 @@ interface EpisodeCoverSectionProps {
 }
 
 const EPISODE_COVER_ACTIVE_POLLING_INTERVAL_MS = 5_000
+
+export async function downloadEpisodeCoverImage(imageUrl: string, episodeId: string): Promise<void> {
+  const response = await fetch(imageUrl)
+  if (!response.ok) throw new Error('EPISODE_COVER_DOWNLOAD_FAILED')
+
+  const objectUrl = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = `episode-cover-${episodeId}.png`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(objectUrl)
+}
 
 function parseRatio(value: string): { width: number; height: number } | null {
   const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*[:/]\s*(\d+(?:\.\d+)?)$/)
@@ -56,6 +72,7 @@ function resolvePreviewWidthClass(value: string): string {
 }
 
 export default function EpisodeCoverCard({
+  episodeId,
   coverImageUrl,
   videoRatio,
   taskState,
@@ -64,6 +81,11 @@ export default function EpisodeCoverCard({
   onGenerate,
 }: EpisodeCoverCardProps) {
   const t = useTranslations('storyboard')
+  const tCommon = useTranslations('common')
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const [imageLoadFailed, setImageLoadFailed] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
   const isRunning = isSubmitting || !!taskState?.isRunning
   const isFailed = !!errorMessage || !!taskState?.isError
   const actionLabel = isRunning
@@ -71,31 +93,57 @@ export default function EpisodeCoverCard({
     : isFailed
       ? t('episodeCover.retry')
       : coverImageUrl
-        ? t('episodeCover.regenerate')
+      ? t('episodeCover.regenerate')
         : t('episodeCover.generate')
 
+  useEffect(() => {
+    setImageLoadFailed(false)
+    setDownloadError(null)
+  }, [coverImageUrl])
+
+  const handleDownload = async () => {
+    if (!coverImageUrl || isDownloading) return
+    setIsDownloading(true)
+    setDownloadError(null)
+    try {
+      await downloadEpisodeCoverImage(coverImageUrl, episodeId)
+    } catch {
+      setDownloadError(t('episodeCover.downloadFailed'))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
-    <GlassSurface variant="card" density="compact" className="overflow-hidden">
+    <>
+      <GlassSurface variant="card" density="compact" className="overflow-hidden">
       <div className="flex flex-col gap-5 md:flex-row md:items-center">
         <div
           className={`relative shrink-0 overflow-hidden rounded-2xl border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-muted)] ${resolvePreviewWidthClass(videoRatio)}`}
           style={{ aspectRatio: resolveEpisodeCoverAspectRatio(videoRatio) }}
         >
-          {coverImageUrl ? (
-            <MediaImageWithLoading
-              src={coverImageUrl}
-              alt={t('episodeCover.imageAlt')}
-              fill
-              sizes="(max-width: 767px) 100vw, 320px"
-              containerClassName="absolute inset-0"
-              className="h-full w-full object-cover"
-            />
+          {coverImageUrl && !imageLoadFailed ? (
+            <button
+              type="button"
+              className="absolute inset-0 block h-full w-full cursor-zoom-in"
+              aria-label={tCommon('previewLarge')}
+              onClick={() => setPreviewImageUrl(coverImageUrl)}
+            >
+              <MediaImage
+                src={coverImageUrl}
+                alt={t('episodeCover.imageAlt')}
+                fill
+                sizes="(max-width: 767px) 100vw, 320px"
+                className="h-full w-full object-cover"
+                onError={() => setImageLoadFailed(true)}
+              />
+            </button>
           ) : !isRunning ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--glass-text-tertiary)]">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--glass-bg-surface-strong)]">
                 <AppIcon name="image" className="h-5 w-5" />
               </span>
-              <span className="text-xs">{t('episodeCover.empty')}</span>
+              <span className="text-xs">{imageLoadFailed ? t('episodeCover.loadFailed') : t('episodeCover.empty')}</span>
             </div>
           ) : null}
 
@@ -130,7 +178,26 @@ export default function EpisodeCoverCard({
             </div>
           )}
 
-          <div className="mt-4">
+          {downloadError && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-[var(--glass-tone-danger-fg)]/20 bg-[var(--glass-tone-danger-bg)] px-3 py-2 text-xs text-[var(--glass-tone-danger-fg)]">
+              <AppIcon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{downloadError}</span>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {coverImageUrl && (
+              <GlassButton
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={isDownloading}
+                onClick={() => void handleDownload()}
+                iconLeft={<AppIcon name="download" className="h-4 w-4" />}
+              >
+                {isDownloading ? t('episodeCover.downloading') : tCommon('download')}
+              </GlassButton>
+            )}
             <GlassButton
               type="button"
               variant={coverImageUrl ? 'secondary' : 'primary'}
@@ -144,7 +211,11 @@ export default function EpisodeCoverCard({
           </div>
         </div>
       </div>
-    </GlassSurface>
+      </GlassSurface>
+      {previewImageUrl && (
+        <ImagePreviewModal imageUrl={previewImageUrl} onClose={() => setPreviewImageUrl(null)} />
+      )}
+    </>
   )
 }
 
@@ -205,6 +276,7 @@ export function EpisodeCoverSection({
       errorMessage={errorMessage}
       isSubmitting={generateCover.isPending}
       onGenerate={() => generateCover.mutate({ episodeId, hasOutput: !!coverImageUrl })}
+      episodeId={episodeId}
     />
   )
 }

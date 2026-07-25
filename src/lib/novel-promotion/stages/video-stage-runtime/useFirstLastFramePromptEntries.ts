@@ -364,6 +364,7 @@ export function useFirstLastFramePromptEntries({
           taskHydrated: !promptTaskStates.isFetching,
           taskPhase: task?.phase,
           ignoreActiveSnapshot: locallySettledPanelsRef.current.has(panelKey),
+          hasPersistedPrompt: Boolean(firstPanel.firstLastFramePrompt?.trim()),
         })
       ) continue
       candidates.push(panelKey)

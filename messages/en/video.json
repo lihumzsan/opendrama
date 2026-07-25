@@ -99,6 +99,18 @@
     "next": "Next",
     "status": "Page {page} of {totalPages}"
   },
+  "segments": {
+    "title": "Segment {index}",
+    "shots": "{count} shots",
+    "completed": "Completed {count}",
+    "running": "Generating {count}",
+    "failed": "Failed {count}",
+    "pending": "Pending {count}",
+    "generatePending": "Generate pending",
+    "retryFailed": "Retry failed",
+    "expand": "Expand segment",
+    "collapse": "Collapse segment"
+  },
   "stage": {
     "title": "Video Generation",
     "generateAll": "Generate All",

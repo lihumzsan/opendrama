@@ -69,6 +69,8 @@ prisma/data/
 
 # uploads (user data)
 uploads/
+!/src/app/api/video-tools/uploads/
+!/src/app/api/video-tools/uploads/route.ts
 /data/
 /local-transfer/
 

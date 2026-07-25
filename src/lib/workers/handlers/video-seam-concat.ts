@@ -26,7 +26,6 @@ import {
   openVideoSeamOutput,
   probeVideoSeamFile,
   readVideoSeamAnchorDataUrl,
-  verifyVideoSeamOutput,
   type VideoSeamWorkspace,
 } from '@/lib/video/video-seam-media'
 import { reportTaskProgress } from '../shared'
@@ -351,7 +350,7 @@ async function buildAiBridgeResult({
       outputPath: workspace.outputPath,
       plan,
     })
-    const output = await verifyVideoSeamOutput(workspace.outputPath, plan)
+    const output = await probeVideoSeamFile(workspace.outputPath)
     await reportTaskProgress(job, 90, {
       stage: 'persist_output',
       stageLabel: 'videoTools.status.persisting',

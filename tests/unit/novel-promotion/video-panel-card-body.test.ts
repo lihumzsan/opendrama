@@ -245,7 +245,7 @@ describe('VideoPanelCardBody', () => {
 
     expect(markup).toMatch(/<button(?![^>]*disabled="")[^>]*>regenerate-first-last-video<\/button>/)
   })
-  it('shows prompt task state and disables editing and video submission while generation is active', () => {
+  it('keeps video submission available with the existing prompt while a replacement prompt is generating', () => {
     const runtime = createRuntime()
     runtime.layout.flPromptEntry = {
       value: 'Keep visible text',
@@ -260,7 +260,7 @@ describe('VideoPanelCardBody', () => {
 
     expect(markup).toContain('firstLastFrame.promptProcessing')
     expect(markup).toMatch(/<button[^>]*disabled=""[^>]*><span>edit<\/span><\/button>/)
-    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>生成首尾帧视频<\/button>/)
+    expect(markup).not.toMatch(/<button[^>]*disabled=""[^>]*class="flex-shrink-0[^>]*>/)
   })
 
   it('shows fallback warning and retry without blocking video submission', () => {
@@ -320,7 +320,7 @@ describe('VideoPanelCardBody', () => {
     expect(markup).not.toContain('stale editor copy')
     expect(markup).not.toContain('panelCard.cancel')
     expect(markup).toContain('data-prompt-config-disabled="true"')
-    expect(markup.match(/<button[^>]*disabled=""/g)?.length).toBeGreaterThanOrEqual(3)
+    expect(markup.match(/<button[^>]*disabled=""/g)?.length).toBeGreaterThanOrEqual(2)
   })
 
   it('offers manual regenerate for an idle linked prompt', () => {

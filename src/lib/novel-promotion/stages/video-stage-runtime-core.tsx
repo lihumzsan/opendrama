@@ -44,10 +44,7 @@ import {
   type VideoSubmissionBaseline,
 } from './video-stage-runtime/immediate-video-submission'
 import type { VideoDurationBinding } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/video'
-import {
-  getVideoPanelPage,
-  paginateVideoPanels,
-} from './video-stage-runtime/video-panel-pagination'
+import { getVideoPanelGroupStats } from './video-stage-runtime/video-panel-groups'
 
 export type { VideoStageShellProps } from './video-stage-runtime/types'
 
@@ -106,38 +103,63 @@ export function useVideoStageRuntime({
     projectId,
     storyboards,
   })
-  const { allPanels } = useVideoPanelsProjection({
+  const { allPanels, panelGroups } = useVideoPanelsProjection({
     storyboards,
     clips,
     panelVideoStates,
     panelLipStates,
   })
 
-  const [videoPanelPage, setVideoPanelPage] = useState(1)
-  const visibleVideoPanelPage = useMemo(
-    () => paginateVideoPanels(allPanels, videoPanelPage),
-    [allPanels, videoPanelPage],
-  )
+  const defaultExpandedStoryboardIds = useMemo(() => {
+    const defaultIds = panelGroups
+      .filter((group) => group.stats.running > 0 || group.stats.failed > 0)
+      .map((group) => group.storyboardId)
+    if (defaultIds.length === 0 && panelGroups[0]) defaultIds.push(panelGroups[0].storyboardId)
+    return new Set(defaultIds)
+  }, [panelGroups])
+  const [expandedStoryboardIds, setExpandedStoryboardIds] = useState(defaultExpandedStoryboardIds)
+
+  useEffect(() => {
+    setExpandedStoryboardIds((previous) => {
+      const availableIds = new Set(panelGroups.map((group) => group.storyboardId))
+      const next = new Set([...previous].filter((storyboardId) => availableIds.has(storyboardId)))
+      if (next.size === 0 && defaultExpandedStoryboardIds.size > 0) return defaultExpandedStoryboardIds
+      if (next.size === previous.size && [...next].every((storyboardId) => previous.has(storyboardId))) return previous
+      return next
+    })
+  }, [defaultExpandedStoryboardIds, panelGroups])
+
   const visiblePanelKeys = useMemo(
-    () => new Set(visibleVideoPanelPage.items.map(
-      (panel) => `${panel.storyboardId}-${panel.panelIndex}`,
-    )),
-    [visibleVideoPanelPage.items],
+    () => new Set(panelGroups
+      .filter((group) => expandedStoryboardIds.has(group.storyboardId))
+      .flatMap((group) => group.panels.map((panel) => `${panel.storyboardId}-${panel.panelIndex}`))),
+    [expandedStoryboardIds, panelGroups],
   )
   const revealPanel = useCallback((panelKey: string) => {
-    setVideoPanelPage(getVideoPanelPage(allPanels, panelKey))
+    const targetPanel = allPanels.find(
+      (panel) => `${panel.storyboardId}-${panel.panelIndex}` === panelKey,
+    )
+    if (!targetPanel) return
+    setExpandedStoryboardIds((previous) => {
+      if (previous.has(targetPanel.storyboardId)) return previous
+      const next = new Set(previous)
+      next.add(targetPanel.storyboardId)
+      return next
+    })
   }, [allPanels])
+  const toggleStoryboardExpanded = useCallback((storyboardId: string) => {
+    setExpandedStoryboardIds((previous) => {
+      const next = new Set(previous)
+      if (next.has(storyboardId)) next.delete(storyboardId)
+      else next.add(storyboardId)
+      return next
+    })
+  }, [])
   const {
     panelRefs,
     highlightedPanelKey,
     locateVoiceLinePanel,
   } = useVideoPanelViewport({ revealPanel })
-
-  useEffect(() => {
-    if (videoPanelPage !== visibleVideoPanelPage.page) {
-      setVideoPanelPage(visibleVideoPanelPage.page)
-    }
-  }, [videoPanelPage, visibleVideoPanelPage.page])
 
   const {
     savingPrompts,
@@ -519,6 +541,22 @@ export function useVideoStageRuntime({
     })
   ), [allPanels, isSubmittingVideoBatch, submittingVideoPanelKeys])
 
+  const projectedPanelGroups = useMemo(() => {
+    const projectedPanelsByKey = new Map(
+      projectedPanels.map((panel) => [`${panel.storyboardId}-${panel.panelIndex}`, panel]),
+    )
+    return panelGroups.map((group) => {
+      const panels = group.panels.map(
+        (panel) => projectedPanelsByKey.get(`${panel.storyboardId}-${panel.panelIndex}`) || panel,
+      )
+      return {
+        ...group,
+        panels,
+        stats: getVideoPanelGroupStats(panels),
+      }
+    })
+  }, [panelGroups, projectedPanels])
+
   const runningCount = projectedPanels.filter((panel) => panel.videoTaskRunning || (lipSyncEnabled && panel.lipSyncTaskRunning)).length
   const failedCount = allPanels.filter((panel) => !!panel.videoErrorMessage || (lipSyncEnabled && !!panel.lipSyncErrorMessage)).length
   const isAnyTaskRunning = runningCount > 0 || isSubmittingVideoBatch
@@ -581,8 +619,10 @@ export function useVideoStageRuntime({
 
       <VideoRenderPanel
         allPanels={projectedPanels}
-        currentPage={visibleVideoPanelPage.page}
-        onPageChange={setVideoPanelPage}
+        panelGroups={projectedPanelGroups}
+        expandedStoryboardIds={expandedStoryboardIds}
+        onToggleStoryboard={toggleStoryboardExpanded}
+        isBatchSubmitting={isSubmittingVideoBatch}
         linkedPanels={linkedPanels}
         highlightedPanelKey={highlightedPanelKey}
         panelRefs={panelRefs}

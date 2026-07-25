@@ -196,8 +196,8 @@ export default function VideoPanelCardBody({ runtime }: VideoPanelCardBodyProps)
                       )}
                       disabled={
                         taskStatus.isVideoTaskRunning
-                        || flPromptActive
-                        || layout.flPromptEntry?.ready === false
+                        || layout.flPromptEntry?.status === 'error'
+                        || !layout.flPromptEntry?.value.trim()
                         || !panel.imageUrl
                         || !linkedNextPanel.imageUrl
                         || !layout.flModel

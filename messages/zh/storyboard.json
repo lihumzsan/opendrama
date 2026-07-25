@@ -14,8 +14,11 @@
         "generate": "生成封面",
         "regenerate": "重新生成",
         "generating": "封面生成中",
+        "downloading": "下载中...",
         "retry": "重试生成",
-        "failed": "封面生成失败，请重试"
+        "failed": "封面生成失败，请重试",
+        "loadFailed": "封面加载失败，请刷新后重试",
+        "downloadFailed": "封面下载失败，请重试"
     },
     "prompts": {
         "imagePrompt": "图片提示词",

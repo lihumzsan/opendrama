@@ -69,21 +69,42 @@ describe('video panel pagination', () => {
     expect(getVideoPanelPage(panels, 'story-49')).toBe(3)
   })
 
-  it('mounts only the requested page while preserving global neighbor indexes', () => {
-    const linkedGlobalIndexes = new Set([23])
-    const getNextPanel = vi.fn((index: number) => (
-      (panels[index + 1] as VideoPanel | undefined) || null
-    ))
-    const isLinkedAsLastFrame = vi.fn((index: number) => linkedGlobalIndexes.has(index - 1))
+  it('renders only expanded storyboard segments while keeping global neighbors', () => {
+    const groupedPanels: VideoPanel[] = [
+      { storyboardId: 'story-1', panelIndex: 0 },
+      { storyboardId: 'story-1', panelIndex: 1 },
+      { storyboardId: 'story-2', panelIndex: 0 },
+    ]
+    const getNextPanel = vi.fn((index: number) => groupedPanels[index + 1] || null)
     const props = {
-      allPanels: panels as VideoPanel[],
-      currentPage: 2,
+      allPanels: groupedPanels,
+      panelGroups: [
+        {
+          storyboardId: 'story-1',
+          clipId: 'clip-1',
+          index: 0,
+          summary: '第一段剧情',
+          panels: groupedPanels.slice(0, 2),
+          stats: { total: 2, completed: 0, running: 0, failed: 0, pending: 2 },
+        },
+        {
+          storyboardId: 'story-2',
+          clipId: 'clip-2',
+          index: 1,
+          summary: '第二段剧情',
+          panels: groupedPanels.slice(2),
+          stats: { total: 1, completed: 0, running: 0, failed: 0, pending: 1 },
+        },
+      ],
+      expandedStoryboardIds: new Set(['story-1']),
+      onToggleStoryboard: vi.fn(),
+      currentPage: 1,
       onPageChange: vi.fn(),
       linkedPanels: new Map(),
       highlightedPanelKey: null,
       panelRefs: { current: new Map() },
       videoRatio: '16:9',
-      defaultVideoModel: '',
+      defaultVideoModel: 'model-default',
       capabilityOverrides: {},
       projectId: 'project-1',
       episodeId: 'episode-1',
@@ -98,7 +119,7 @@ describe('video panel pagination', () => {
       flCapabilityFields: [],
       flMissingCapabilityFields: [],
       promptEntries: new Map(),
-      onGenerateVideo: vi.fn(),
+      onGenerateVideo: vi.fn(async () => undefined),
       onUpdatePanelVideoModel: vi.fn(),
       onUpdatePanelVideoDurationBinding: vi.fn(),
       onRestorePreviousVideo: vi.fn(),
@@ -114,7 +135,7 @@ describe('video panel pagination', () => {
       onPreviewImage: vi.fn(),
       onToggleLipSyncVideo: vi.fn(),
       getNextPanel,
-      isLinkedAsLastFrame,
+      isLinkedAsLastFrame: vi.fn(() => false),
       getFirstLastFrameDurationStatus: () => null,
       getLocalPrompt: () => '',
       updateLocalPrompt: vi.fn(),
@@ -122,22 +143,73 @@ describe('video panel pagination', () => {
     } as unknown as ComponentProps<typeof VideoRenderPanel>
 
     const markup = renderToStaticMarkup(React.createElement(VideoRenderPanel, props))
-    const mountedCards = markup.match(/<article/g) || []
 
-    expect(mountedCards).toHaveLength(24)
-    expect(markup).toContain('data-global-index="24"')
-    expect(markup).toContain('data-prev-index="23"')
-    expect(markup).toMatch(/data-global-index="24"[^>]*data-is-last-frame="true"/)
-    expect(markup).toContain('data-global-index="47"')
-    expect(markup).toContain('data-next-index="48"')
-    expect(markup).not.toContain('data-global-index="0"')
-    expect(getNextPanel).toHaveBeenCalledWith(24)
-    expect(getNextPanel).toHaveBeenCalledWith(47)
-    expect(getNextPanel).not.toHaveBeenCalledWith(0)
-    expect(isLinkedAsLastFrame).toHaveBeenCalledWith(24)
-    expect(isLinkedAsLastFrame).toHaveBeenCalledWith(47)
-    expect(isLinkedAsLastFrame).not.toHaveBeenCalledWith(0)
-    expect(markup).toContain('content-visibility:auto')
-    expect(markup).toContain('contain-intrinsic-size:0 720px')
+    expect(markup).toContain('第一段剧情')
+    expect(markup).toContain('data-panel-key="story-1-0"')
+    expect(markup).toContain('data-panel-key="story-1-1"')
+    expect(markup).not.toContain('data-panel-key="story-2-0"')
+    expect(getNextPanel).toHaveBeenCalledWith(1)
+  })
+
+  it('disables segment actions while a global batch submission is running', () => {
+    const segmentPanel: VideoPanel = { storyboardId: 'story-1', panelIndex: 0 }
+    const props = {
+      allPanels: [segmentPanel],
+      panelGroups: [{
+        storyboardId: 'story-1',
+        clipId: 'clip-1',
+        index: 0,
+        summary: '第一段剧情',
+        panels: [segmentPanel],
+        stats: { total: 1, completed: 0, running: 0, failed: 0, pending: 1 },
+      }],
+      expandedStoryboardIds: new Set(['story-1']),
+      onToggleStoryboard: vi.fn(),
+      isBatchSubmitting: true,
+      linkedPanels: new Map(),
+      highlightedPanelKey: null,
+      panelRefs: { current: new Map() },
+      videoRatio: '16:9',
+      defaultVideoModel: 'model-default',
+      capabilityOverrides: {},
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      runningVoiceLineIds: new Set(),
+      panelVoiceLines: new Map(),
+      panelVideoPreference: new Map(),
+      savingPrompts: new Set(),
+      flModel: '',
+      flModelOptions: [],
+      flGenerationOptions: {},
+      flGenerationOptionsByPanel: new Map(),
+      flCapabilityFields: [],
+      flMissingCapabilityFields: [],
+      promptEntries: new Map(),
+      onGenerateVideo: vi.fn(async () => undefined),
+      onUpdatePanelVideoModel: vi.fn(),
+      onUpdatePanelVideoDurationBinding: vi.fn(),
+      onRestorePreviousVideo: vi.fn(),
+      onLipSync: vi.fn(),
+      onToggleLink: vi.fn(),
+      onFlModelChange: vi.fn(),
+      onFlCapabilityChange: vi.fn(),
+      onRestoreFlSmartDuration: vi.fn(),
+      onFlPromptChange: vi.fn(),
+      onSaveFlPrompt: vi.fn(),
+      onRegenerateFlPrompt: vi.fn(),
+      onGenerateFirstLastFrame: vi.fn(),
+      onPreviewImage: vi.fn(),
+      onToggleLipSyncVideo: vi.fn(),
+      getNextPanel: () => null,
+      isLinkedAsLastFrame: () => false,
+      getFirstLastFrameDurationStatus: () => null,
+      getLocalPrompt: () => '',
+      updateLocalPrompt: vi.fn(),
+      savePrompt: vi.fn(),
+    } as unknown as ComponentProps<typeof VideoRenderPanel>
+
+    const markup = renderToStaticMarkup(React.createElement(VideoRenderPanel, props))
+
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>segments\.generatePending<\/button>/)
   })
 })

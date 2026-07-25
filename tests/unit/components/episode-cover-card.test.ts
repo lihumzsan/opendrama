@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import EpisodeCoverCard, {
+  downloadEpisodeCoverImage,
   EpisodeCoverSection,
   resolveEpisodeCoverAspectRatio,
 } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/storyboard/EpisodeCoverCard'
@@ -43,6 +44,18 @@ vi.mock('@/components/ui/icons', () => ({
 vi.mock('@/components/media/MediaImageWithLoading', () => ({
   MediaImageWithLoading: ({ src, alt, className }: { src: string; alt: string; className?: string }) => (
     createElement('img', { src, alt, className })
+  ),
+}))
+
+vi.mock('@/components/media/MediaImage', () => ({
+  MediaImage: ({ src, alt, className, onError }: { src: string; alt: string; className?: string; onError?: () => void }) => (
+    createElement('img', { src, alt, className, onError })
+  ),
+}))
+
+vi.mock('@/components/ui/ImagePreviewModal', () => ({
+  default: ({ imageUrl, onClose }: { imageUrl: string; onClose: () => void }) => (
+    createElement('button', { type: 'button', 'data-testid': 'episode-cover-preview', onClick: onClose }, imageUrl)
   ),
 }))
 
@@ -142,6 +155,7 @@ describe('EpisodeCoverCard', () => {
     await act(async () => {
       renderer = create(
         createElement(EpisodeCoverCard, {
+          episodeId: 'episode-1',
           coverImageUrl: '/m/episode-cover.webp',
           videoRatio: '16:9',
           taskState: null,
@@ -162,6 +176,7 @@ describe('EpisodeCoverCard', () => {
     await act(async () => {
       renderer = create(
         createElement(EpisodeCoverCard, {
+          episodeId: 'episode-1',
           coverImageUrl: null,
           videoRatio: '9:16',
           taskState: {
@@ -191,6 +206,7 @@ describe('EpisodeCoverCard', () => {
     await act(async () => {
       renderer = create(
         createElement(EpisodeCoverCard, {
+          episodeId: 'episode-1',
           coverImageUrl: null,
           videoRatio: 'invalid',
           taskState: {
@@ -213,6 +229,57 @@ describe('EpisodeCoverCard', () => {
     expect(JSON.stringify(renderer!.toJSON())).toContain('provider failed')
     expect(JSON.stringify(renderer!.toJSON())).toContain('episodeCover.retry')
     expect(resolveEpisodeCoverAspectRatio('invalid')).toBe('16 / 9')
+  })
+
+  it('shows a completed cover directly and opens a large preview', async () => {
+    let renderer: ReactTestRenderer
+    await act(async () => {
+      renderer = create(
+        createElement(EpisodeCoverCard, {
+          episodeId: 'episode-1',
+          coverImageUrl: '/m/episode-cover.webp',
+          videoRatio: '16:9',
+          taskState: null,
+          errorMessage: null,
+          onGenerate: () => undefined,
+        }),
+      )
+    })
+    renderers.push(renderer!)
+
+    const image = renderer!.root.findByProps({ alt: 'episodeCover.imageAlt' })
+    expect(image.props.src).toBe('/m/episode-cover.webp')
+
+    const previewButton = renderer!.root.findByProps({ 'aria-label': 'previewLarge' })
+    await act(async () => {
+      previewButton.props.onClick()
+    })
+    expect(renderer!.root.findByProps({ 'data-testid': 'episode-cover-preview' }).children).toEqual(['/m/episode-cover.webp'])
+  })
+
+  it('downloads an existing cover with its episode filename', async () => {
+    const click = vi.fn()
+    const remove = vi.fn()
+    const appendChild = vi.fn()
+    const blob = new Blob(['cover'], { type: 'image/png' })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: async () => blob })
+    const createObjectURL = vi.fn(() => 'blob:episode-cover')
+    const revokeObjectURL = vi.fn()
+    const link = { href: '', download: '', click, remove }
+
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => link),
+      body: { appendChild },
+    })
+
+    await downloadEpisodeCoverImage('/m/episode-cover.webp', 'episode-1')
+
+    expect(fetchMock).toHaveBeenCalledWith('/m/episode-cover.webp')
+    expect(link.download).toBe('episode-cover-episode-1.png')
+    expect(click).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:episode-cover')
   })
 
   it('refreshes repeated null-timestamp terminal generations after a processing transition', async () => {

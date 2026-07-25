@@ -58,6 +58,23 @@ describe('first/last-frame prompt entry', () => {
     })
   })
 
+  it('keeps the displayed prompt usable while a replacement prompt is processing', async () => {
+    const { buildFirstLastFrameVideoPrompt } = await import(
+      '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
+    )
+
+    expect(buildFirstLastFrameVideoPrompt({
+      value: 'Current transition prompt',
+      origin: 'generated',
+      dirty: false,
+      status: 'processing',
+      ready: false,
+    })).toEqual({
+      customPrompt: 'Current transition prompt',
+      customPromptEditedByUser: false,
+    })
+  })
+
   it('marks a saved manual prompt ready for the current source without queueing regeneration', async () => {
     const { markSavedUserPromptReady, resolvePromptEntryReadiness } = await import(
       '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
@@ -80,37 +97,30 @@ describe('first/last-frame prompt entry', () => {
     })
   })
 
-  it('is pending on the first render until the current source has been verified', async () => {
-    const { resolvePromptEntryReadiness } = await import(
+  it('keeps a persisted generated prompt ready after reload', async () => {
+    const { createPersistedPromptEntry, resolvePromptEntryReadiness } = await import(
       '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
     )
-    const persisted = {
-      value: 'Persisted prompt',
-      origin: 'generated' as const,
-      dirty: false,
-      status: 'idle' as const,
+    const persisted = createPersistedPromptEntry({
+      prompt: 'Persisted prompt',
+      editedByUser: false,
       sourceFingerprint: 'server-fingerprint',
-      ready: false,
-    }
-
-    expect(resolvePromptEntryReadiness(persisted, 'source-v2')).toMatchObject({
-      status: 'queued',
-      ready: false,
     })
-    expect(resolvePromptEntryReadiness({
-      ...persisted,
+
+    expect(persisted).toBeDefined()
+    expect(resolvePromptEntryReadiness(persisted!, 'source-v2')).toMatchObject({
+      status: 'idle',
       ready: true,
-      verifiedSourceSignature: 'source-v2',
-    }, 'source-v2')).toMatchObject({ status: 'idle', ready: true })
+    })
   })
 
-  it('keeps the operation gate startable while the derived view is pending', async () => {
+  it('keeps the operation gate startable while a derived prompt is pending', async () => {
     const { canStartPromptOperation, resolvePromptEntryReadiness } = await import(
       '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
     )
     const operationEntry = {
       value: 'Persisted prompt',
-      origin: 'generated' as const,
+      origin: 'derived' as const,
       dirty: false,
       status: 'idle' as const,
       ready: false,
@@ -505,12 +515,14 @@ describe('first/last-frame prompt entry', () => {
     const shouldEnsure = promptState.shouldAutoEnsurePrompt as (params: {
       taskHydrated: boolean
       taskPhase?: string | null
+      hasPersistedPrompt?: boolean
     }) => boolean
     expect(shouldEnsure({ taskHydrated: false })).toBe(false)
     expect(shouldEnsure({ taskHydrated: true, taskPhase: 'failed' })).toBe(false)
     expect(shouldEnsure({ taskHydrated: true, taskPhase: 'queued' })).toBe(false)
     expect(shouldEnsure({ taskHydrated: true, taskPhase: 'processing' })).toBe(false)
     expect(shouldEnsure({ taskHydrated: true, taskPhase: 'idle' })).toBe(true)
+    expect(shouldEnsure({ taskHydrated: true, taskPhase: 'idle', hasPersistedPrompt: true })).toBe(false)
   })
 
   it('turns an unapplied result into a retryable error instead of a permanent idle skip', async () => {

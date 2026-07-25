@@ -14,8 +14,11 @@
         "generate": "Generate cover",
         "regenerate": "Regenerate",
         "generating": "Generating cover",
+        "downloading": "Downloading...",
         "retry": "Retry generation",
-        "failed": "Cover generation failed. Please retry."
+        "failed": "Cover generation failed. Please retry.",
+        "loadFailed": "Cover failed to load. Refresh and try again.",
+        "downloadFailed": "Cover download failed. Please try again."
     },
     "prompts": {
         "imagePrompt": "Image Prompt",

@@ -63,12 +63,33 @@ vi.mock('@/lib/novel-promotion/stages/video-stage-runtime/useVideoTaskStates', (
 }))
 
 const panels = Array.from({ length: 60 }, (_, panelIndex): VideoPanel => ({
-  storyboardId: 'story',
+  storyboardId: panelIndex < 30 ? 'story-a' : 'story-b',
   panelIndex,
 }))
 
 vi.mock('@/lib/novel-promotion/stages/video-stage-runtime/useVideoPanelsProjection', () => ({
-  useVideoPanelsProjection: () => ({ allPanels: panels }),
+  useVideoPanelsProjection: () => ({
+    allPanels: panels,
+    sortedStoryboards: [],
+    panelGroups: [
+      {
+        storyboardId: 'story-a',
+        clipId: 'clip-a',
+        index: 0,
+        summary: '第一段',
+        panels: panels.slice(0, 30),
+        stats: { total: 30, completed: 0, running: 0, failed: 0, pending: 30 },
+      },
+      {
+        storyboardId: 'story-b',
+        clipId: 'clip-b',
+        index: 1,
+        summary: '第二段',
+        panels: panels.slice(30),
+        stats: { total: 30, completed: 0, running: 0, failed: 0, pending: 30 },
+      },
+    ],
+  }),
 }))
 vi.mock('@/lib/novel-promotion/stages/video-stage-runtime/useVideoPromptState', () => ({
   useVideoPromptState: () => ({
@@ -164,7 +185,7 @@ describe('video stage visible panel keys', () => {
     vi.unstubAllGlobals()
   })
 
-  it('passes exactly the second page keys to the first-last-frame prompt flow', () => {
+  it('passes only the default expanded segment keys to the first-last-frame prompt flow', () => {
     useVideoStageRuntime({
       projectId: 'project-1',
       episodeId: 'episode-1',
@@ -181,7 +202,7 @@ describe('video stage visible panel keys', () => {
       onRestorePreviousVideo: vi.fn(async () => undefined),
     })
 
-    const expectedKeys = Array.from({ length: 24 }, (_, index) => `story-${index + 24}`)
+    const expectedKeys = Array.from({ length: 30 }, (_, index) => `story-a-${index}`)
     expect(capture.visiblePanelKeys).toEqual(new Set(expectedKeys))
   })
 })

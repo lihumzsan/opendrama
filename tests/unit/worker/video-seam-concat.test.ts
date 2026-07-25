@@ -225,6 +225,7 @@ describe('video seam concat worker handler', () => {
       if (filePath === workspace.input1Path) return probe1
       if (filePath === workspace.input2Path) return probe2
       if (filePath === workspace.bridgePath) return bridgeProbe
+      if (filePath === workspace.outputPath) return verifiedOutput
       throw new Error(`unexpected probe path: ${filePath}`)
     })
     extractAnchorsMock.mockImplementation(async ({ inputPath }) => {
@@ -319,7 +320,7 @@ describe('video seam concat worker handler', () => {
     expect(runMotionBridgeWorkflowMock).not.toHaveBeenCalled()
   })
 
-  it('builds, verifies, and persists one local four-anchor AI bridge output', async () => {
+  it('builds, probes, and persists one local four-anchor AI bridge output', async () => {
     const result = await handleVideoSeamConcatTask(buildJob({
       ...validPayload,
       mode: 'ai_bridge',
@@ -378,10 +379,8 @@ describe('video seam concat worker handler', () => {
       outputPath: workspace.outputPath,
       plan: expect.objectContaining({ generatedFrameCount: 97 }),
     }))
-    expect(verifyOutputMock).toHaveBeenCalledWith(
-      workspace.outputPath,
-      expect.objectContaining({ generatedFrameCount: 97 }),
-    )
+    expect(probeFileMock).toHaveBeenNthCalledWith(4, workspace.outputPath)
+    expect(verifyOutputMock).not.toHaveBeenCalled()
     expect(openOutputMock).toHaveBeenCalledWith(workspace.outputPath)
     expect(uploadObjectStreamMock).toHaveBeenCalledTimes(1)
     expect(uploadObjectStreamMock).toHaveBeenCalledWith(
@@ -391,7 +390,7 @@ describe('video seam concat worker handler', () => {
       'video/mp4',
     )
     expect(persistedBytes).toEqual([[6, 5, 4]])
-    expect(operationOrder.indexOf('verify')).toBeLessThan(operationOrder.indexOf('open'))
+    expect(operationOrder.indexOf(`probe:${workspace.outputPath}`)).toBeLessThan(operationOrder.indexOf('open'))
     expect(operationOrder.indexOf('open')).toBeLessThan(operationOrder.indexOf('upload'))
     expect(operationOrder.indexOf(`probe:${workspace.bridgePath}`))
       .toBeLessThan(operationOrder.indexOf('compose'))
@@ -435,6 +434,37 @@ describe('video seam concat worker handler', () => {
         audioPolicy: 'both',
         targetBitrateMbps: 10,
       },
+    })
+  })
+
+  it('persists an AI bridge output when its final metadata differs from the planned output', async () => {
+    const relaxedOutput = {
+      ...verifiedOutput,
+      frameCount: verifiedOutput.frameCount - 1,
+      durationSeconds: (verifiedOutput.frameCount - 1) / verifiedOutput.fps,
+    }
+    probeFileMock.mockImplementation(async (filePath) => {
+      if (filePath === workspace.input1Path) return probe1
+      if (filePath === workspace.input2Path) return probe2
+      if (filePath === workspace.bridgePath) return bridgeProbe
+      if (filePath === workspace.outputPath) return relaxedOutput
+      throw new Error(`unexpected probe path: ${filePath}`)
+    })
+    verifyOutputMock.mockRejectedValue(new Error('VIDEO_SEAM_MEDIA_PROBE_FAILED'))
+
+    const result = await handleVideoSeamConcatTask(buildJob({
+      ...validPayload,
+      mode: 'ai_bridge',
+      bridge: { durationSeconds: 4 },
+    }))
+
+    expect(verifyOutputMock).not.toHaveBeenCalled()
+    expect(probeFileMock).toHaveBeenCalledWith(workspace.outputPath)
+    expect(openOutputMock).toHaveBeenCalledWith(workspace.outputPath)
+    expect(uploadObjectStreamMock).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({
+      mode: 'ai_bridge',
+      output: relaxedOutput,
     })
   })
 
@@ -611,7 +641,7 @@ describe('video seam concat worker handler', () => {
     expect(getSignedUrlMock).not.toHaveBeenCalled()
   })
 
-  it('uses a prompt for continuous evolution across all four anchors when bridge motion is omitted', async () => {
+  it('uses the default continuous endpoint-transition prompt when bridge motion is omitted', async () => {
     await handleVideoSeamConcatTask(buildJob({
       ...validPayload,
       mode: 'ai_bridge',
@@ -619,7 +649,7 @@ describe('video seam concat worker handler', () => {
     }))
 
     expect(runMotionBridgeWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      prompt: expect.stringContaining('all four supplied anchors'),
+      prompt: expect.stringContaining('between the exact first and last frame'),
     }))
   })
 

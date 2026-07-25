@@ -11,6 +11,26 @@ vi.mock('react', async () => {
 import { useVideoPanelsProjection } from '@/lib/novel-promotion/stages/video-stage-runtime/useVideoPanelsProjection'
 
 describe('video panels projection error code', () => {
+  it('returns panels grouped by the storyboard clip order', () => {
+    const result = useVideoPanelsProjection({
+      clips: [
+        { id: 'clip-1', start: 0, end: 5, summary: '开场' },
+        { id: 'clip-2', start: 6, end: 10, summary: '转折' },
+      ],
+      storyboards: [
+        { id: 'sb-2', clipId: 'clip-2', panels: [{ id: 'panel-2', panelIndex: 0 }] },
+        { id: 'sb-1', clipId: 'clip-1', panels: [{ id: 'panel-1', panelIndex: 0 }] },
+      ],
+      panelVideoStates: { getTaskState: () => null },
+      panelLipStates: { getTaskState: () => null },
+    })
+
+    expect(result.panelGroups).toMatchObject([
+      { storyboardId: 'sb-1', summary: '开场', panels: [{ panelId: 'panel-1' }] },
+      { storyboardId: 'sb-2', summary: '转折', panels: [{ panelId: 'panel-2' }] },
+    ])
+  })
+
   it('projects failed task lastError code/message onto panel fields', () => {
     const result = useVideoPanelsProjection({
       clips: [{ id: 'clip-1', start: 0, end: 5, summary: 'clip' }],
