@@ -18,6 +18,8 @@ import {
   requestTaskResponseWithError,
 } from './mutation-shared'
 
+export const EPISODE_SPLIT_TASK_TIMEOUT_MS = 21 * 60 * 1000
+
 /**
  * 获取项目剧集列表
  */
@@ -58,7 +60,9 @@ export function useSplitProjectEpisodes(projectId: string) {
           content: string
           wordCount: number
         }>
-      }>(response)
+      }>(response, {
+        timeoutMs: EPISODE_SPLIT_TASK_TIMEOUT_MS,
+      })
     },
   })
 }
