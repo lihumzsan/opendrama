@@ -103,6 +103,7 @@ export function ApiConfigTabContainer() {
     updateProviderHidden,
     updateProviderApiKey,
     updateProviderBaseUrl,
+    updateProviderExecutablePath,
     reorderProviders,
     addProvider,
     deleteProvider,
@@ -285,6 +286,7 @@ export function ApiConfigTabContainer() {
             onToggleModel={toggleModel}
             onUpdateApiKey={updateProviderApiKey}
             onUpdateBaseUrl={updateProviderBaseUrl}
+            onUpdateExecutablePath={updateProviderExecutablePath}
             onReorderProviders={reorderProviders}
             onDeleteModel={deleteModel}
             onUpdateModel={updateModel}

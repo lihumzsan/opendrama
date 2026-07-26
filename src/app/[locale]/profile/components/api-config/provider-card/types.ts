@@ -23,6 +23,7 @@ export interface ProviderCardProps {
   onToggleModel: (modelKey: string) => void
   onUpdateApiKey: (providerId: string, apiKey: string) => void
   onUpdateBaseUrl?: (providerId: string, baseUrl: string) => void
+  onUpdateExecutablePath?: (providerId: string, executablePath: string) => void
   onDeleteModel: (modelKey: string) => void
   onUpdateModel?: (modelKey: string, updates: Partial<CustomModel>) => void
   onDeleteProvider?: (providerId: string) => void

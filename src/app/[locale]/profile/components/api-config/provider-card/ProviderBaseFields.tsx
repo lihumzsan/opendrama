@@ -1,12 +1,10 @@
 'use client'
 
+import React from 'react'
 import type { ProviderCardProps, ProviderCardTranslator } from './types'
 import type { UseProviderCardStateResult } from './hooks/useProviderCardState'
 import { AppIcon } from '@/components/ui/icons'
-import {
-  CODEX_DEFAULT_EXECUTABLE_PATH,
-  CODEX_PROVIDER_KEY,
-} from '@/lib/providers/codex/constants'
+import { CODEX_PROVIDER_KEY } from '@/lib/providers/codex/constants'
 
 interface ProviderBaseFieldsProps {
   provider: ProviderCardProps['provider']
@@ -19,7 +17,7 @@ export function ProviderBaseFields({ provider, t, state }: ProviderBaseFieldsPro
   const baseUrlPlaceholder = (() => {
     switch (state.providerKey) {
       case CODEX_PROVIDER_KEY:
-        return CODEX_DEFAULT_EXECUTABLE_PATH
+        return t('codexPathPlaceholder')
       case 'gemini-compatible':
         return 'https://your-api-domain.com'
       case 'openai-compatible':
@@ -268,14 +266,20 @@ export function ProviderBaseFields({ provider, t, state }: ProviderBaseFieldsPro
         <div className="px-3.5 pb-2.5 pt-2">
           <div className="glass-surface-soft flex items-center gap-2.5 rounded-xl px-3 py-2">
             <span className="w-[64px] shrink-0 whitespace-nowrap text-[12px] font-semibold text-[var(--glass-text-tertiary)]">
-              {isCodexProvider ? 'Path' : t('baseUrl')}
+              {isCodexProvider ? t('cliPath') : t('baseUrl')}
             </span>
             {state.isEditingUrl ? (
               <div className="flex flex-1 items-center gap-2">
                 <input
                   type="text"
-                  value={state.tempUrl}
-                  onChange={(event) => state.setTempUrl(event.target.value)}
+                  value={isCodexProvider ? state.tempExecutablePath : state.tempUrl}
+                  onChange={(event) => {
+                    if (isCodexProvider) {
+                      state.setTempExecutablePath(event.target.value)
+                    } else {
+                      state.setTempUrl(event.target.value)
+                    }
+                  }}
                   placeholder={baseUrlPlaceholder}
                   className="glass-input-base flex-1 px-3 py-1.5 text-[12px] font-mono"
                   autoFocus
@@ -297,10 +301,12 @@ export function ProviderBaseFields({ provider, t, state }: ProviderBaseFieldsPro
               </div>
             ) : (
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                {provider.baseUrl ? (
+                {isCodexProvider || provider.baseUrl ? (
                   <>
                     <span className="min-w-0 flex-1 truncate rounded-lg bg-[var(--glass-bg-surface)] px-3 py-1.5 font-mono text-[12px] text-[var(--glass-text-secondary)]">
-                      {provider.baseUrl}
+                      {isCodexProvider
+                        ? (provider.executablePath || t('codexAutoDetect'))
+                        : provider.baseUrl}
                     </span>
                     <div className="flex shrink-0 items-center gap-1">
                       <button

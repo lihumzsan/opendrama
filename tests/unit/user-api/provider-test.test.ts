@@ -219,18 +219,21 @@ describe('provider test connection', () => {
       stdout: '',
       stderr: '',
       durationMs: 1234,
+      executablePath: '/Applications/ChatGPT.app/Contents/Resources/codex',
+      resolutionSource: 'macos-chatgpt',
+      version: 'codex-cli 1.2.3',
     })
 
     const result = await testProviderConnection({
       apiType: 'codex',
       apiKey: '',
-      baseUrl: '%USERPROFILE%\\.codex\\.sandbox-bin\\codex.exe',
+      executablePath: '/custom/codex',
       llmModel: 'gpt-5.4',
     })
 
     expect(result.success).toBe(true)
     expect(codexClientMock.runCodexSelfCheck).toHaveBeenCalledWith({
-      codexPath: '%USERPROFILE%\\.codex\\.sandbox-bin\\codex.exe',
+      codexPath: '/custom/codex',
       model: 'gpt-5.4',
     })
     expect(result.steps).toEqual([{
@@ -238,8 +241,36 @@ describe('provider test connection', () => {
       status: 'pass',
       model: 'gpt-5.4',
       message: 'Codex CLI OK (1s): CODEX_OK',
-      detail: 'Local Codex CLI self-check; no API key or routekey used.',
+      detail: 'source=macos-chatgpt | path=/Applications/ChatGPT.app/Contents/Resources/codex | version=codex-cli 1.2.3',
     }])
+  })
+
+  it.each([
+    [
+      'CODEX_EXECUTABLE_NOT_FOUND',
+      'Codex executable not found. Use auto-detect or check the configured CLI path.',
+    ],
+    [
+      'CODEX_EXECUTABLE_NOT_EXECUTABLE',
+      'Codex executable exists but cannot be executed. Check file permissions.',
+    ],
+    [
+      'CODEX_SELF_CHECK_FAILED',
+      'Codex CLI was found, but its authenticated self-check failed. Check Codex login state.',
+    ],
+  ])('shows an actionable Codex message for %s', async (code, expectedMessage) => {
+    codexClientMock.runCodexSelfCheck.mockRejectedValueOnce(
+      new codexClientMock.CodexExecError(code, 'probe failed'),
+    )
+
+    const result = await testProviderConnection({
+      apiType: 'codex',
+      apiKey: '',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.steps[0]?.message).toBe(expectedMessage)
+    expect(result.steps[0]?.detail).toContain(`code=${code}`)
   })
 
   it('surfaces Codex timeout as a local CLI failure instead of an API key failure', async () => {

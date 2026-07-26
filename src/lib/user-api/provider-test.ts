@@ -41,6 +41,7 @@ type CompatibleProviderType = 'openai-compatible' | 'gemini-compatible'
 type TestProviderPayload = {
   apiType: CompatibleProviderType | PresetProviderType
   baseUrl?: string
+  executablePath?: string
   apiKey?: string
   llmModel?: string
 }
@@ -913,9 +914,13 @@ function codexProbeUserMessage(error: unknown): string {
   if (error instanceof CodexExecError) {
     switch (error.code) {
       case 'CODEX_EXECUTABLE_NOT_FOUND':
-        return 'Codex executable not found. Check the configured Codex path.'
+        return 'Codex executable not found. Use auto-detect or check the configured CLI path.'
+      case 'CODEX_EXECUTABLE_NOT_EXECUTABLE':
+        return 'Codex executable exists but cannot be executed. Check file permissions.'
       case 'CODEX_EXEC_TIMEOUT':
         return 'Codex CLI timed out. The local Codex process may be busy or stuck.'
+      case 'CODEX_SELF_CHECK_FAILED':
+        return 'Codex CLI was found, but its authenticated self-check failed. Check Codex login state.'
       case 'CODEX_EXEC_FAILED':
         return 'Codex CLI execution failed. Check local Codex login state and CLI warnings.'
       case 'CODEX_EMPTY_OUTPUT':
@@ -942,11 +947,11 @@ function codexProbeDetail(error: unknown): string | undefined {
   return parts.join(' | ').slice(0, 500) || undefined
 }
 
-async function testCodexProvider(baseUrl?: string, llmModel?: string): Promise<TestProviderResult> {
+async function testCodexProvider(executablePath?: string, llmModel?: string): Promise<TestProviderResult> {
   const model = llmModel?.trim() || CODEX_DEFAULT_MODEL_ID
   try {
     const result = await runCodexSelfCheck({
-      codexPath: baseUrl,
+      codexPath: executablePath,
       model,
     })
     return {
@@ -956,7 +961,11 @@ async function testCodexProvider(baseUrl?: string, llmModel?: string): Promise<T
         status: 'pass',
         model,
         message: `Codex CLI OK (${Math.round(result.durationMs / 1000)}s): ${result.text.trim().slice(0, 80)}`,
-        detail: 'Local Codex CLI self-check; no API key or routekey used.',
+        detail: [
+          `source=${result.resolutionSource}`,
+          `path=${result.executablePath}`,
+          result.version ? `version=${result.version}` : '',
+        ].filter(Boolean).join(' | '),
       }],
     }
   } catch (error) {
@@ -978,7 +987,7 @@ async function testCodexProvider(baseUrl?: string, llmModel?: string): Promise<T
 // ---------------------------------------------------------------------------
 
 export async function testProviderConnection(payload: TestProviderPayload): Promise<TestProviderResult> {
-  const { apiType, baseUrl, llmModel } = payload
+  const { apiType, baseUrl, executablePath, llmModel } = payload
   const apiKey = payload.apiKey || ''
 
   if (!apiKey && apiType !== 'comfyui' && apiType !== CODEX_PROVIDER_KEY) {
@@ -1004,7 +1013,7 @@ export async function testProviderConnection(payload: TestProviderPayload): Prom
 
   switch (apiType) {
     case 'codex':
-      return testCodexProvider(baseUrl, llmModel)
+      return testCodexProvider(executablePath ?? baseUrl, llmModel)
     case 'openai-compatible':
       return testCompatibleProvider(baseUrl!, apiKey, llmModel)
     case 'gemini-compatible':

@@ -213,6 +213,11 @@ describe('codex cli client', () => {
     spawnMock.mockImplementation((_exe: string, args: string[]) => {
       const child = createMockChild()
       queueMicrotask(async () => {
+        if (args[0] === '--version') {
+          child.stdout.write('codex-cli 1.2.3\n')
+          child.emit('close', 0, null)
+          return
+        }
         const outputPath = args[args.indexOf('--output-last-message') + 1]
         if (!outputPath) throw new Error('missing output path')
         await fs.writeFile(outputPath, 'CODEX_OK\n', 'utf8')
@@ -229,6 +234,40 @@ describe('codex cli client', () => {
 
     expect(result.text).toBe('CODEX_OK')
     expect(result.durationMs).toBeGreaterThanOrEqual(0)
+    expect(result.executablePath).toBe(process.execPath)
+    expect(result.resolutionSource).toBe('provider')
+    expect(result.version).toBe('codex-cli 1.2.3')
+    expect(spawnMock).toHaveBeenNthCalledWith(
+      1,
+      process.execPath,
+      ['--version'],
+      expect.objectContaining({ windowsHide: true }),
+    )
+  })
+
+  it('wraps a present CLI inference failure with self-check context', async () => {
+    spawnMock.mockImplementation((_exe: string, args: string[]) => {
+      const child = createMockChild()
+      queueMicrotask(() => {
+        if (args[0] === '--version') {
+          child.stdout.write('codex-cli 1.2.3\n')
+          child.emit('close', 0, null)
+          return
+        }
+        child.stderr.write('not logged in')
+        child.emit('close', 1, null)
+      })
+      return child
+    })
+
+    await expect(runCodexSelfCheck({
+      codexPath: process.execPath,
+      timeoutMs: 1000,
+    })).rejects.toMatchObject({
+      code: 'CODEX_SELF_CHECK_FAILED',
+      exitCode: 1,
+      stderr: 'not logged in',
+    })
   })
 
   it('returns generated image bytes from a codex image final message path', async () => {

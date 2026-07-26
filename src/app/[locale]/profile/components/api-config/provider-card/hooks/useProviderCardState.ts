@@ -51,6 +51,7 @@ interface UseProviderCardStateParams {
   defaultModels: ProviderCardProps['defaultModels']
   onUpdateApiKey: ProviderCardProps['onUpdateApiKey']
   onUpdateBaseUrl: ProviderCardProps['onUpdateBaseUrl']
+  onUpdateExecutablePath: ProviderCardProps['onUpdateExecutablePath']
   onUpdateModel: ProviderCardProps['onUpdateModel']
   onAddModel: ProviderCardProps['onAddModel']
   onFlushConfig: ProviderCardProps['onFlushConfig']
@@ -85,6 +86,7 @@ interface ProviderConnectionPayload {
   apiType: string
   apiKey: string
   baseUrl?: string
+  executablePath?: string
   llmModel?: string
 }
 
@@ -226,10 +228,12 @@ export function buildProviderConnectionPayload(params: {
   providerKey: string
   apiKey: string
   baseUrl?: string
+  executablePath?: string
   llmModel?: string
 }): ProviderConnectionPayload {
   const apiKey = params.apiKey.trim()
   const compatibleBaseUrl = params.baseUrl?.trim()
+  const executablePath = params.executablePath?.trim()
   const llmModel = params.llmModel?.trim()
   const isCompatibleProvider =
     params.providerKey === 'openai-compatible' || params.providerKey === 'gemini-compatible'
@@ -247,7 +251,7 @@ export function buildProviderConnectionPayload(params: {
     return {
       apiType: params.providerKey,
       apiKey,
-      ...(compatibleBaseUrl ? { baseUrl: compatibleBaseUrl } : {}),
+      ...(executablePath ? { executablePath } : {}),
       ...(llmModel ? { llmModel } : {}),
     }
   }
@@ -366,6 +370,7 @@ export interface UseProviderCardStateResult {
   showKey: boolean
   tempKey: string
   tempUrl: string
+  tempExecutablePath: string
   showTutorial: boolean
   showAddForm: ProviderCardModelType | null
   newModel: ModelFormState
@@ -383,6 +388,7 @@ export interface UseProviderCardStateResult {
   setEditModel: (value: ModelFormState) => void
   setTempKey: (value: string) => void
   setTempUrl: (value: string) => void
+  setTempExecutablePath: (value: string) => void
   startEditKey: () => void
   startEditUrl: () => void
   handleSaveKey: () => void
@@ -425,6 +431,7 @@ export function useProviderCardState({
   defaultModels,
   onUpdateApiKey,
   onUpdateBaseUrl,
+  onUpdateExecutablePath,
   onUpdateModel,
   onAddModel,
   onFlushConfig,
@@ -435,6 +442,7 @@ export function useProviderCardState({
   const [showKey, setShowKey] = useState(false)
   const [tempKey, setTempKey] = useState(provider.apiKey || '')
   const [tempUrl, setTempUrl] = useState(provider.baseUrl || '')
+  const [tempExecutablePath, setTempExecutablePath] = useState(provider.executablePath || '')
   const [showTutorial, setShowTutorial] = useState(false)
   const [showAddForm, setShowAddForm] = useState<ProviderCardModelType | null>(null)
   const [newModel, setNewModel] = useState<ModelFormState>(EMPTY_MODEL_FORM)
@@ -455,8 +463,10 @@ export function useProviderCardState({
     (presetProvider) => presetProvider.id === provider.id,
   )
   const showBaseUrlEdit =
-    ['gemini-compatible', 'openai-compatible', CODEX_PROVIDER_KEY].includes(providerKey) &&
-    Boolean(onUpdateBaseUrl)
+    (
+      (providerKey === CODEX_PROVIDER_KEY && Boolean(onUpdateExecutablePath))
+      || (['gemini-compatible', 'openai-compatible'].includes(providerKey) && Boolean(onUpdateBaseUrl))
+    )
   const tutorial = getProviderTutorial(provider.id)
 
   const groupedModels: ProviderCardGroupedModels = {}
@@ -512,7 +522,11 @@ export function useProviderCardState({
   }
 
   const startEditUrl = () => {
-    setTempUrl(provider.baseUrl || '')
+    if (providerKey === CODEX_PROVIDER_KEY) {
+      setTempExecutablePath(provider.executablePath || '')
+    } else {
+      setTempUrl(provider.baseUrl || '')
+    }
     setIsEditingUrl(true)
   }
 
@@ -541,6 +555,7 @@ export function useProviderCardState({
         providerKey,
         apiKey: tempKey,
         baseUrl: provider.baseUrl,
+        executablePath: provider.executablePath,
         llmModel: fallbackLlmModel,
       })
       const res = await apiFetch('/api/user/api-config/test-provider', {
@@ -564,7 +579,7 @@ export function useProviderCardState({
       setKeyTestSteps([{ name: 'models', status: 'fail', message: 'Network error' }])
       setKeyTestStatus('failed')
     }
-  }, [defaultModels.analysisModel, doSaveKey, models, provider.baseUrl, providerKey, tempKey])
+  }, [defaultModels.analysisModel, doSaveKey, models, provider.baseUrl, provider.executablePath, providerKey, tempKey])
 
   const handleForceSaveKey = useCallback(() => {
     doSaveKey()
@@ -583,6 +598,9 @@ export function useProviderCardState({
         providerKey,
         apiKey: provider.apiKey || '',
         baseUrl: provider.baseUrl,
+        executablePath: providerKey === CODEX_PROVIDER_KEY && isEditingUrl
+          ? tempExecutablePath
+          : provider.executablePath,
         llmModel: fallbackLlmModel,
       })
       const res = await apiFetch('/api/user/api-config/test-provider', {
@@ -597,7 +615,16 @@ export function useProviderCardState({
       setKeyTestSteps([{ name: 'models', status: 'fail', message: 'Network error' }])
       setKeyTestStatus('failed')
     }
-  }, [defaultModels.analysisModel, models, provider.apiKey, provider.baseUrl, providerKey])
+  }, [
+    defaultModels.analysisModel,
+    isEditingUrl,
+    models,
+    provider.apiKey,
+    provider.baseUrl,
+    provider.executablePath,
+    providerKey,
+    tempExecutablePath,
+  ])
 
   const handleDismissTest = useCallback(() => {
     setKeyTestStatus('idle')
@@ -612,12 +639,20 @@ export function useProviderCardState({
   }
 
   const handleSaveUrl = () => {
-    onUpdateBaseUrl?.(provider.id, tempUrl)
+    if (providerKey === CODEX_PROVIDER_KEY) {
+      onUpdateExecutablePath?.(provider.id, tempExecutablePath.trim())
+    } else {
+      onUpdateBaseUrl?.(provider.id, tempUrl)
+    }
     setIsEditingUrl(false)
   }
 
   const handleCancelUrlEdit = () => {
-    setTempUrl(provider.baseUrl || '')
+    if (providerKey === CODEX_PROVIDER_KEY) {
+      setTempExecutablePath(provider.executablePath || '')
+    } else {
+      setTempUrl(provider.baseUrl || '')
+    }
     setIsEditingUrl(false)
   }
 
@@ -863,6 +898,7 @@ export function useProviderCardState({
     showKey,
     tempKey,
     tempUrl,
+    tempExecutablePath,
     showTutorial,
     showAddForm,
     newModel,
@@ -880,6 +916,7 @@ export function useProviderCardState({
     setEditModel,
     setTempKey,
     setTempUrl,
+    setTempExecutablePath,
     startEditKey,
     startEditUrl,
     handleSaveKey,

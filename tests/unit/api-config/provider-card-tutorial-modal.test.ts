@@ -39,6 +39,7 @@ function createState(tutorial: ProviderTutorial): UseProviderCardStateResult {
     showKey: false,
     tempKey: '',
     tempUrl: '',
+    tempExecutablePath: '',
     showTutorial: true,
     showAddForm: null,
     newModel: {
@@ -72,6 +73,7 @@ function createState(tutorial: ProviderTutorial): UseProviderCardStateResult {
     setEditModel: () => undefined,
     setTempKey: () => undefined,
     setTempUrl: () => undefined,
+    setTempExecutablePath: () => undefined,
     startEditKey: () => undefined,
     startEditUrl: () => undefined,
     handleSaveKey: () => Promise.resolve(),

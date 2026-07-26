@@ -13,6 +13,8 @@ import {
 import {
   CodexExecutableResolutionError,
   resolveCodexExecutable,
+  type CodexExecutableResolution,
+  type CodexExecutableSource,
 } from './executable-resolver'
 
 export type CodexChatMessage = {
@@ -55,6 +57,9 @@ export interface CodexImageGenerationResult {
 
 export interface CodexSelfCheckResult extends CodexCompletionResult {
   durationMs: number
+  executablePath: string
+  resolutionSource: CodexExecutableSource
+  version?: string
 }
 
 export class CodexExecError extends Error {
@@ -117,13 +122,35 @@ function truncateForError(value: string): string {
 }
 
 export function resolveCodexExecutablePath(rawPath?: string): string {
+  return resolveCodexExecutableForClient(rawPath).path
+}
+
+function resolveCodexExecutableForClient(rawPath?: string): CodexExecutableResolution {
   try {
-    return resolveCodexExecutable({ configuredPath: rawPath }).path
+    return resolveCodexExecutable({ configuredPath: rawPath })
   } catch (error) {
     if (error instanceof CodexExecutableResolutionError) {
       throw new CodexExecError(error.code, error.message)
     }
     throw error
+  }
+}
+
+async function readCodexVersion(params: {
+  executablePath: string
+  cwd?: string
+  timeoutMs: number
+}): Promise<string | undefined> {
+  try {
+    const result = await spawnCodex(params.executablePath, ['--version'], {
+      cwd: params.cwd,
+      timeoutMs: params.timeoutMs,
+    })
+    if (result.exitCode !== 0) return undefined
+    const version = (result.stdout.trim() || result.stderr.trim()).split(/\r?\n/, 1)[0]?.trim()
+    return version || undefined
+  } catch {
+    return undefined
   }
 }
 
@@ -769,20 +796,53 @@ export async function runCodexSelfCheck(params: {
   timeoutMs?: number
 } = {}): Promise<CodexSelfCheckResult> {
   const startedAt = Date.now()
-  const result = await runCodexTextCompletion({
-    codexPath: params.codexPath,
-    model: params.model || CODEX_DEFAULT_MODEL_ID,
+  const resolution = resolveCodexExecutableForClient(params.codexPath)
+  const version = await readCodexVersion({
+    executablePath: resolution.path,
     cwd: params.cwd,
-    timeoutMs: params.timeoutMs,
-    messages: [{
-      role: 'user',
-      content: 'Reply with exactly CODEX_OK and no other text.',
-    }],
+    timeoutMs: Math.min(params.timeoutMs ?? 5_000, 5_000),
   })
+
+  let result: CodexCompletionResult
+  try {
+    result = await runCodexTextCompletion({
+      codexPath: resolution.path,
+      model: params.model || CODEX_DEFAULT_MODEL_ID,
+      cwd: params.cwd,
+      timeoutMs: params.timeoutMs,
+      messages: [{
+        role: 'user',
+        content: 'Reply with exactly CODEX_OK and no other text.',
+      }],
+    })
+  } catch (error) {
+    if (
+      error instanceof CodexExecError
+      && (
+        error.code === 'CODEX_EXECUTABLE_NOT_FOUND'
+        || error.code === 'CODEX_EXECUTABLE_NOT_EXECUTABLE'
+        || error.code === 'CODEX_EXEC_TIMEOUT'
+      )
+    ) {
+      throw error
+    }
+    throw new CodexExecError(
+      'CODEX_SELF_CHECK_FAILED',
+      error instanceof Error ? error.message : String(error),
+      error instanceof CodexExecError
+        ? {
+            exitCode: error.exitCode,
+            signal: error.signal,
+            stdout: error.stdout,
+            stderr: error.stderr,
+          }
+        : undefined,
+    )
+  }
 
   if (!result.text.trim().includes('CODEX_OK')) {
     throw new CodexExecError(
-      'CODEX_EXEC_FAILED',
+      'CODEX_SELF_CHECK_FAILED',
       `Codex self-check returned unexpected text: ${truncateForError(result.text.trim())}`,
       {
         stdout: truncateForError(result.stdout),
@@ -794,6 +854,9 @@ export async function runCodexSelfCheck(params: {
   return {
     ...result,
     durationMs: Date.now() - startedAt,
+    executablePath: resolution.path,
+    resolutionSource: resolution.source,
+    version,
   }
 }
 
