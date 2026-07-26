@@ -5,7 +5,7 @@ const getProviderConfigMock = vi.hoisted(() => vi.fn(async () => ({
   id: 'codex',
   name: 'Codex (Local)',
   apiKey: '',
-  baseUrl: 'C:\\codex.exe',
+  executablePath: 'C:\\codex.exe',
 })))
 const prepareCodexImageInputsMock = vi.hoisted(() => vi.fn(async (
   inputs: string[],
@@ -59,7 +59,7 @@ describe('CodexImageGenerator', () => {
       id: 'codex',
       name: 'Codex (Local)',
       apiKey: '',
-      baseUrl: 'C:\\codex.exe',
+      executablePath: 'C:\\codex.exe',
     })
     prepareCodexImageInputsMock.mockResolvedValue({
       imagePaths: ['C:\\tmp\\ref-a.png', 'C:\\tmp\\ref-b.png'],

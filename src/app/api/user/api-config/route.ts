@@ -40,10 +40,10 @@ import type {
 } from '@/lib/openai-compat-media-template'
 import { validateOpenAICompatMediaTemplate } from '@/lib/user-api/model-template/validator'
 import {
-  CODEX_DEFAULT_EXECUTABLE_PATH,
   CODEX_DEFAULT_IMAGE_MODEL_KEY,
   CODEX_PROVIDER_KEY,
 } from '@/lib/providers/codex/constants'
+import { isCodexAutoPath } from '@/lib/providers/codex/executable-resolver'
 
 type ApiModeType = 'gemini-sdk' | 'openai-official'
 type GatewayRouteType = 'official' | 'openai-compat'
@@ -63,6 +63,7 @@ interface StoredProvider {
   id: string
   name: string
   baseUrl?: string
+  executablePath?: string
   apiKey?: string
   hidden?: boolean
   apiMode?: ApiModeType
@@ -195,9 +196,6 @@ function normalizeMinimaxProviderBaseUrl(input: {
   field: string
 }): string | undefined {
   const providerKey = getProviderKey(input.providerId)
-  if (providerKey === CODEX_PROVIDER_KEY) {
-    return input.baseUrl || CODEX_DEFAULT_EXECUTABLE_PATH
-  }
   if (providerKey !== 'minimax') return input.baseUrl
   if (!input.baseUrl) return MINIMAX_OFFICIAL_BASE_URL
   if (input.baseUrl === MINIMAX_OFFICIAL_BASE_URL) return MINIMAX_OFFICIAL_BASE_URL
@@ -208,6 +206,12 @@ function normalizeMinimaxProviderBaseUrl(input: {
     })
   }
   return MINIMAX_OFFICIAL_BASE_URL
+}
+
+function normalizeCodexExecutablePath(rawPath: unknown): string | undefined {
+  const executablePath = readTrimmedString(rawPath)
+  if (!executablePath || isCodexAutoPath(executablePath)) return undefined
+  return executablePath
 }
 
 function formatPriceAmount(amount: number): string {
@@ -982,17 +986,26 @@ function normalizeProvidersInput(rawProviders: unknown): StoredProvider[] {
       })
     }
 
-    const baseUrl = normalizeMinimaxProviderBaseUrl({
-      providerId: id,
-      baseUrl: readTrimmedString(item.baseUrl) || undefined,
-      strict: true,
-      field: `providers[${index}].baseUrl`,
-    })
+    const isCodexProvider = providerKey === CODEX_PROVIDER_KEY
+    const executablePath = isCodexProvider
+      ? normalizeCodexExecutablePath(
+          item.executablePath !== undefined ? item.executablePath : item.baseUrl,
+        )
+      : undefined
+    const baseUrl = isCodexProvider
+      ? undefined
+      : normalizeMinimaxProviderBaseUrl({
+          providerId: id,
+          baseUrl: readTrimmedString(item.baseUrl) || undefined,
+          strict: true,
+          field: `providers[${index}].baseUrl`,
+        })
 
     normalized.push({
       id,
       name,
       baseUrl,
+      executablePath,
       apiKey: typeof item.apiKey === 'string' ? item.apiKey.trim() : undefined,
       hidden: hiddenRaw === true,
       apiMode: apiModeRaw,
@@ -1442,17 +1455,26 @@ function parseStoredProviders(rawProviders: string | null | undefined): StoredPr
       })
     }
 
-    const baseUrl = normalizeMinimaxProviderBaseUrl({
-      providerId: id,
-      baseUrl: readTrimmedString(raw.baseUrl) || undefined,
-      strict: false,
-      field: `customProviders[${index}].baseUrl`,
-    })
+    const isCodexProvider = providerKey === CODEX_PROVIDER_KEY
+    const executablePath = isCodexProvider
+      ? normalizeCodexExecutablePath(
+          raw.executablePath !== undefined ? raw.executablePath : raw.baseUrl,
+        )
+      : undefined
+    const baseUrl = isCodexProvider
+      ? undefined
+      : normalizeMinimaxProviderBaseUrl({
+          providerId: id,
+          baseUrl: readTrimmedString(raw.baseUrl) || undefined,
+          strict: false,
+          field: `customProviders[${index}].baseUrl`,
+        })
 
     normalized.push({
       id,
       name,
       baseUrl,
+      executablePath,
       apiKey: typeof raw.apiKey === 'string' ? raw.apiKey.trim() : undefined,
       hidden: hiddenRaw === true,
       apiMode,
@@ -1811,6 +1833,7 @@ export const PUT = apiHandler(async (request: NextRequest) => {
         id: provider.id,
         name: provider.name,
         baseUrl: provider.baseUrl,
+        executablePath: provider.executablePath,
         hidden: finalHidden,
         apiMode: provider.apiMode,
         gatewayRoute: provider.gatewayRoute,

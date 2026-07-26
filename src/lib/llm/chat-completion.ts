@@ -116,7 +116,7 @@ export async function chatCompletion(
     try {
       if (providerKey === 'codex') {
         const codexResult = await runCodexTextCompletion({
-          codexPath: providerConfig.baseUrl,
+          codexPath: providerConfig.executablePath,
           model: resolvedModelId,
           messages,
           cwd: process.cwd(),

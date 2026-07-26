@@ -61,6 +61,7 @@ interface UseProvidersReturn {
     updateProviderHidden: (providerId: string, hidden: boolean) => void
     updateProviderApiKey: (providerId: string, apiKey: string) => void
     updateProviderBaseUrl: (providerId: string, baseUrl: string) => void
+    updateProviderExecutablePath: (providerId: string, executablePath: string) => void
     reorderProviders: (activeProviderId: string, overProviderId: string) => void
     addProvider: (provider: Omit<Provider, 'hasApiKey'>) => void
     deleteProvider: (providerId: string) => void
@@ -103,9 +104,11 @@ export function mergeProvidersForDisplay(
         const matchedPreset = presetProviders.find((presetProvider) => presetProvider.id === providerKey)
         if (matchedPreset) {
             const apiKey = savedProvider.apiKey || ''
-            const providerBaseUrl = providerKey === 'minimax'
-                ? matchedPreset.baseUrl
-                : (savedProvider.baseUrl || matchedPreset.baseUrl)
+            const providerBaseUrl = providerKey === CODEX_PROVIDER_KEY
+                ? undefined
+                : providerKey === 'minimax'
+                    ? matchedPreset.baseUrl
+                    : (savedProvider.baseUrl || matchedPreset.baseUrl)
             const hasApiKeyResolved = providerKey === CODEX_PROVIDER_KEY
                 ? true
                 : providerKey === 'comfyui'
@@ -117,6 +120,9 @@ export function mergeProvidersForDisplay(
                 hasApiKey: hasApiKeyResolved,
                 hidden: savedProvider.hidden === true,
                 baseUrl: providerBaseUrl,
+                executablePath: providerKey === CODEX_PROVIDER_KEY
+                    ? savedProvider.executablePath
+                    : undefined,
                 apiMode: savedProvider.apiMode,
                 gatewayRoute: savedProvider.gatewayRoute,
             })
@@ -953,6 +959,25 @@ export function useProviders(): UseProvidersReturn {
         })
     }, [performSave])
 
+    const updateProviderExecutablePath = useCallback((providerId: string, executablePath: string) => {
+        setProviders(prev => {
+            const normalizedPath = executablePath.trim() || undefined
+            const next = prev.map((provider) =>
+                provider.id === providerId
+                    ? {
+                        ...provider,
+                        baseUrl: undefined,
+                        executablePath: normalizedPath,
+                        hasApiKey: true,
+                    }
+                    : provider
+            )
+            latestProvidersRef.current = next
+            void performSave(undefined, true)
+            return next
+        })
+    }, [performSave])
+
     // 模型操作
     const toggleModel = useCallback((modelKey: string, providerId?: string) => {
         if (isPresetComingSoonModelKey(modelKey)) {
@@ -1073,6 +1098,7 @@ export function useProviders(): UseProvidersReturn {
         updateProviderHidden,
         updateProviderApiKey,
         updateProviderBaseUrl,
+        updateProviderExecutablePath,
         reorderProviders,
         addProvider,
         deleteProvider,

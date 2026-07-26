@@ -33,6 +33,7 @@ type SavedProvider = {
   id: string
   name: string
   baseUrl?: string
+  executablePath?: string
   apiKey?: string
   hidden?: boolean
   apiMode?: 'gemini-sdk' | 'openai-official'
@@ -460,6 +461,87 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
       modelId: CODEX_DEFAULT_IMAGE_MODEL_ID,
       modelKey: CODEX_DEFAULT_IMAGE_MODEL_KEY,
     })
+  })
+
+  it('persists a Codex executable path without treating it as a base URL', async () => {
+    installAuthMocks()
+    mockAuthenticated('user-1')
+    const route = await import('@/app/api/user/api-config/route')
+
+    const req = buildMockRequest({
+      path: '/api/user/api-config',
+      method: 'PUT',
+      body: {
+        providers: [{
+          id: CODEX_PROVIDER_KEY,
+          name: 'Codex (Local)',
+          executablePath: '/custom/codex',
+        }],
+      },
+    })
+
+    const res = await route.PUT(req, routeContext)
+
+    expect(res.status).toBe(200)
+    const savedProvider = readSavedProvidersFromUpsert()[0]
+    expect(savedProvider).toMatchObject({
+      id: CODEX_PROVIDER_KEY,
+      executablePath: '/custom/codex',
+    })
+    expect(savedProvider?.baseUrl).toBeUndefined()
+  })
+
+  it('normalizes a legacy Codex default path to automatic discovery when saving', async () => {
+    installAuthMocks()
+    mockAuthenticated('user-1')
+    const route = await import('@/app/api/user/api-config/route')
+
+    const req = buildMockRequest({
+      path: '/api/user/api-config',
+      method: 'PUT',
+      body: {
+        providers: [{
+          id: CODEX_PROVIDER_KEY,
+          name: 'Codex (Local)',
+          baseUrl: CODEX_DEFAULT_EXECUTABLE_PATH,
+        }],
+      },
+    })
+
+    const res = await route.PUT(req, routeContext)
+
+    expect(res.status).toBe(200)
+    const savedProvider = readSavedProvidersFromUpsert()[0]
+    expect(savedProvider?.baseUrl).toBeUndefined()
+    expect(savedProvider?.executablePath).toBeUndefined()
+  })
+
+  it('reads a legacy custom Codex base URL as its executable path', async () => {
+    installAuthMocks()
+    mockAuthenticated('user-1')
+    prismaMock.userPreference.findUnique.mockResolvedValue({
+      customProviders: JSON.stringify([{
+        id: CODEX_PROVIDER_KEY,
+        name: 'Codex (Local)',
+        baseUrl: '/legacy/custom/codex',
+      }]),
+      customModels: null,
+    })
+    const route = await import('@/app/api/user/api-config/route')
+
+    const req = buildMockRequest({
+      path: '/api/user/api-config',
+      method: 'GET',
+    })
+    const res = await route.GET(req, routeContext)
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as { providers: SavedProvider[] }
+    expect(body.providers[0]).toMatchObject({
+      id: CODEX_PROVIDER_KEY,
+      executablePath: '/legacy/custom/codex',
+    })
+    expect(body.providers[0]?.baseUrl).toBeUndefined()
   })
 
   it('migrates existing project ComfyUI image defaults when saving Codex Image defaults', async () => {

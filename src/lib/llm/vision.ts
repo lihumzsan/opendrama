@@ -92,7 +92,7 @@ export async function chatCompletionWithVision(
         const preparedImages = await prepareCodexImageInputs(imageUrls, normalizeToBase64ForGeneration)
         try {
           const codexResult = await runCodexTextCompletion({
-            codexPath: providerConfig.baseUrl,
+            codexPath: providerConfig.executablePath,
             model: resolvedModelId,
             messages: [{
               role: 'user',

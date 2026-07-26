@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const runCodexTextCompletionMock = vi.hoisted(() => vi.fn())
+const resolveCodexExecutablePathMock = vi.hoisted(() => vi.fn())
 const getProviderConfigMock = vi.hoisted(() => vi.fn())
 const resolveLlmRuntimeModelMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/providers/codex/client', () => ({
+  resolveCodexExecutablePath: resolveCodexExecutablePathMock,
   runCodexTextCompletion: runCodexTextCompletionMock,
 }))
 
@@ -45,8 +47,9 @@ describe('codex llm stream branch', () => {
       id: 'codex',
       name: 'Codex (Local)',
       apiKey: '',
-      baseUrl: '%USERPROFILE%\\.codex\\.sandbox-bin\\codex.exe',
+      executablePath: '/custom/codex',
     })
+    resolveCodexExecutablePathMock.mockReturnValue('/resolved/codex')
     runCodexTextCompletionMock.mockResolvedValue({
       text: 'final codex text',
       stdout: '',
@@ -55,9 +58,14 @@ describe('codex llm stream branch', () => {
   })
 
   it('emits stage events and one final text chunk', async () => {
+    const lifecycle: string[] = []
     const stages: string[] = []
     const chunks: string[] = []
     const completed: string[] = []
+    resolveCodexExecutablePathMock.mockImplementationOnce(() => {
+      lifecycle.push('resolve')
+      return '/resolved/codex'
+    })
 
     const completion = await chatCompletionStream(
       'user-1',
@@ -65,18 +73,31 @@ describe('codex llm stream branch', () => {
       [{ role: 'user', content: 'hello' }],
       {},
       {
-        onStage: (stage) => stages.push(stage.stage),
+        onStage: (stage) => {
+          stages.push(stage.stage)
+          lifecycle.push(`stage:${stage.stage}`)
+        },
         onChunk: (chunk) => chunks.push(chunk.delta),
         onComplete: (text) => completed.push(text),
       },
     )
 
     expect(runCodexTextCompletionMock).toHaveBeenCalledWith({
-      codexPath: '%USERPROFILE%\\.codex\\.sandbox-bin\\codex.exe',
+      codexPath: '/resolved/codex',
       model: 'gpt-5.5',
       messages: [{ role: 'user', content: 'hello' }],
       cwd: process.cwd(),
     })
+    expect(resolveCodexExecutablePathMock).toHaveBeenCalledWith('/custom/codex')
+    expect(resolveCodexExecutablePathMock.mock.invocationCallOrder[0]).toBeLessThan(
+      runCodexTextCompletionMock.mock.invocationCallOrder[0]!,
+    )
+    expect(lifecycle).toEqual([
+      'stage:submit',
+      'resolve',
+      'stage:streaming',
+      'stage:completed',
+    ])
     expect(stages).toEqual(['submit', 'streaming', 'completed'])
     expect(chunks).toEqual(['final codex text'])
     expect(completed).toEqual(['final codex text'])
@@ -92,7 +113,7 @@ describe('codex llm stream branch', () => {
     )
 
     expect(runCodexTextCompletionMock).toHaveBeenCalledWith({
-      codexPath: '%USERPROFILE%\\.codex\\.sandbox-bin\\codex.exe',
+      codexPath: '/custom/codex',
       model: 'gpt-5.5',
       messages: [{ role: 'user', content: 'hello' }],
       cwd: process.cwd(),

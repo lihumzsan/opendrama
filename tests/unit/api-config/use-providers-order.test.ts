@@ -7,7 +7,6 @@ import {
 } from '@/app/[locale]/profile/components/api-config/hooks'
 import type { Provider } from '@/app/[locale]/profile/components/api-config/types'
 import {
-  CODEX_DEFAULT_EXECUTABLE_PATH,
   CODEX_DEFAULT_IMAGE_MODEL_KEY,
   CODEX_DEFAULT_MODEL_KEY,
   CODEX_PROVIDER_KEY,
@@ -97,10 +96,10 @@ describe('useProviders provider order merge', () => {
 
   it('treats codex as ready without an api key', () => {
     const presetProviders: Provider[] = [
-      { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)', baseUrl: CODEX_DEFAULT_EXECUTABLE_PATH },
+      { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)' },
     ]
     const savedProviders: Provider[] = [
-      { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)', baseUrl: CODEX_DEFAULT_EXECUTABLE_PATH, apiKey: '' },
+      { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)', executablePath: '/custom/codex', apiKey: '' },
     ]
 
     const merged = mergeProvidersForDisplay(savedProviders, presetProviders)
@@ -108,9 +107,10 @@ describe('useProviders provider order merge', () => {
     expect(merged).toHaveLength(1)
     expect(merged[0]).toMatchObject({
       id: CODEX_PROVIDER_KEY,
-      baseUrl: CODEX_DEFAULT_EXECUTABLE_PATH,
+      executablePath: '/custom/codex',
       hasApiKey: true,
     })
+    expect(merged[0]?.baseUrl).toBeUndefined()
   })
 
   it('auto-selects codex for analysis only on the migration pass', () => {

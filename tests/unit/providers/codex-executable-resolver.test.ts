@@ -14,7 +14,7 @@ function resolverOptions(input: {
   platform: NodeJS.Platform
   files?: string[]
   executables?: string[]
-  env?: NodeJS.ProcessEnv
+  env?: CodexExecutableResolverOptions['env']
   homedir?: string
   directories?: Record<string, Array<{ name: string; mtimeMs: number }>>
 }): CodexExecutableResolverOptions {

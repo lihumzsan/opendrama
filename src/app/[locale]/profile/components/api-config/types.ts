@@ -12,7 +12,6 @@ import type {
     OpenAICompatMediaTemplateSource,
 } from '@/lib/openai-compat-media-template'
 import {
-    CODEX_DEFAULT_EXECUTABLE_PATH,
     CODEX_DEFAULT_IMAGE_MODEL_ID,
     CODEX_DEFAULT_MODEL_ID,
     CODEX_PROVIDER_KEY,
@@ -23,6 +22,7 @@ export interface Provider {
     id: string
     name: string
     baseUrl?: string
+    executablePath?: string
     apiKey?: string
     hasApiKey?: boolean
     hidden?: boolean
@@ -158,7 +158,7 @@ export const PRESET_PROVIDERS: Omit<Provider, 'apiKey' | 'hasApiKey'>[] = [
     { id: 'minimax', name: 'MiniMax Hailuo', baseUrl: 'https://api.minimaxi.com/v1' },
     { id: 'vidu', name: 'Vidu' },
     { id: 'fal', name: 'FAL' },
-    { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)', baseUrl: CODEX_DEFAULT_EXECUTABLE_PATH },
+    { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)' },
     { id: 'comfyui', name: 'ComfyUI (Local)', baseUrl: 'http://127.0.0.1:8188' },
 ]
 

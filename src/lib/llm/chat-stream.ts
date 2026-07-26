@@ -39,7 +39,10 @@ import { withStreamChunkTimeout } from './stream-timeout'
 import { shouldUseOpenAIReasoningProviderOptions } from './reasoning-capability'
 import { completeBailianLlm } from '@/lib/providers/bailian'
 import { completeSiliconFlowLlm } from '@/lib/providers/siliconflow'
-import { runCodexTextCompletion } from '@/lib/providers/codex/client'
+import {
+  resolveCodexExecutablePath,
+  runCodexTextCompletion,
+} from '@/lib/providers/codex/client'
 
 const OFFICIAL_ONLY_PROVIDER_KEYS = new Set(['bailian', 'siliconflow'])
 
@@ -108,9 +111,10 @@ export async function chatCompletionStream(
 
   try {
     if (providerKey === 'codex') {
+      const executablePath = resolveCodexExecutablePath(providerConfig.executablePath)
       emitStreamStage(callbacks, streamStep, 'streaming', providerKey)
       const codexResult = await runCodexTextCompletion({
-        codexPath: providerConfig.baseUrl,
+        codexPath: executablePath,
         model: resolvedModelId,
         messages,
         cwd: process.cwd(),

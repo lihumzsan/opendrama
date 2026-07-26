@@ -25,10 +25,12 @@ export interface CodexExecutableResolution {
   source: CodexExecutableSource
 }
 
+type CodexResolverEnvironment = Readonly<Record<string, string | undefined>>
+
 export interface CodexExecutableResolverOptions {
   configuredPath?: string
   platform?: NodeJS.Platform
-  env?: NodeJS.ProcessEnv
+  env?: CodexResolverEnvironment
   homedir?: string
   isFile?: (candidate: string) => boolean
   isExecutable?: (candidate: string) => boolean
@@ -86,14 +88,14 @@ function defaultListDirectories(directory: string): Array<{ name: string; mtimeM
   }
 }
 
-function readEnvironmentValue(env: NodeJS.ProcessEnv, key: string): string | undefined {
+function readEnvironmentValue(env: CodexResolverEnvironment, key: string): string | undefined {
   const direct = env[key]
   if (direct) return direct
   const matchedKey = Object.keys(env).find((candidate) => candidate.toLowerCase() === key.toLowerCase())
   return matchedKey ? env[matchedKey] : undefined
 }
 
-function expandEnvironmentVariables(input: string, env: NodeJS.ProcessEnv): string {
+function expandEnvironmentVariables(input: string, env: CodexResolverEnvironment): string {
   return input.replace(/%([^%]+)%/g, (match, name: string) => {
     return readEnvironmentValue(env, name) || match
   })

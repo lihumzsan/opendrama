@@ -127,7 +127,7 @@ export class CodexImageGenerator extends BaseImageGenerator {
       }
 
       const result = await runCodexImageGeneration({
-        codexPath: providerConfig.baseUrl,
+        codexPath: providerConfig.executablePath,
         model: codexModelId,
         prompt: buildCodexImagePrompt({
           prompt,

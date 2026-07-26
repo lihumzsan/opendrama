@@ -41,6 +41,7 @@ interface StoredProvider {
   name?: string
   apiKey?: string
   baseUrl?: string
+  executablePath?: string
 }
 
 interface UserModelOption {

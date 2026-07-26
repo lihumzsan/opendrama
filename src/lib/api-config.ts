@@ -20,13 +20,13 @@ import type {
 } from './openai-compat-media-template'
 import { validateOpenAICompatMediaTemplate } from './user-api/model-template/validator'
 import {
-  CODEX_DEFAULT_EXECUTABLE_PATH,
   CODEX_DEFAULT_IMAGE_MODEL_ID,
   CODEX_DEFAULT_IMAGE_MODEL_KEY,
   CODEX_DEFAULT_MODEL_ID,
   CODEX_DEFAULT_MODEL_KEY,
   CODEX_PROVIDER_KEY,
 } from './providers/codex/constants'
+import { isCodexAutoPath } from './providers/codex/executable-resolver'
 
 const ALLOWED_LLM_PROVIDER_KEYS = new Set([CODEX_PROVIDER_KEY])
 
@@ -124,6 +124,7 @@ interface CustomProvider {
   id: string
   name: string
   baseUrl?: string
+  executablePath?: string
   apiKey?: string
   apiMode?: 'gemini-sdk' | 'openai-official'
   gatewayRoute?: GatewayRouteType
@@ -152,8 +153,7 @@ function normalizeProviderBaseUrl(providerId: string, rawBaseUrl?: string): stri
     return baseUrl || 'http://127.0.0.1:8188'
   }
   if (providerKey === CODEX_PROVIDER_KEY) {
-    const baseUrl = readTrimmedString(rawBaseUrl)
-    return baseUrl || CODEX_DEFAULT_EXECUTABLE_PATH
+    return undefined
   }
 
   const baseUrl = readTrimmedString(rawBaseUrl)
@@ -173,6 +173,12 @@ function normalizeProviderBaseUrl(providerId: string, rawBaseUrl?: string): stri
     // Keep original value to avoid hiding invalid-config errors.
     return baseUrl
   }
+}
+
+function normalizeCodexExecutablePath(rawPath: unknown): string | undefined {
+  const executablePath = readTrimmedString(rawPath)
+  if (!executablePath || isCodexAutoPath(executablePath)) return undefined
+  return executablePath
 }
 
 function filterRuntimeSupportedModels(models: CustomModel[]): CustomModel[] {
@@ -277,10 +283,18 @@ function parseCustomProviders(rawProviders: string | null | undefined): CustomPr
       gatewayRoute = gatewayRouteRaw
     }
 
+    const isCodexProvider = providerKey === CODEX_PROVIDER_KEY
+    const executablePath = isCodexProvider
+      ? normalizeCodexExecutablePath(
+          raw.executablePath !== undefined ? raw.executablePath : raw.baseUrl,
+        )
+      : undefined
+
     providers.push({
       id,
       name,
-      baseUrl: readTrimmedString(raw.baseUrl) || undefined,
+      baseUrl: isCodexProvider ? undefined : (readTrimmedString(raw.baseUrl) || undefined),
+      executablePath,
       apiKey: readTrimmedString(raw.apiKey) || undefined,
       apiMode,
       gatewayRoute,
@@ -537,6 +551,7 @@ export interface ProviderConfig {
   name: string
   apiKey: string
   baseUrl?: string
+  executablePath?: string
   apiMode?: 'gemini-sdk' | 'openai-official'
   gatewayRoute?: GatewayRouteType
 }
@@ -555,6 +570,9 @@ export async function getProviderConfig(userId: string, providerId: string): Pro
     name: provider.name,
     apiKey: provider.apiKey ? decryptApiKey(provider.apiKey) : '',
     baseUrl: normalizeProviderBaseUrl(provider.id, provider.baseUrl),
+    executablePath: providerKey === CODEX_PROVIDER_KEY
+      ? normalizeCodexExecutablePath(provider.executablePath)
+      : undefined,
     apiMode: provider.apiMode,
     gatewayRoute: provider.gatewayRoute,
   }
