@@ -36,7 +36,7 @@
   "analyzing": {
     "title": "AI is Analyzing Your Story",
     "description": "Recognizing chapter structure, smart splitting in progress...",
-    "autoSave": "Will auto-save after analysis complete"
+    "autoSave": "Preview the result after analysis, then confirm to save"
   },
   "analyzingDesc": "Identifying chapter structure, smart splitting...",
   "autoSave": "Will auto-save after analysis",
@@ -62,7 +62,7 @@
     "title": "Smart Splitting Complete",
     "episodeCount": "Automatically split into {count} episodes",
     "totalWords": "Total {count} words",
-    "autoSaved": "✓ Auto-saved",
+    "autoSaved": "Not saved yet; confirm to apply",
     "reanalyze": "Re-analyze",
     "confirm": "Confirm Complete",
     "saving": "Saving...",

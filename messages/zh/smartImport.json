@@ -36,7 +36,7 @@
   "analyzing": {
     "title": "AI 正在分析你的故事",
     "description": "识别章节结构，智能分集中...",
-    "autoSave": "分析完成后将自动保存"
+    "autoSave": "分析完成后可预览，确认后保存"
   },
   "analyzingDesc": "识别章节结构，智能分集中...",
   "autoSave": "分析完成后将自动保存",
@@ -62,7 +62,7 @@
     "title": "智能分集完成",
     "episodeCount": "已为你自动分为 {count} 集",
     "totalWords": "总计 {count} 字",
-    "autoSaved": "✓ 已自动保存",
+    "autoSaved": "尚未保存，确认后生效",
     "reanalyze": "重新分析",
     "confirm": "确认完成",
     "saving": "保存中...",
