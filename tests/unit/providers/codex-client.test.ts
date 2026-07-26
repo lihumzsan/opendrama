@@ -40,19 +40,16 @@ describe('codex cli client', () => {
     vi.clearAllMocks()
   })
 
-  it('expands Windows environment variables in explicit custom paths', () => {
-    const previous = process.env.USERPROFILE
-    process.env.USERPROFILE = 'C:\\Users\\Unit'
-    try {
-      expect(resolveCodexExecutablePath('%USERPROFILE%\\tools\\codex.exe'))
-        .toBe('C:\\Users\\Unit\\tools\\codex.exe')
-    } finally {
-      if (previous === undefined) {
-        delete process.env.USERPROFILE
-      } else {
-        process.env.USERPROFILE = previous
-      }
-    }
+  it('uses an existing explicit custom path', () => {
+    expect(resolveCodexExecutablePath(process.execPath)).toBe(process.execPath)
+  })
+
+  it('surfaces a missing explicit custom path as a Codex error', () => {
+    expect(() => resolveCodexExecutablePath('/missing/codex')).toThrowError(
+      expect.objectContaining({
+        code: 'CODEX_EXECUTABLE_NOT_FOUND',
+      }),
+    )
   })
 
   it('uses the current Codex CLI path when configured with the legacy sandbox default', () => {
