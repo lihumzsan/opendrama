@@ -41,6 +41,7 @@ export const POST = apiHandler(async (
     routePath: `/api/novel-promotion/${projectId}/episodes/split`,
     body: { content },
     dedupeKey: `episode_split_llm:${projectId}:${hashContentForDedupe(content)}`,
+    maxAttempts: 1,
   })
   if (asyncTaskResponse) return asyncTaskResponse
 

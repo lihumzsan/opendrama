@@ -14,6 +14,7 @@ type LLMRouteCase = {
   expectedTaskType: TaskType
   expectedTargetType: string
   expectedProjectId: string
+  expectedMaxAttempts?: number
 }
 
 type RouteContext = {
@@ -310,6 +311,7 @@ const ROUTE_CASES: ReadonlyArray<LLMRouteCase> = [
     expectedTaskType: TASK_TYPE.EPISODE_SPLIT_LLM,
     expectedTargetType: 'NovelPromotionProject',
     expectedProjectId: 'project-1',
+    expectedMaxAttempts: 1,
   },
   {
     routeFile: 'src/app/api/novel-promotion/[projectId]/reference-to-character/route.ts',
@@ -408,6 +410,9 @@ describe('api contract - llm observe routes (behavior)', () => {
       expect(callArg?.targetType).toBe(routeCase.expectedTargetType)
       expect(callArg?.projectId).toBe(routeCase.expectedProjectId)
       expect(callArg?.userId).toBe('user-1')
+      if (routeCase.expectedMaxAttempts !== undefined) {
+        expect(callArg?.maxAttempts).toBe(routeCase.expectedMaxAttempts)
+      }
 
       const json = await res.json() as Record<string, unknown>
       expect(json.async).toBe(true)

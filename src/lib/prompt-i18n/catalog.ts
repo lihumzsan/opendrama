@@ -146,6 +146,20 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
     pathStem: 'novel-promotion/episode_split',
     variableKeys: ['CONTENT'],
   },
+  [PROMPT_IDS.NP_EPISODE_SCENE_ANALYSIS]: {
+    pathStem: 'novel-promotion/episode_scene_analysis',
+    variableKeys: ['SOURCE_KIND', 'BATCH_ID', 'UNIT_JSON'],
+  },
+  [PROMPT_IDS.NP_EPISODE_PLAN]: {
+    pathStem: 'novel-promotion/episode_plan',
+    variableKeys: [
+      'SOURCE_KIND',
+      'ESTIMATED_TOTAL_MINUTES',
+      'EXISTING_EPISODE_CONTEXT',
+      'SCENE_JSON',
+      'REPAIR_CONTEXT',
+    ],
+  },
   [PROMPT_IDS.NP_EPISODE_COVER_IMAGE]: {
     pathStem: 'novel-promotion/episode_cover_image',
     variableKeys: ['episode_context', 'aspect_ratio', 'style'],

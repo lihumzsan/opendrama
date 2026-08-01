@@ -53,12 +53,30 @@ export function useSplitProjectEpisodes(projectId: string) {
         '分割失败',
       )
       return resolveTaskResponse<{
+        profile?: 'horizontal_motion_comic' | 'regular_episode'
+        estimatedTotalMinutes?: number
         episodes: Array<{
           number: number
           title: string
           summary: string
           content: string
           wordCount: number
+          estimatedMinutes?: number
+          coreGoal?: string
+          dramaticArc?: string
+          endingHook?: string
+          rationale?: string
+          startSceneId?: string
+          endSceneId?: string
+          sceneIds?: string[]
+          scenes?: Array<{
+            id: string
+            title: string
+            summary: string
+            content: string
+            wordCount: number
+            estimatedMinutes: number
+          }>
         }>
       }>(response, {
         timeoutMs: EPISODE_SPLIT_TASK_TIMEOUT_MS,

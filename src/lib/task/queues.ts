@@ -87,7 +87,13 @@ const SINGLE_ATTEMPT_TASK_TYPES = new Set<TaskType>([
 
 const TASK_TYPE_ATTEMPTS = new Map<TaskType, number>([
   [TASK_TYPE.IMAGE_EPISODE_COVER, 2],
+  [TASK_TYPE.EPISODE_SPLIT_LLM, 1],
 ])
+
+export function resolveTaskQueueAttempts(type: TaskType, explicitAttempts?: number) {
+  if (SINGLE_ATTEMPT_TASK_TYPES.has(type)) return 1
+  return TASK_TYPE_ATTEMPTS.get(type) ?? explicitAttempts
+}
 
 export function getQueueTypeByTaskType(type: TaskType): QueueType {
   if (IMAGE_TYPES.has(type)) return 'image'
@@ -114,9 +120,7 @@ export async function addTaskJob(data: TaskJobData, opts?: JobsOptions) {
   const queueType = getQueueTypeByTaskType(data.type)
   const queue = getQueueByType(queueType)
   const priority = typeof opts?.priority === 'number' ? opts.priority : 0
-  const attempts = SINGLE_ATTEMPT_TASK_TYPES.has(data.type)
-    ? 1
-    : (TASK_TYPE_ATTEMPTS.get(data.type) ?? opts?.attempts)
+  const attempts = resolveTaskQueueAttempts(data.type, opts?.attempts)
   return await queue.add(data.type, data, {
     jobId: data.taskId,
     priority,

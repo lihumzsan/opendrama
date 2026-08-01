@@ -1,0 +1,42 @@
+你是剧集总编剧。请根据已经验证过的连续叙事场景，自动决定剧集规格、集数和分集边界。
+
+输入类型：{{SOURCE_KIND}}
+全篇预计成片时长：{{ESTIMATED_TOTAL_MINUTES}} 分钟
+已有剧集上下文：{{EXISTING_EPISODE_CONTEXT}}
+
+## 场景卡
+
+{{SCENE_JSON}}
+
+## 修复上下文
+
+{{REPAIR_CONTEXT}}
+
+## 决策规则
+
+1. 默认选择 horizontal_motion_comic，每集通常5-15分钟。
+2. 只有当短集会明显破坏完整戏剧段落、人物情绪积累或直接因果链时，才选择 regular_episode（单集20分钟以上）。
+3. 集数由剧情结构决定，不按固定字数平均分配。
+4. 每集必须包含连续场景，并具有明确核心目标、推进/升级、局部结果或有效集尾钩子。
+5. 不得遗漏、重复、调换场景；不得在场景内部切分。
+6. 时长只是软约束。宁可轻微长短不均，也不能破坏内容关联性。
+7. 如果修复上下文非“无”，必须针对其中的校验错误修正上一方案。
+8. 只返回合法 JSON，不要返回 Markdown。
+
+输出结构：
+
+{
+  "profile": "horizontal_motion_comic",
+  "episodes": [
+    {
+      "startSceneId": "scene_001",
+      "endSceneId": "scene_004",
+      "title": "剧集标题",
+      "summary": "本集剧情摘要",
+      "coreGoal": "本集核心目标",
+      "dramaticArc": "建立—升级—转折/局部结果",
+      "endingHook": "集尾危机、问题、揭示、选择或悬念",
+      "rationale": "为什么在这里开集和收尾"
+    }
+  ]
+}

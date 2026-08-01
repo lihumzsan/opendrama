@@ -1,0 +1,40 @@
+You are the head writer. Using validated consecutive narrative scenes, automatically choose the episode format, episode count, and episode boundaries.
+
+Source type: {{SOURCE_KIND}}
+Estimated total runtime: {{ESTIMATED_TOTAL_MINUTES}} minutes
+Existing episode context: {{EXISTING_EPISODE_CONTEXT}}
+
+## Scene cards
+
+{{SCENE_JSON}}
+
+## Repair context
+
+{{REPAIR_CONTEXT}}
+
+## Rules
+
+1. Default to horizontal_motion_comic with episodes usually lasting 5-15 minutes.
+2. Choose regular_episode (20+ minutes per episode) only when shorter episodes would damage a complete dramatic movement, emotional accumulation, or a direct causal chain.
+3. Narrative structure determines count; never balance by fixed word count.
+4. Every episode uses a contiguous scene range and has a core goal, progression/escalation, and a local result or effective ending hook.
+5. Never omit, duplicate, reorder, or split scenes.
+6. Runtime is a soft constraint. Preserve narrative integrity over equal duration.
+7. When repair context is not "none", fix the exact validation error in the previous plan.
+8. Return valid JSON only, without Markdown.
+
+Return:
+
+{
+  "profile": "horizontal_motion_comic",
+  "episodes": [{
+    "startSceneId": "scene_001",
+    "endSceneId": "scene_004",
+    "title": "Episode title",
+    "summary": "Episode summary",
+    "coreGoal": "Episode goal",
+    "dramaticArc": "Setup-escalation-turn/local outcome",
+    "endingHook": "Crisis, question, reveal, choice, or cliffhanger",
+    "rationale": "Why the episode starts and ends here"
+  }]
+}

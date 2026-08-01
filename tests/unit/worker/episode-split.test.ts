@@ -10,24 +10,17 @@ const prismaMock = vi.hoisted(() => ({
     findFirst: vi.fn(async () => ({ id: 'np-project-1' })),
   },
   novelPromotionEpisode: {
-    findMany: vi.fn(async () => []),
+    findMany: vi.fn(async () => [] as Array<{
+      episodeNumber: number
+      name: string
+      description: string | null
+      novelText: string | null
+    }>),
   },
 }))
 
 const aiRuntimeMock = vi.hoisted(() => ({
-  executeAiTextStep: vi.fn(async () => ({
-    text: JSON.stringify({
-      episodes: [
-        {
-          number: 1,
-          title: 'Episode 1',
-          summary: 'Opening',
-          startMarker: 'START_MARKER',
-          endMarker: 'END_MARKER',
-        },
-      ],
-    }),
-  })),
+  executeAiTextStep: vi.fn(),
 }))
 
 const configServiceMock = vi.hoisted(() => ({
@@ -48,16 +41,21 @@ const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => {}),
 }))
 
+const flushMock = vi.hoisted(() => vi.fn(async () => {}))
 const llmStreamMock = vi.hoisted(() => ({
   createWorkerLLMStreamContext: vi.fn(() => ({ streamId: 'stream-1' })),
   createWorkerLLMStreamCallbacks: vi.fn(() => ({
-    flush: vi.fn(async () => {}),
+    flush: flushMock,
   })),
 }))
 
 const promptMock = vi.hoisted(() => ({
-  PROMPT_IDS: { NP_EPISODE_SPLIT: 'np_episode_split' },
-  buildPrompt: vi.fn(() => 'EPISODE_SPLIT_PROMPT'),
+  PROMPT_IDS: {
+    NP_EPISODE_SCENE_ANALYSIS: 'np_episode_scene_analysis',
+    NP_EPISODE_PLAN: 'np_episode_plan',
+  },
+  buildPrompt: vi.fn((input: { promptId: string; variables: Record<string, string> }) =>
+    JSON.stringify({ promptId: input.promptId, ...input.variables })),
 }))
 
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
@@ -68,18 +66,6 @@ vi.mock('@/lib/workers/shared', () => sharedMock)
 vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/workers/handlers/llm-stream', () => llmStreamMock)
 vi.mock('@/lib/prompt-i18n', () => promptMock)
-vi.mock('@/lib/novel-promotion/story-to-script/clip-matching', () => ({
-  createTextMarkerMatcher: (content: string) => ({
-    matchMarker: (marker: string, fromIndex = 0) => {
-      const startIndex = content.indexOf(marker, fromIndex)
-      if (startIndex === -1) return null
-      return {
-        startIndex,
-        endIndex: startIndex + marker.length,
-      }
-    },
-  }),
-}))
 
 import { handleEpisodeSplitTask } from '@/lib/workers/handlers/episode-split'
 
@@ -98,86 +84,152 @@ function buildJob(content: string): Job<TaskJobData> {
   } as unknown as Job<TaskJobData>
 }
 
-describe('worker episode-split', () => {
+function longSourceContent() {
+  return [
+    '第一章 初遇',
+    '山'.repeat(650),
+    '',
+    '第二章 军报',
+    '海'.repeat(650),
+  ].join('\n')
+}
+
+const sceneAnalysis = {
+  scenes: [
+    {
+      startUnitId: 'unit_0001',
+      endUnitId: 'unit_0001',
+      title: '王府初遇',
+      summary: '人物关系建立',
+      characters: ['周生辰', '时宜'],
+      goal: '建立关系',
+      outcome: '互相留下印象',
+      boundaryAfter: { closure: 7, hook: 4, transition: 8, causalBreakPenalty: 1 },
+    },
+    {
+      startUnitId: 'unit_0002',
+      endUnitId: 'unit_0002',
+      title: '军报突至',
+      summary: '危机进入主线',
+      characters: ['周生辰'],
+      goal: '应对危机',
+      outcome: '决定出征',
+      boundaryAfter: { closure: 8, hook: 9, transition: 8, causalBreakPenalty: 0 },
+    },
+  ],
+}
+
+const validPlan = {
+  profile: 'horizontal_motion_comic',
+  episodes: [{
+    startSceneId: 'scene_001',
+    endSceneId: 'scene_002',
+    title: '初遇风云',
+    summary: '相遇后军报突至',
+    coreGoal: '建立人物关系并引出危机',
+    dramaticArc: '相遇—缓和—危机',
+    endingHook: '周生辰决定出征',
+    rationale: '两场戏构成完整的关系建立与危机触发',
+  }],
+}
+
+describe('semantic episode split worker', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    prismaMock.novelPromotionProject.findFirst.mockResolvedValue({
-      id: 'np-project-1',
-    })
+    prismaMock.project.findUnique.mockResolvedValue({ id: 'project-1' })
+    prismaMock.novelPromotionProject.findFirst.mockResolvedValue({ id: 'np-project-1' })
     prismaMock.novelPromotionEpisode.findMany.mockResolvedValue([])
     configServiceMock.getUserModelConfig.mockResolvedValue({
       analysisModel: 'codex::gpt-5.5',
     })
-    aiRuntimeMock.executeAiTextStep.mockResolvedValue({
-      text: JSON.stringify({
-        episodes: [
-          {
-            number: 1,
-            title: 'Episode 1',
-            summary: 'Opening',
-            startMarker: 'START_MARKER',
-            endMarker: 'END_MARKER',
-          },
-        ],
-      }),
-    })
   })
 
   it('fails fast when content is too short', async () => {
-    const job = buildJob('short text')
-    await expect(handleEpisodeSplitTask(job)).rejects.toThrow()
+    await expect(handleEpisodeSplitTask(buildJob('short text'))).rejects.toThrow('至少需要 100 字')
+    expect(aiRuntimeMock.executeAiTextStep).not.toHaveBeenCalled()
   })
 
-  it('uses the user configured Codex analysis model', async () => {
-    const content = [
-      'This prefix makes the content long enough for validation. ',
-      'This prefix makes the content long enough for validation. ',
-      'START_MARKER',
-      'This is the body of the first episode, long enough to exercise boundary matching. ',
-      'END_MARKER',
-      'This suffix keeps additional text outside the matched boundary.',
-    ].join('')
+  it('analyzes source units, plans episodes, and assembles source content locally', async () => {
+    const content = longSourceContent()
+    aiRuntimeMock.executeAiTextStep
+      .mockResolvedValueOnce({ text: JSON.stringify(sceneAnalysis) })
+      .mockResolvedValueOnce({ text: JSON.stringify(validPlan) })
 
-    const job = buildJob(content)
-    await handleEpisodeSplitTask(job)
+    const result = await handleEpisodeSplitTask(buildJob(content))
 
-    expect(configServiceMock.getUserModelConfig).toHaveBeenCalledWith('user-1')
-    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledWith(expect.objectContaining({
+    expect(result.method).toBe('semantic')
+    expect(result.profile).toBe('horizontal_motion_comic')
+    expect(result.episodes).toHaveLength(1)
+    expect(result.episodes[0]?.content).toBe(content)
+    expect(result.episodes[0]?.wordCount).toBeGreaterThan(400)
+    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledTimes(2)
+    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenNthCalledWith(1, expect.objectContaining({
       model: 'codex::gpt-5.5',
+      temperature: 0.2,
+      reasoningEffort: 'medium',
     }))
   })
 
-  it('returns matched episodes when ai boundaries are valid', async () => {
-    const content = [
-      'This prefix makes the content long enough for validation. ',
-      'This prefix makes the content long enough for validation. ',
-      'START_MARKER',
-      'This is the body of the first episode, long enough to exercise boundary matching. ',
-      'END_MARKER',
-      'This suffix keeps additional text outside the matched boundary.',
-    ].join('')
+  it('continues episode numbering after existing episodes', async () => {
+    prismaMock.novelPromotionEpisode.findMany.mockResolvedValue([{
+      episodeNumber: 4,
+      name: '第四集',
+      description: null,
+      novelText: '既有内容',
+    }])
+    aiRuntimeMock.executeAiTextStep
+      .mockResolvedValueOnce({ text: JSON.stringify(sceneAnalysis) })
+      .mockResolvedValueOnce({ text: JSON.stringify(validPlan) })
 
-    const job = buildJob(content)
-    const result = await handleEpisodeSplitTask(job)
+    const result = await handleEpisodeSplitTask(buildJob(longSourceContent()))
 
-    expect(result.success).toBe(true)
-    expect(result.episodes).toHaveLength(1)
-    expect(result.episodes[0]?.number).toBe(1)
-    expect(result.episodes[0]?.title).toBe('Episode 1')
-    expect(result.episodes[0]?.content).toContain('START_MARKER')
-    expect(result.episodes[0]?.content).toContain('END_MARKER')
+    expect(result.episodes[0]?.number).toBe(5)
   })
 
-  it('rejects ai episode boundaries that exceed 400 words', async () => {
-    const content = [
-      'This prefix makes the content long enough for validation. ',
-      'START_MARKER',
-      '山'.repeat(401),
-      'END_MARKER',
-    ].join('')
+  it('includes the validation failure in a single repair prompt', async () => {
+    const invalidPlan = {
+      profile: 'horizontal_motion_comic',
+      episodes: [{
+        startSceneId: 'scene_002',
+        endSceneId: 'scene_002',
+        title: '错误方案',
+        summary: '遗漏第一场',
+      }],
+    }
+    aiRuntimeMock.executeAiTextStep
+      .mockResolvedValueOnce({ text: JSON.stringify(sceneAnalysis) })
+      .mockResolvedValueOnce({ text: JSON.stringify(invalidPlan) })
+      .mockResolvedValueOnce({ text: JSON.stringify(validPlan) })
 
-    const job = buildJob(content)
+    const result = await handleEpisodeSplitTask(buildJob(longSourceContent()))
 
-    await expect(handleEpisodeSplitTask(job)).rejects.toThrow('exceeds 400 words')
+    expect(result.success).toBe(true)
+    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledTimes(3)
+    const repairCall = aiRuntimeMock.executeAiTextStep.mock.calls[2]?.[0] as {
+      messages: Array<{ content: string }>
+    }
+    expect(repairCall.messages[0]?.content).toContain('scene coverage gap')
+    expect(repairCall.messages[0]?.content).toContain('错误方案')
+  })
+
+  it('does not retry an invalid repaired plan indefinitely', async () => {
+    const invalidPlan = {
+      profile: 'horizontal_motion_comic',
+      episodes: [{
+        startSceneId: 'scene_002',
+        endSceneId: 'scene_002',
+        title: '仍然错误',
+        summary: '仍然遗漏第一场',
+      }],
+    }
+    aiRuntimeMock.executeAiTextStep
+      .mockResolvedValueOnce({ text: JSON.stringify(sceneAnalysis) })
+      .mockResolvedValueOnce({ text: JSON.stringify(invalidPlan) })
+      .mockResolvedValueOnce({ text: JSON.stringify(invalidPlan) })
+
+    await expect(handleEpisodeSplitTask(buildJob(longSourceContent())))
+      .rejects.toThrow('scene coverage gap')
+    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledTimes(3)
+    expect(flushMock).toHaveBeenCalledTimes(1)
   })
 })

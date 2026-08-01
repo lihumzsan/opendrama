@@ -22,6 +22,8 @@ export const PROMPT_IDS = {
   NP_CHARACTER_MODIFY: 'np_character_modify',
   NP_CHARACTER_REGENERATE: 'np_character_regenerate',
   NP_EPISODE_SPLIT: 'np_episode_split',
+  NP_EPISODE_SCENE_ANALYSIS: 'np_episode_scene_analysis',
+  NP_EPISODE_PLAN: 'np_episode_plan',
   NP_EPISODE_COVER_IMAGE: 'np_episode_cover_image',
   NP_IMAGE_PROMPT_MODIFY: 'np_image_prompt_modify',
   NP_LOCATION_CREATE: 'np_location_create',

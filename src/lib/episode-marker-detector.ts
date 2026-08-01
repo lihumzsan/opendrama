@@ -29,8 +29,6 @@ export interface EpisodeMarkerResult {
     previewSplits: PreviewSplit[]
 }
 
-export const MAX_EPISODE_WORDS = 400
-
 // 中文数字映射
 const CHINESE_NUMBERS: Record<string, number> = {
     '零': 0, '〇': 0,
@@ -189,67 +187,6 @@ function buildPreviewText(text: string): string {
     return preview + (preview.length >= 20 ? '...' : '')
 }
 
-function splitRangeByWordLimit(
-    content: string,
-    startIndex: number,
-    endIndex: number,
-    maxWords = MAX_EPISODE_WORDS,
-): Array<{ startIndex: number; endIndex: number }> {
-    const segment = content.slice(startIndex, endIndex)
-    if (countWords(segment) <= maxWords) {
-        return [{ startIndex, endIndex }]
-    }
-
-    const units = segment.match(/[\s\r\n]+|[A-Za-z0-9]+|[\u3400-\u9fff\uf900-\ufaff]|./gu) || []
-    const ranges: Array<{ startIndex: number; endIndex: number }> = []
-    let cursor = startIndex
-    let chunkStart = startIndex
-    let chunkWords = 0
-
-    for (const unit of units) {
-        const unitStart = cursor
-        const unitEnd = cursor + unit.length
-        const unitWords = countWords(unit)
-
-        if (chunkWords > 0 && chunkWords + unitWords > maxWords) {
-            ranges.push({ startIndex: chunkStart, endIndex: unitStart })
-            chunkStart = unitStart
-            chunkWords = 0
-        }
-
-        chunkWords += unitWords
-        cursor = unitEnd
-    }
-
-    if (chunkStart < endIndex) {
-        ranges.push({ startIndex: chunkStart, endIndex })
-    }
-
-    return ranges.filter((range) => countWords(content.slice(range.startIndex, range.endIndex).trim()) > 0)
-}
-
-function enforcePreviewSplitWordLimit(content: string, splits: PreviewSplit[]): PreviewSplit[] {
-    const nextSplits: PreviewSplit[] = []
-
-    for (const split of splits) {
-        const ranges = splitRangeByWordLimit(content, split.startIndex, split.endIndex)
-        for (const range of ranges) {
-            const number = nextSplits.length + 1
-            const episodeContent = content.slice(range.startIndex, range.endIndex)
-            nextSplits.push({
-                number,
-                title: `第 ${number} 集`,
-                wordCount: countWords(episodeContent),
-                startIndex: range.startIndex,
-                endIndex: range.endIndex,
-                preview: buildPreviewText(episodeContent),
-            })
-        }
-    }
-
-    return nextSplits
-}
-
 /**
  * 检测文本中的分集标记
  */
@@ -376,7 +313,7 @@ export function detectEpisodeMarkers(content: string): EpisodeMarkerResult {
         })
     })
 
-    result.previewSplits = enforcePreviewSplitWordLimit(content, previewSplits)
+    result.previewSplits = previewSplits
 
     return result
 }
@@ -396,7 +333,7 @@ export function splitByMarkers(content: string, markerResult: EpisodeMarkerResul
     }
 
     return markerResult.previewSplits.map(split => {
-        const episodeContent = content.slice(split.startIndex, split.endIndex).trim()
+        const episodeContent = content.slice(split.startIndex, split.endIndex)
 
         return {
             number: split.number,

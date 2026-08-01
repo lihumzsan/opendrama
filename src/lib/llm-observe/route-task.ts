@@ -65,6 +65,7 @@ export async function maybeSubmitLLMTask(params: {
   body?: unknown
   dedupeKey?: string | null
   priority?: number
+  maxAttempts?: number
 }) {
   const policy = getLLMTaskPolicy(params.type)
   const observeEnabled = LLM_OBSERVE_ENABLED || policy.consoleEnabled
@@ -123,6 +124,7 @@ export async function maybeSubmitLLMTask(params: {
     },
     dedupeKey: params.dedupeKey || null,
     priority,
+    maxAttempts: params.maxAttempts,
   })
 
   return NextResponse.json(taskResult)

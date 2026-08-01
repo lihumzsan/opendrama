@@ -88,6 +88,13 @@ export default function SmartImportWizard({
         onOpenDeleteConfirm={wizard.openDeleteConfirm}
         onCloseDeleteConfirm={wizard.closeDeleteConfirm}
         onConfirmDeleteEpisode={wizard.confirmDeleteEpisode}
+        splitProfile={wizard.splitProfile}
+        canResetAIRecommendation={wizard.canResetAIRecommendation}
+        onResetAIRecommendation={wizard.resetAIRecommendation}
+        onMergeWithNext={wizard.mergeWithNext}
+        onSplitAfterScene={wizard.splitAfterScene}
+        onMoveLastSceneForward={wizard.moveLastSceneForward}
+        onMoveFirstSceneBackward={wizard.moveFirstSceneBackward}
       />
     </div>
   )

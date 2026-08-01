@@ -2,30 +2,22 @@ import type { Job } from 'bullmq'
 import { safeParseJsonObject } from '@/lib/json-repair'
 import { prisma } from '@/lib/prisma'
 import { executeAiTextStep } from '@/lib/ai-runtime'
-import { countWords } from '@/lib/word-count'
 import { withInternalLLMStreamCallbacks } from '@/lib/llm-observe/internal-stream-context'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
 import { getUserModelConfig } from '@/lib/config-service'
-import { MAX_EPISODE_WORDS } from '@/lib/episode-marker-detector'
-import { createTextMarkerMatcher } from '@/lib/novel-promotion/story-to-script/clip-matching'
+import {
+  assembleSemanticEpisodes,
+  buildEpisodeAnalysisBatches,
+  buildEpisodeSourceUnits,
+  classifyEpisodeSource,
+  estimateEpisodeRuntimeMinutes,
+  normalizeNarrativeScenes,
+  type NarrativeScene,
+} from '@/lib/novel-promotion/semantic-episode-split'
 import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from './llm-stream'
 import type { TaskJobData } from '@/lib/task/types'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
-
-type EpisodeSplit = {
-  number?: number
-  title?: string
-  summary?: string
-  startMarker?: string
-  endMarker?: string
-  startIndex?: number
-  endIndex?: number
-}
-
-type SplitResponse = {
-  episodes?: EpisodeSplit[]
-}
 
 type ExistingEpisodeForContext = {
   episodeNumber: number
@@ -34,13 +26,10 @@ type ExistingEpisodeForContext = {
   novelText: string | null
 }
 
-const MAX_EPISODE_SPLIT_ATTEMPTS = 2
-const EPISODE_SPLIT_BOUNDARY_SUFFIX = `
-
-[Boundary Constraints]
-1. Each episode MUST include both startMarker and endMarker from the original text.
-2. Markers must be locatable in the original text; allow punctuation/whitespace differences only.
-3. If boundaries cannot be located reliably, return an empty episodes array.`
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  return value as Record<string, unknown>
+}
 
 function compactText(value: string | null | undefined, maxLength: number) {
   const normalized = (value || '').replace(/\s+/g, ' ').trim()
@@ -49,43 +38,89 @@ function compactText(value: string | null | undefined, maxLength: number) {
 }
 
 function buildExistingEpisodeContext(episodes: ExistingEpisodeForContext[]) {
-  if (episodes.length === 0) return ''
-
+  if (episodes.length === 0) return '无已有剧集，从第1集开始。'
   const recentEpisodes = episodes.slice(-8)
   const lines = recentEpisodes.map((episode) => {
     const title = compactText(episode.name, 40)
     const summary = compactText(episode.description || episode.novelText, 120)
     return `- #${episode.episodeNumber} ${title}${summary ? `: ${summary}` : ''}`
   })
-
-  return `
-
-[Existing Episode Context]
-The project already has ${episodes.length} episode(s). The text you are splitting is a new/additional chunk, not a replacement for existing episodes.
-Do not rewrite, merge, remove, or renumber existing episodes. Split only the provided input text.
-Keep title style, summary style, pacing, and episode granularity consistent with these existing episodes:
-${lines.join('\n')}`
+  return `已有 ${episodes.length} 集；本次输入是追加内容，应延续节奏和风格，不改写已有剧集。\n${lines.join('\n')}`
 }
 
-function parseSplitResponse(aiResponse: string): SplitResponse {
-  const parsed = safeParseJsonObject(aiResponse) as SplitResponse
-  if (!parsed || !Array.isArray(parsed.episodes) || parsed.episodes.length === 0) {
-    throw new Error('Failed to parse AI response: invalid episodes payload')
+function serializeUnits(units: ReturnType<typeof buildEpisodeSourceUnits>) {
+  return JSON.stringify(
+    units.map((unit) => ({
+      unitId: unit.id,
+      kind: unit.kind,
+      title: unit.title,
+      wordCount: unit.wordCount,
+      text: unit.text,
+    })),
+  )
+}
+
+function serializeSceneCards(scenes: NarrativeScene[]) {
+  return JSON.stringify(
+    scenes.map((scene) => ({
+      sceneId: scene.id,
+      title: scene.title,
+      summary: scene.summary,
+      characters: scene.characters,
+      location: scene.location,
+      time: scene.time,
+      goal: scene.goal,
+      conflict: scene.conflict,
+      outcome: scene.outcome,
+      plotline: scene.plotline,
+      unresolvedThreads: scene.unresolvedThreads,
+      turningPoint: scene.turningPoint,
+      boundaryAfter: scene.boundaryAfter,
+      estimatedMinutes: scene.estimatedMinutes,
+    })),
+  )
+}
+
+function parseSceneAnalysis(responseText: string, batchId: string) {
+  const parsed = asRecord(safeParseJsonObject(responseText))
+  if (!Array.isArray(parsed.scenes) || parsed.scenes.length === 0) {
+    throw new Error(`场景分析结果无效（${batchId}）`)
   }
-  return parsed
+  return parsed.scenes
 }
 
-function readBoundaryMarker(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const marker = value.trim()
-  return marker.length > 0 ? marker : null
-}
-
-function toValidBoundaryIndex(value: unknown, textLength: number): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null
-  const idx = Math.floor(value)
-  if (idx < 0 || idx > textLength) return null
-  return idx
+async function runSemanticTextStep(params: {
+  job: Job<TaskJobData>
+  callbacks: ReturnType<typeof createWorkerLLMStreamCallbacks>
+  model: string
+  prompt: string
+  stepId: string
+  stepTitle: string
+  stepIndex: number
+  stepTotal: number
+  stepAttempt?: number
+}) {
+  return await withInternalLLMStreamCallbacks(
+    params.callbacks,
+    async () =>
+      await executeAiTextStep({
+        userId: params.job.data.userId,
+        model: params.model,
+        messages: [{ role: 'user', content: params.prompt }],
+        temperature: 0.2,
+        reasoning: true,
+        reasoningEffort: 'medium',
+        projectId: params.job.data.projectId,
+        action: 'episode_split',
+        meta: {
+          stepId: params.stepId,
+          stepAttempt: params.stepAttempt ?? 1,
+          stepTitle: params.stepTitle,
+          stepIndex: params.stepIndex,
+          stepTotal: params.stepTotal,
+        },
+      }),
+  )
 }
 
 export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
@@ -98,21 +133,15 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
 
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: {
-      id: true,
-    },
+    select: { id: true },
   })
-  if (!project) {
-    throw new Error('Project not found')
-  }
+  if (!project) throw new Error('Project not found')
 
   const novelProject = await prisma.novelPromotionProject.findFirst({
     where: { projectId },
     select: { id: true },
   })
-  if (!novelProject) {
-    throw new Error('Novel promotion data not found')
-  }
+  if (!novelProject) throw new Error('Novel promotion data not found')
 
   const existingEpisodes = await prisma.novelPromotionEpisode.findMany({
     where: { novelPromotionProjectId: novelProject.id },
@@ -127,178 +156,124 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
 
   const userConfig = await getUserModelConfig(job.data.userId)
   const analysisModel = userConfig.analysisModel
-  if (!analysisModel) {
-    throw new Error('请先在设置页面配置分析模型')
-  }
-  const promptBase = buildPrompt({
-    promptId: PROMPT_IDS.NP_EPISODE_SPLIT,
-    locale: job.data.locale,
-    variables: {
-      CONTENT: content,
-    },
-  })
-  const prompt = `${promptBase}${buildExistingEpisodeContext(existingEpisodes)}${EPISODE_SPLIT_BOUNDARY_SUFFIX}`
+  if (!analysisModel) throw new Error('请先在设置页面配置分析模型')
 
-  await reportTaskProgress(job, 20, {
-    stage: 'episode_split_prepare',
-    stageLabel: '准备分集参数',
+  await reportTaskProgress(job, 10, {
+    stage: 'episode_split_source_parse',
+    stageLabel: '识别原文场景与章节',
     displayMode: 'detail',
   })
-  await assertTaskActive(job, 'episode_split_prepare')
+  await assertTaskActive(job, 'episode_split_source_parse')
 
+  const sourceKind = classifyEpisodeSource(content)
+  const units = buildEpisodeSourceUnits(content)
+  const batches = buildEpisodeAnalysisBatches(units)
   const streamContext = createWorkerLLMStreamContext(job, 'episode_split')
   const streamCallbacks = createWorkerLLMStreamCallbacks(job, streamContext)
-  type EpisodeOutput = {
-    number: number
-    title: string
-    summary: string
-    content: string
-    wordCount: number
-  }
-  let episodes: EpisodeOutput[] | null = null
-  let lastError: Error | null = null
+  const rawScenes: unknown[] = []
+  const stepTotal = batches.length + 1
 
   try {
-    for (let attempt = 1; attempt <= MAX_EPISODE_SPLIT_ATTEMPTS; attempt += 1) {
+    for (let index = 0; index < batches.length; index += 1) {
+      const batch = batches[index]
+      const progress = 20 + Math.round(((index + 1) / Math.max(1, batches.length)) * 35)
+      await reportTaskProgress(job, progress, {
+        stage: 'episode_split_scene_analysis',
+        stageLabel: `分析剧情场景（${index + 1}/${batches.length}）`,
+        displayMode: 'detail',
+      })
+      await assertTaskActive(job, `episode_split_scene_analysis:${batch.id}`)
+      const prompt = buildPrompt({
+        promptId: PROMPT_IDS.NP_EPISODE_SCENE_ANALYSIS,
+        locale: job.data.locale,
+        variables: {
+          SOURCE_KIND: sourceKind,
+          BATCH_ID: batch.id,
+          UNIT_JSON: serializeUnits(batch.units),
+        },
+      })
+      const completion = await runSemanticTextStep({
+        job,
+        callbacks: streamCallbacks,
+        model: analysisModel,
+        prompt,
+        stepId: `episode_scene_analysis_${batch.id}`,
+        stepTitle: `剧情场景分析 ${index + 1}/${batches.length}`,
+        stepIndex: index + 1,
+        stepTotal,
+      })
+      if (!completion.text) throw new Error(`AI 场景分析返回为空（${batch.id}）`)
+      rawScenes.push(...parseSceneAnalysis(completion.text, batch.id))
+    }
+
+    const scenes = normalizeNarrativeScenes(units, rawScenes)
+    await reportTaskProgress(job, 70, {
+      stage: 'episode_split_global_plan',
+      stageLabel: '规划剧集结构与结尾钩子',
+      displayMode: 'detail',
+    })
+
+    let lastValidationError: Error | null = null
+    let previousPlan: unknown = null
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      await assertTaskActive(job, `episode_split_global_plan:${attempt}`)
+      const repairContext = attempt === 1
+        ? '无'
+        : `上一方案校验失败：${lastValidationError?.message || '未知错误'}\n上一方案：${JSON.stringify(previousPlan)}`
+      const prompt = buildPrompt({
+        promptId: PROMPT_IDS.NP_EPISODE_PLAN,
+        locale: job.data.locale,
+        variables: {
+          SOURCE_KIND: sourceKind,
+          ESTIMATED_TOTAL_MINUTES: String(estimateEpisodeRuntimeMinutes(content)),
+          EXISTING_EPISODE_CONTEXT: buildExistingEpisodeContext(existingEpisodes),
+          SCENE_JSON: serializeSceneCards(scenes),
+          REPAIR_CONTEXT: repairContext,
+        },
+      })
+      const completion = await runSemanticTextStep({
+        job,
+        callbacks: streamCallbacks,
+        model: analysisModel,
+        prompt,
+        stepId: 'episode_global_plan',
+        stepTitle: attempt === 1 ? '智能剧集规划' : '修复剧集规划',
+        stepIndex: stepTotal,
+        stepTotal,
+        stepAttempt: attempt,
+      })
+      if (!completion.text) throw new Error('AI 剧集规划返回为空')
+      const parsedPlan = safeParseJsonObject(completion.text)
+      previousPlan = parsedPlan
+
       try {
-        await assertTaskActive(job, `episode_split_attempt:${attempt}`)
-        const completion = await withInternalLLMStreamCallbacks(
-          streamCallbacks,
-          async () =>
-            await executeAiTextStep({
-              userId: job.data.userId,
-              model: analysisModel,
-              messages: [{ role: 'user', content: prompt }],
-              temperature: 0.3,
-              reasoning: true,
-              reasoningEffort: 'high',
-              projectId,
-              action: 'episode_split',
-              meta: {
-                stepId: 'episode_split',
-                stepAttempt: attempt,
-                stepTitle: '智能分集',
-                stepIndex: 1,
-                stepTotal: 1,
-              },
-            }),
-        )
-
-        const aiResponse = completion.text
-        if (!aiResponse) {
-          throw new Error('AI 返回为空')
-        }
-
-        await reportTaskProgress(job, 60, {
-          stage: 'episode_split_parse',
-          stageLabel: attempt === 1 ? '解析分集结果' : `解析分集结果（重试 ${attempt - 1}）`,
+        const result = assembleSemanticEpisodes(content, scenes, parsedPlan)
+        const nextEpisodeNumber = (existingEpisodes.at(-1)?.episodeNumber || 0) + 1
+        const episodes = result.episodes.map((episode, index) => ({
+          ...episode,
+          number: nextEpisodeNumber + index,
+        }))
+        await reportTaskProgress(job, 96, {
+          stage: 'episode_split_done',
+          stageLabel: '语义分集完成',
           displayMode: 'detail',
         })
-        await assertTaskActive(job, 'episode_split_parse')
-
-        const splitResult = parseSplitResponse(aiResponse)
-        const splitEpisodes = splitResult.episodes || []
-        if (splitEpisodes.length === 0) {
-          throw new Error('分集结果为空')
+        return {
+          ...result,
+          episodes,
         }
-
-        await reportTaskProgress(job, 80, {
-          stage: 'episode_split_match',
-          stageLabel: '匹配剧集内容范围',
-          displayMode: 'detail',
-        })
-        const markerMatcher = createTextMarkerMatcher(content)
-        const resolved: EpisodeOutput[] = []
-        let searchFrom = 0
-
-        for (let idx = 0; idx < splitEpisodes.length; idx += 1) {
-          await assertTaskActive(job, `episode_split_match:${idx + 1}`)
-          const ep = splitEpisodes[idx]
-          const episodeNumber =
-            typeof ep.number === 'number' && Number.isFinite(ep.number) && ep.number > 0
-              ? Math.floor(ep.number)
-              : null
-          if (episodeNumber === null) {
-            throw new Error(`episode_${idx + 1} 缺少有效 number`)
-          }
-
-          const title = typeof ep.title === 'string' ? ep.title.trim() : ''
-          if (!title) {
-            throw new Error(`episode_${idx + 1} 缺少 title`)
-          }
-
-          const startMarker = readBoundaryMarker(ep.startMarker)
-          const endMarker = readBoundaryMarker(ep.endMarker)
-          if (!startMarker || !endMarker) {
-            throw new Error(`episode_${idx + 1} 必须同时提供 startMarker/endMarker`)
-          }
-
-          const startMatch = markerMatcher.matchMarker(startMarker, searchFrom)
-          if (!startMatch) {
-            throw new Error(`episode_${idx + 1} startMarker 无法定位`)
-          }
-          const endMatch = markerMatcher.matchMarker(endMarker, startMatch.endIndex)
-          if (!endMatch) {
-            throw new Error(`episode_${idx + 1} endMarker 无法定位`)
-          }
-
-          const rawStartIndex = toValidBoundaryIndex(ep.startIndex, content.length)
-          if (rawStartIndex !== null && Math.abs(rawStartIndex - startMatch.startIndex) > 200) {
-            throw new Error(`episode_${idx + 1} startIndex 与 marker 偏差过大`)
-          }
-          const rawEndIndex = toValidBoundaryIndex(ep.endIndex, content.length)
-          if (rawEndIndex !== null && Math.abs(rawEndIndex - endMatch.endIndex) > 200) {
-            throw new Error(`episode_${idx + 1} endIndex 与 marker 偏差过大`)
-          }
-
-          const startPos = startMatch.startIndex
-          const endPos = endMatch.endIndex
-          if (startPos < searchFrom || endPos <= startPos || endPos > content.length) {
-            throw new Error(`episode_${idx + 1} 边界区间无效`)
-          }
-
-          const episodeContent = content.slice(startPos, endPos).trim()
-          if (!episodeContent) {
-            throw new Error(`episode_${idx + 1} 匹配内容为空`)
-          }
-
-          const wordCount = countWords(episodeContent)
-          if (wordCount > MAX_EPISODE_WORDS) {
-            throw new Error(`episode_${idx + 1} exceeds ${MAX_EPISODE_WORDS} words (${wordCount})`)
-          }
-
-          resolved.push({
-            number: episodeNumber,
-            title,
-            summary: typeof ep.summary === 'string' ? ep.summary : '',
-            content: episodeContent,
-            wordCount,
-          })
-          searchFrom = endPos
-        }
-
-        episodes = resolved
-        break
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error))
+        lastValidationError = error instanceof Error ? error : new Error(String(error))
+        if (attempt === 2) throw lastValidationError
+        await reportTaskProgress(job, 84, {
+          stage: 'episode_split_plan_repair',
+          stageLabel: `修复分集边界：${lastValidationError.message}`,
+          displayMode: 'detail',
+        })
       }
     }
+    throw lastValidationError || new Error('语义分集规划失败')
   } finally {
     await streamCallbacks.flush()
-  }
-
-  if (!episodes) {
-    throw lastError || new Error('分集边界匹配失败')
-  }
-
-  await reportTaskProgress(job, 96, {
-    stage: 'episode_split_done',
-    stageLabel: '智能分集完成',
-    displayMode: 'detail',
-  })
-
-  return {
-    success: true,
-    episodes,
   }
 }

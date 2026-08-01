@@ -35,7 +35,7 @@
   "startAnalyzing": "Start Analysis",
   "analyzing": {
     "title": "AI is Analyzing Your Story",
-    "description": "Recognizing chapter structure, smart splitting in progress...",
+    "description": "Identifying continuous scenes and turning points, then planning episode boundaries...",
     "autoSave": "Preview the result after analysis, then confirm to save"
   },
   "analyzingDesc": "Identifying chapter structure, smart splitting...",
@@ -74,6 +74,24 @@
     "summaryPlaceholder": "Enter plot summary...",
     "newEpisode": "New Episode",
     "deleteEpisode": "Delete Episode",
+    "semantic": {
+      "profile": {
+        "horizontal_motion_comic": "AI recommendation: 5–15 min horizontal motion comic",
+        "regular_episode": "AI recommendation: 20+ min regular episodes"
+      },
+      "minutes": "about {count} min",
+      "reset": "Reset to AI plan",
+      "sceneSafeActions": "Adjust by complete scene",
+      "sceneSafeHint": "Boundaries stay between scenes so dialogue, action, and direct causality remain intact.",
+      "moveFirstBackward": "Move first scene back",
+      "moveLastForward": "Move last scene forward",
+      "mergeNext": "Merge next episode",
+      "splitHere": "Split after scene",
+      "noSceneSummary": "No scene summary",
+      "contentReadOnly": "Source text is assembled from scene boundaries. Use the complete-scene actions above to adjust it.",
+      "coreGoal": "Episode goal",
+      "endingHook": "Ending hook"
+    },
     "deleteConfirm": {
       "title": "Confirm Delete",
       "message": "Are you sure you want to delete \"{title}\"?",

@@ -8,17 +8,29 @@ function readPrompt(filename: string) {
   return readFileSync(join(promptDir, filename), 'utf8')
 }
 
-describe('episode split prompt', () => {
-  it('does not include stale examples above the 400 word product limit', () => {
-    const prompts = [
-      readPrompt('episode_split.zh.txt'),
-      readPrompt('episode_split.en.txt'),
-    ]
+describe('semantic episode split prompts', () => {
+  it.each(['zh', 'en'])('defines scene analysis and global planning in %s', (locale) => {
+    const scenePrompt = readPrompt(`episode_scene_analysis.${locale}.txt`)
+    const planPrompt = readPrompt(`episode_plan.${locale}.txt`)
 
-    for (const prompt of prompts) {
-      expect(prompt).toContain('400')
-      expect(prompt).not.toMatch(/maxWords["：:\s]+720/)
-      expect(prompt).not.toMatch(/allowedRange["：:\s]+["“”]?590-720/)
-    }
+    expect(scenePrompt).toContain('{{UNIT_JSON}}')
+    expect(scenePrompt).toContain('startUnitId')
+    expect(scenePrompt).toContain('endUnitId')
+    expect(scenePrompt).toContain('boundaryAfter')
+
+    expect(planPrompt).toContain('{{SCENE_JSON}}')
+    expect(planPrompt).toContain('{{REPAIR_CONTEXT}}')
+    expect(planPrompt).toContain('horizontal_motion_comic')
+    expect(planPrompt).toContain('regular_episode')
+    expect(planPrompt).toContain('startSceneId')
+    expect(planPrompt).toContain('endSceneId')
+  })
+
+  it.each(['zh', 'en'])('does not impose a fixed word limit in %s', (locale) => {
+    const scenePrompt = readPrompt(`episode_scene_analysis.${locale}.txt`)
+    const planPrompt = readPrompt(`episode_plan.${locale}.txt`)
+
+    expect(scenePrompt).not.toContain('400')
+    expect(planPrompt).not.toContain('400')
   })
 })

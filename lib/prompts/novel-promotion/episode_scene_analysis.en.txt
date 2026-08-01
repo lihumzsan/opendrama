@@ -1,0 +1,44 @@
+You are a professional screenwriter and story editor. Analyze the following consecutive source units and group them into narrative scenes with one coherent action, stable time/location, and a stable character constellation.
+
+Source type: {{SOURCE_KIND}}
+Analysis batch: {{BATCH_ID}}
+
+## Source units
+
+{{UNIT_JSON}}
+
+## Rules
+
+1. Use only supplied unit IDs. Never rewrite, omit, duplicate, or reorder units.
+2. Scenes must cover every unit in this batch once, in order, using contiguous ranges.
+3. A scene follows one main action or direct causal chain. Never split dialogue, action, or emotional continuation to satisfy length.
+4. Score the boundary after each scene from 0-10 for closure, hook, transition, and causalBreakPenalty. Set recommended when it is a strong episode-boundary candidate.
+5. turningPoint is one of none, opportunity, goal_change, commitment, setback, climax, resolution.
+6. Return valid JSON only, without Markdown.
+
+Return:
+
+{
+  "scenes": [{
+    "startUnitId": "unit_0001",
+    "endUnitId": "unit_0003",
+    "title": "Scene title",
+    "summary": "Key event",
+    "characters": ["Character"],
+    "location": "Location",
+    "time": "Time",
+    "goal": "Main goal",
+    "conflict": "Conflict",
+    "outcome": "Outcome",
+    "plotline": "main or subplot name",
+    "unresolvedThreads": ["Open question"],
+    "turningPoint": "none",
+    "boundaryAfter": {
+      "closure": 0,
+      "hook": 0,
+      "transition": 0,
+      "causalBreakPenalty": 0,
+      "recommended": false
+    }
+  }]
+}

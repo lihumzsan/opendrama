@@ -11,6 +11,12 @@ import {
   useSplitProjectEpisodesByMarkers,
 } from '@/lib/query/hooks'
 import type { DeleteConfirmState, SplitEpisode, WizardStage } from '../types'
+import {
+  mergeEpisodeWithNext,
+  moveFirstSceneToPreviousEpisode,
+  moveLastSceneToNextEpisode,
+  splitEpisodeAfterScene,
+} from '../preview-operations'
 
 type TranslateValues = Record<string, string | number | Date>
 type Translate = (key: string, values?: TranslateValues) => string
@@ -21,6 +27,18 @@ interface UseWizardStateParams {
   onImportComplete: (episodes: SplitEpisode[], triggerGlobalAnalysis?: boolean) => void
   t: Translate
   initialRawContent?: string
+}
+
+function cloneEpisodes(episodes: SplitEpisode[]): SplitEpisode[] {
+  return episodes.map((episode) => ({
+    ...episode,
+    sceneIds: episode.sceneIds ? [...episode.sceneIds] : undefined,
+    scenes: episode.scenes?.map((scene) => ({
+      ...scene,
+      characters: scene.characters ? [...scene.characters] : undefined,
+      boundaryAfter: scene.boundaryAfter ? { ...scene.boundaryAfter } : undefined,
+    })),
+  }))
 }
 
 export function useWizardState({
@@ -44,6 +62,8 @@ export function useWizardState({
   const [markerResult, setMarkerResult] = useState<EpisodeMarkerResult | null>(null)
   const [showMarkerConfirm, setShowMarkerConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [splitProfile, setSplitProfile] = useState<'horizontal_motion_comic' | 'regular_episode' | null>(null)
+  const [aiRecommendation, setAiRecommendation] = useState<SplitEpisode[] | null>(null)
 
   const listProjectEpisodesMutation = useListProjectEpisodes(projectId)
   const splitProjectEpisodesMutation = useSplitProjectEpisodes(projectId)
@@ -93,8 +113,10 @@ export function useWizardState({
     try {
       _ulogInfo('[SmartImport] starting AI episode split')
       const data = await splitProjectEpisodesMutation.mutateAsync({ content: rawContent, async: true })
-      const splitEpisodes = data.episodes || []
+      const splitEpisodes: SplitEpisode[] = data.episodes || []
       setEpisodes(splitEpisodes)
+      setAiRecommendation(cloneEpisodes(splitEpisodes))
+      setSplitProfile(data.profile || 'horizontal_motion_comic')
       _ulogInfo('[SmartImport] AI split ready for preview; database will update only after confirmation')
       setStage('preview')
     } catch (err: unknown) {
@@ -152,6 +174,8 @@ export function useWizardState({
       const data = await splitProjectEpisodesByMarkersMutation.mutateAsync({ content: rawContent })
       const splitEpisodes = data.episodes || []
       setEpisodes(splitEpisodes)
+      setAiRecommendation(null)
+      setSplitProfile(null)
       _ulogInfo('[SmartImport] marker split ready for preview; database will update only after confirmation')
       setStage('preview')
     } catch (err: unknown) {
@@ -202,6 +226,30 @@ export function useWizardState({
       return next
     })
   }, [t])
+
+  const mergeWithNext = useCallback((index: number) => {
+    setEpisodes((prev) => mergeEpisodeWithNext(prev, index))
+    setSelectedEpisode(index)
+  }, [])
+
+  const splitAfterScene = useCallback((index: number, sceneId: string) => {
+    setEpisodes((prev) => splitEpisodeAfterScene(prev, index, sceneId))
+    setSelectedEpisode(index)
+  }, [])
+
+  const moveLastSceneForward = useCallback((index: number) => {
+    setEpisodes((prev) => moveLastSceneToNextEpisode(prev, index))
+  }, [])
+
+  const moveFirstSceneBackward = useCallback((index: number) => {
+    setEpisodes((prev) => moveFirstSceneToPreviousEpisode(prev, index))
+  }, [])
+
+  const resetAIRecommendation = useCallback(() => {
+    if (!aiRecommendation) return
+    setEpisodes(cloneEpisodes(aiRecommendation))
+    setSelectedEpisode(0)
+  }, [aiRecommendation])
 
   const openDeleteConfirm = useCallback((index: number, title: string) => {
     setDeleteConfirm({ show: true, index, title })
@@ -258,6 +306,8 @@ export function useWizardState({
     setSelectedEpisode,
     error,
     saving,
+    splitProfile,
+    canResetAIRecommendation: aiRecommendation !== null,
     markerResult,
     showMarkerConfirm,
     deleteConfirm,
@@ -271,6 +321,11 @@ export function useWizardState({
     updateEpisodeNumber,
     updateEpisodeContent,
     addEpisode,
+    mergeWithNext,
+    splitAfterScene,
+    moveLastSceneForward,
+    moveFirstSceneBackward,
+    resetAIRecommendation,
     openDeleteConfirm,
     closeDeleteConfirm,
     confirmDeleteEpisode,

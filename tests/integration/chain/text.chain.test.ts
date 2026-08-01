@@ -24,18 +24,31 @@ const prismaMock = vi.hoisted(() => ({
   },
 }))
 
-const llmMock = vi.hoisted(() => ({
-  chatCompletion: vi.fn(async () => ({ id: 'completion-1' })),
-  getCompletionContent: vi.fn(() => JSON.stringify({
-    episodes: [
-      {
-        number: 1,
-        title: '第一集',
-        summary: '开端',
-        startMarker: 'START_MARKER',
-        endMarker: 'END_MARKER',
-      },
-    ],
+const aiRuntimeMock = vi.hoisted(() => ({
+  executeAiTextStep: vi.fn(async (params: { meta?: { stepId?: string } }) => ({
+    text: JSON.stringify(params.meta?.stepId?.startsWith('episode_scene_analysis')
+      ? {
+          scenes: [{
+            startUnitId: 'unit_0001',
+            endUnitId: 'unit_0001',
+            title: '完整场景',
+            summary: '角色冲突与场景推进',
+            boundaryAfter: { closure: 8, hook: 7, transition: 6, causalBreakPenalty: 0, recommended: true },
+          }],
+        }
+      : {
+          profile: 'horizontal_motion_comic',
+          episodes: [{
+            startSceneId: 'scene_001',
+            endSceneId: 'scene_001',
+            title: '第一集',
+            summary: '开端',
+            coreGoal: '推进冲突',
+            dramaticArc: '建立—升级—结果',
+            endingHook: '新的疑问',
+            rationale: '这是完整的剧情段落',
+          }],
+        }),
   })),
 }))
 
@@ -71,7 +84,7 @@ vi.mock('bullmq', () => ({
 
 vi.mock('@/lib/redis', () => ({ queueRedis: {} }))
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
-vi.mock('@/lib/llm-client', () => llmMock)
+vi.mock('@/lib/ai-runtime', () => aiRuntimeMock)
 vi.mock('@/lib/config-service', () => configMock)
 vi.mock('@/lib/workers/shared', () => ({ reportTaskProgress: workerMock.reportTaskProgress }))
 vi.mock('@/lib/workers/utils', () => ({ assertTaskActive: workerMock.assertTaskActive }))
@@ -83,17 +96,11 @@ vi.mock('@/lib/workers/handlers/llm-stream', () => ({
   createWorkerLLMStreamCallbacks: vi.fn(() => ({ flush: vi.fn(async () => undefined) })),
 }))
 vi.mock('@/lib/prompt-i18n', () => ({
-  PROMPT_IDS: { NP_EPISODE_SPLIT: 'np_episode_split' },
+  PROMPT_IDS: {
+    NP_EPISODE_SCENE_ANALYSIS: 'np_episode_scene_analysis',
+    NP_EPISODE_PLAN: 'np_episode_plan',
+  },
   buildPrompt: vi.fn(() => 'episode-split-prompt'),
-}))
-vi.mock('@/lib/novel-promotion/story-to-script/clip-matching', () => ({
-  createTextMarkerMatcher: (content: string) => ({
-    matchMarker: (marker: string, fromIndex = 0) => {
-      const startIndex = content.indexOf(marker, fromIndex)
-      if (startIndex === -1) return null
-      return { startIndex, endIndex: startIndex + marker.length }
-    },
-  }),
 }))
 
 function toJob(data: TaskJobData): Job<TaskJobData> {
@@ -172,7 +179,7 @@ describe('chain contract - text queue behavior', () => {
     expect(calls[0]?.options).toEqual(expect.objectContaining({ priority: 7, jobId: 'task-text-2' }))
   })
 
-  it('queued text job payload can be consumed by text handler and resolve episode boundaries', async () => {
+  it('queued text job payload can be consumed by the two-stage semantic handler', async () => {
     const { addTaskJob, QUEUE_NAME } = await import('@/lib/task/queues')
     const { handleEpisodeSplitTask } = await import('@/lib/workers/handlers/episode-split')
 
@@ -203,9 +210,12 @@ describe('chain contract - text queue behavior', () => {
 
     const result = await handleEpisodeSplitTask(toJob(queued!))
     expect(result.success).toBe(true)
+    expect(result.method).toBe('semantic')
+    expect(result.profile).toBe('horizontal_motion_comic')
     expect(result.episodes).toHaveLength(1)
     expect(result.episodes[0]?.title).toBe('第一集')
-    expect(result.episodes[0]?.content).toContain('START_MARKER')
-    expect(result.episodes[0]?.content).toContain('END_MARKER')
+    expect(result.episodes[0]?.content).toBe(content)
+    expect(result.episodes[0]?.sceneIds).toEqual(['scene_001'])
+    expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledTimes(2)
   })
 })

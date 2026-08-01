@@ -17,6 +17,13 @@ interface StepMappingProps {
   onOpenDeleteConfirm: (index: number, title: string) => void
   onCloseDeleteConfirm: () => void
   onConfirmDeleteEpisode: () => void
+  splitProfile: 'horizontal_motion_comic' | 'regular_episode' | null
+  canResetAIRecommendation: boolean
+  onResetAIRecommendation: () => void
+  onMergeWithNext: (index: number) => void
+  onSplitAfterScene: (index: number, sceneId: string) => void
+  onMoveLastSceneForward: (index: number) => void
+  onMoveFirstSceneBackward: (index: number) => void
 }
 
 export default function StepMapping({
@@ -32,8 +39,17 @@ export default function StepMapping({
   onOpenDeleteConfirm,
   onCloseDeleteConfirm,
   onConfirmDeleteEpisode,
+  splitProfile,
+  canResetAIRecommendation,
+  onResetAIRecommendation,
+  onMergeWithNext,
+  onSplitAfterScene,
+  onMoveLastSceneForward,
+  onMoveFirstSceneBackward,
 }: StepMappingProps) {
   const t = useTranslations('smartImport')
+  const currentEpisode = episodes[selectedEpisode]
+  const isSemanticPreview = episodes.some((episode) => Boolean(episode.scenes?.length))
 
   return (
     <>
@@ -70,8 +86,24 @@ export default function StepMapping({
           <div className="bg-[var(--glass-bg-surface)] rounded-2xl border border-[var(--glass-stroke-base)] p-6 sticky top-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-lg">{t('preview.episodeList')}</h3>
-              <span className="text-sm text-[var(--glass-text-tertiary)]">{episodes.length} {t('preview.episodeList')}</span>
+              <div className="flex items-center gap-2">
+                {canResetAIRecommendation && (
+                  <button
+                    onClick={onResetAIRecommendation}
+                    className="text-xs px-2 py-1 rounded-md border border-[var(--glass-stroke-strong)] hover:bg-[var(--glass-bg-muted)]"
+                  >
+                    {t('preview.semantic.reset')}
+                  </button>
+                )}
+                <span className="text-sm text-[var(--glass-text-tertiary)]">{episodes.length} {t('episodes')}</span>
+              </div>
             </div>
+
+            {splitProfile && (
+              <div className="mb-4 rounded-lg bg-[var(--glass-tone-info-bg)] px-3 py-2 text-xs text-[var(--glass-tone-info-fg)]">
+                {t(`preview.semantic.profile.${splitProfile}`)}
+              </div>
+            )}
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {episodes.map((ep, idx) => (
@@ -100,9 +132,11 @@ export default function StepMapping({
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${selectedEpisode === idx ? 'bg-[var(--glass-accent-from)] text-white' : 'bg-[var(--glass-bg-muted)] text-[var(--glass-text-secondary)]'
                         }`}>
-                        {ep.wordCount.toLocaleString()} {t('upload.words')}
+                        {ep.estimatedMinutes
+                          ? t('preview.semantic.minutes', { count: ep.estimatedMinutes })
+                          : `${ep.wordCount.toLocaleString()} ${t('upload.words')}`}
                       </span>
-                      {episodes.length > 1 && (
+                      {!isSemanticPreview && episodes.length > 1 && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation()
@@ -136,13 +170,15 @@ export default function StepMapping({
               ))}
             </div>
 
-            <button
-              onClick={onAddEpisode}
-              className="w-full mt-4 py-3 border-2 border-dashed border-[var(--glass-stroke-strong)] rounded-xl text-[var(--glass-text-tertiary)] hover:border-[var(--glass-stroke-focus)] hover:text-[var(--glass-tone-info-fg)] hover:bg-[var(--glass-tone-info-bg)] transition-all duration-200 flex items-center justify-center gap-2"
-            >
-              <AppIcon name="plus" className="w-5 h-5" />
-              {t('preview.addEpisode')}
-            </button>
+            {!isSemanticPreview && (
+              <button
+                onClick={onAddEpisode}
+                className="w-full mt-4 py-3 border-2 border-dashed border-[var(--glass-stroke-strong)] rounded-xl text-[var(--glass-text-tertiary)] hover:border-[var(--glass-stroke-focus)] hover:text-[var(--glass-tone-info-fg)] hover:bg-[var(--glass-tone-info-bg)] transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <AppIcon name="plus" className="w-5 h-5" />
+                {t('preview.addEpisode')}
+              </button>
+            )}
 
             <div className="mt-4 pt-4 border-t border-[var(--glass-stroke-base)] space-y-2">
               <div className="flex justify-between text-sm">
@@ -156,32 +192,98 @@ export default function StepMapping({
         </div>
 
         <div className="lg:col-span-2">
-          {episodes[selectedEpisode] && (
+          {currentEpisode && (
             <div className="bg-[var(--glass-bg-surface)] rounded-2xl border border-[var(--glass-stroke-base)] p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <input
                     type="text"
-                    value={episodes[selectedEpisode].title}
+                    value={currentEpisode.title}
                     onChange={(e) => onUpdateEpisodeTitle(selectedEpisode, e.target.value)}
                     className="text-2xl font-semibold border-b-2 border-transparent hover:border-[var(--glass-stroke-base)] focus:border-[var(--glass-stroke-focus)] focus:outline-none transition-colors duration-200 px-2"
                   />
-                  <span className="text-sm text-[var(--glass-text-tertiary)]">{t('episode', { num: episodes[selectedEpisode].number })}</span>
+                  <span className="text-sm text-[var(--glass-text-tertiary)]">{t('episode', { num: currentEpisode.number })}</span>
                 </div>
-                <span className="text-sm text-[var(--glass-text-tertiary)]">{episodes[selectedEpisode].wordCount.toLocaleString()} {t('upload.words')}</span>
+                <span className="text-sm text-[var(--glass-text-tertiary)]">
+                  {currentEpisode.estimatedMinutes
+                    ? t('preview.semantic.minutes', { count: currentEpisode.estimatedMinutes })
+                    : `${currentEpisode.wordCount.toLocaleString()} ${t('upload.words')}`}
+                </span>
               </div>
+
+              {currentEpisode.scenes?.length ? (
+                <div className="mb-5 rounded-xl border border-[var(--glass-stroke-base)] bg-[var(--glass-bg-muted)] p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">{t('preview.semantic.sceneSafeActions')}</span>
+                    {selectedEpisode > 0 && currentEpisode.scenes.length > 1 && (
+                      <button
+                        onClick={() => onMoveFirstSceneBackward(selectedEpisode)}
+                        className="rounded-md border border-[var(--glass-stroke-strong)] px-2.5 py-1 text-xs hover:bg-[var(--glass-bg-surface)]"
+                      >
+                        {t('preview.semantic.moveFirstBackward')}
+                      </button>
+                    )}
+                    {selectedEpisode < episodes.length - 1 && currentEpisode.scenes.length > 1 && (
+                      <button
+                        onClick={() => onMoveLastSceneForward(selectedEpisode)}
+                        className="rounded-md border border-[var(--glass-stroke-strong)] px-2.5 py-1 text-xs hover:bg-[var(--glass-bg-surface)]"
+                      >
+                        {t('preview.semantic.moveLastForward')}
+                      </button>
+                    )}
+                    {selectedEpisode < episodes.length - 1 && (
+                      <button
+                        onClick={() => onMergeWithNext(selectedEpisode)}
+                        className="rounded-md border border-[var(--glass-stroke-strong)] px-2.5 py-1 text-xs hover:bg-[var(--glass-bg-surface)]"
+                      >
+                        {t('preview.semantic.mergeNext')}
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--glass-text-tertiary)]">{t('preview.semantic.sceneSafeHint')}</p>
+                  <div className="mt-3 space-y-2">
+                    {currentEpisode.scenes.map((scene, sceneIndex) => (
+                      <div
+                        key={scene.id}
+                        className="flex items-center justify-between gap-3 rounded-lg bg-[var(--glass-bg-surface)] px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium">{scene.title}</div>
+                          <div className="truncate text-xs text-[var(--glass-text-tertiary)]">
+                            {scene.summary || t('preview.semantic.noSceneSummary')}
+                          </div>
+                        </div>
+                        {sceneIndex < currentEpisode.scenes!.length - 1 && (
+                          <button
+                            onClick={() => onSplitAfterScene(selectedEpisode, scene.id)}
+                            className="flex-shrink-0 rounded-md border border-[var(--glass-stroke-strong)] px-2 py-1 text-xs hover:bg-[var(--glass-bg-muted)]"
+                          >
+                            {t('preview.semantic.splitHere')}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-semibold text-[var(--glass-text-secondary)]">{t('preview.episodeContent')}</label>
-                  <span className="text-sm text-[var(--glass-text-tertiary)]">{episodes[selectedEpisode].wordCount.toLocaleString()} {t('upload.words')}</span>
+                  <span className="text-sm text-[var(--glass-text-tertiary)]">{currentEpisode.wordCount.toLocaleString()} {t('upload.words')}</span>
                 </div>
                 <textarea
                   rows={16}
-                  value={episodes[selectedEpisode].content}
+                  value={currentEpisode.content}
                   onChange={(e) => onUpdateEpisodeContent(selectedEpisode, e.target.value)}
+                  readOnly={isSemanticPreview}
                   className="w-full border border-[var(--glass-stroke-strong)] rounded-xl p-4 focus:outline-none focus:ring-2 focus:ring-[var(--glass-focus-ring-strong)] focus:border-[var(--glass-stroke-focus)] resize-none font-mono text-sm leading-relaxed"
                 />
+                {isSemanticPreview && (
+                  <p className="mt-2 text-xs text-[var(--glass-text-tertiary)]">
+                    {t('preview.semantic.contentReadOnly')}
+                  </p>
+                )}
               </div>
 
               <div className="mt-4 p-4 bg-[var(--glass-tone-info-bg)] border border-[var(--glass-stroke-focus)] rounded-xl">
@@ -190,8 +292,18 @@ export default function StepMapping({
                   <div className="flex-1">
                     <p className="font-medium text-[var(--glass-text-primary)] mb-1">{t('plotSummary')}</p>
                     <p className="text-sm text-[var(--glass-text-primary)]">
-                      {episodes[selectedEpisode].summary || t('preview.summaryPlaceholder')}
+                      {currentEpisode.summary || t('preview.summaryPlaceholder')}
                     </p>
+                    {currentEpisode.coreGoal && (
+                      <p className="mt-2 text-xs text-[var(--glass-text-secondary)]">
+                        {t('preview.semantic.coreGoal')}: {currentEpisode.coreGoal}
+                      </p>
+                    )}
+                    {currentEpisode.endingHook && (
+                      <p className="mt-1 text-xs text-[var(--glass-text-secondary)]">
+                        {t('preview.semantic.endingHook')}: {currentEpisode.endingHook}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

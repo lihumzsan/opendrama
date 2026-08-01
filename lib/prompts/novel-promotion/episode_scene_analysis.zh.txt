@@ -1,0 +1,51 @@
+你是专业的影视编剧和故事编辑。请分析下列连续原文单元，把它们组合成具有完整行动、稳定时间地点和人物组合的叙事场景。
+
+输入类型：{{SOURCE_KIND}}
+分析批次：{{BATCH_ID}}
+
+## 原文单元
+
+{{UNIT_JSON}}
+
+## 规则
+
+1. 只能使用输入中存在的 unitId，禁止改写、遗漏、重复或调换单元。
+2. scenes 必须按原顺序覆盖本批次全部单元，场景范围必须连续。
+3. 一个场景应围绕一个主要行动或直接因果链。不要为了字数拆开对白、动作或情绪延续。
+4. boundaryAfter 评价该场景之后是否适合成为剧集边界：
+   - closure：当前小目标或阶段是否完成，0-10；
+   - hook：是否形成危机、问题、揭示、选择或悬念，0-10；
+   - transition：时间、地点、人物阶段或目标是否发生转换，0-10；
+   - causalBreakPenalty：若在此处分集会否切断直接因果或情绪延续，0-10；
+   - recommended：是否推荐作为分集候选点。
+5. turningPoint 可使用 none、opportunity、goal_change、commitment、setback、climax、resolution。
+6. 只返回合法 JSON，不要返回 Markdown。
+
+输出结构：
+
+{
+  "scenes": [
+    {
+      "startUnitId": "unit_0001",
+      "endUnitId": "unit_0003",
+      "title": "场景标题",
+      "summary": "本场发生的关键事件",
+      "characters": ["人物"],
+      "location": "地点",
+      "time": "时间",
+      "goal": "人物在本场的主要目标",
+      "conflict": "阻碍或冲突",
+      "outcome": "本场造成的结果",
+      "plotline": "main 或支线名称",
+      "unresolvedThreads": ["尚未解决的问题"],
+      "turningPoint": "none",
+      "boundaryAfter": {
+        "closure": 0,
+        "hook": 0,
+        "transition": 0,
+        "causalBreakPenalty": 0,
+        "recommended": false
+      }
+    }
+  ]
+}
