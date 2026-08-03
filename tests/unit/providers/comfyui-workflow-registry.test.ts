@@ -1125,4 +1125,81 @@ describe('comfyui workflow registry', () => {
     expect(videoOutputs).toEqual([{ nodeId: '280', saveOutput: true }])
   })
 
+  it('registers the three bundled MiniMax H3 FL2VA workflows', () => {
+    const workflowKeys = listComfyUiWorkflowKeys()
+
+    expect(workflowKeys).toContain('basevideo/h3/fl2va-first-frame')
+    expect(workflowKeys).toContain('basevideo/h3/fl2va-last-frame')
+    expect(workflowKeys).toContain('basevideo/h3/fl2va-first-last-frame')
+    expect(getComfyUiWorkflowImageInputCount('basevideo/h3/fl2va-first-frame')).toBe(1)
+    expect(getComfyUiWorkflowImageInputCount('basevideo/h3/fl2va-first-last-frame')).toBe(2)
+  })
+
+  it('injects H3 first and last frames with the requested prompt and target shape', () => {
+    const workflow = resolveComfyUiWorkflow('basevideo/h3/fl2va-first-last-frame', {
+      prompt: 'The actor crosses the room while the camera arcs left.',
+      imageFilenames: ['first.png', 'last.png'],
+      width: 832,
+      height: 480,
+      durationSeconds: 6,
+      fps: 24,
+    })
+
+    expect(workflow['4']).toMatchObject({
+      class_type: 'LoadImage',
+      inputs: { image: 'first.png' },
+      _meta: { title: 'First frame' },
+    })
+    expect(workflow['6']).toMatchObject({
+      class_type: 'LoadImage',
+      inputs: { image: 'last.png' },
+      _meta: { title: 'Last frame' },
+    })
+    expect(workflow['7']?.inputs).toMatchObject({
+      aspect_ratio: '16:9',
+      duration_seconds: 6,
+      width: 832,
+      height: 480,
+    })
+    expect(workflow['8']?.inputs.prompt).toBe(
+      'The actor crosses the room while the camera arcs left.',
+    )
+    expect(workflow['10']?.inputs).toMatchObject({
+      sigma_points: 21,
+      accel: 'off',
+      sampler_mode: 'res_multistep',
+    })
+    expect(workflow['12']?.inputs.fps).toBe(24)
+  })
+
+  it('uses first and last frame titles instead of numeric node order for image slots', () => {
+    writeExternalWorkflow('basevideo/h3/test-title-aware-slots', {
+      '1': {
+        class_type: 'LoadImage',
+        inputs: { image: 'last-placeholder.png' },
+        _meta: { title: 'Last frame' },
+      },
+      '2': {
+        class_type: 'LoadImage',
+        inputs: { image: 'first-placeholder.png' },
+        _meta: { title: 'First frame' },
+      },
+      '3': {
+        class_type: 'ImageBlend',
+        inputs: { image1: ['2', 0], image2: ['1', 0], blend_factor: 0.5, blend_mode: 'normal' },
+      },
+      '4': {
+        class_type: 'SaveImage',
+        inputs: { images: ['3', 0], filename_prefix: 'test' },
+      },
+    })
+
+    const workflow = resolveComfyUiWorkflow('basevideo/h3/test-title-aware-slots', {
+      imageFilenames: ['first.png', 'last.png'],
+    })
+
+    expect(workflow['2']?.inputs.image).toBe('first.png')
+    expect(workflow['1']?.inputs.image).toBe('last.png')
+  })
+
 })

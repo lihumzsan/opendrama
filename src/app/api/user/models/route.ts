@@ -104,6 +104,20 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
     type: 'video',
     provider: 'comfyui',
   },
+  {
+    modelId: 'basevideo/h3/fl2va-first-frame',
+    modelKey: 'comfyui::basevideo/h3/fl2va-first-frame',
+    name: 'ComfyUI · MiniMax H3 首帧图生视频',
+    type: 'video',
+    provider: 'comfyui',
+  },
+  {
+    modelId: 'basevideo/h3/fl2va-first-last-frame',
+    modelKey: 'comfyui::basevideo/h3/fl2va-first-last-frame',
+    name: 'ComfyUI · MiniMax H3 首尾帧视频',
+    type: 'video',
+    provider: 'comfyui',
+  },
 ]
 
 const AUDIO_MODEL_EXCLUDED_IDS = new Set([

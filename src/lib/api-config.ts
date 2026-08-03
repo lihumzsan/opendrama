@@ -86,6 +86,22 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
     provider: 'comfyui',
     price: 0,
   },
+  {
+    modelId: 'basevideo/h3/fl2va-first-frame',
+    modelKey: 'comfyui::basevideo/h3/fl2va-first-frame',
+    name: 'ComfyUI · MiniMax H3 首帧图生视频',
+    type: 'video',
+    provider: 'comfyui',
+    price: 0,
+  },
+  {
+    modelId: 'basevideo/h3/fl2va-first-last-frame',
+    modelKey: 'comfyui::basevideo/h3/fl2va-first-last-frame',
+    name: 'ComfyUI · MiniMax H3 首尾帧视频',
+    type: 'video',
+    provider: 'comfyui',
+    price: 0,
+  },
 ]
 
 const CODEX_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [

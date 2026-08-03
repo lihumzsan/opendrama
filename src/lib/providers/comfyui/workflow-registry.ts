@@ -1620,10 +1620,20 @@ function applyDimensionHeuristics(
   }
 }
 
+function getFrameImageSlotRank(node: ComfyUiWorkflowGraphNode): number {
+  const title = readTrimmedString(node._meta?.title).toLowerCase()
+  if (title.includes('first frame') || title.includes('首帧')) return 0
+  if (title.includes('last frame') || title.includes('尾帧') || title.includes('末帧')) return 1
+  return 2
+}
+
 function applyImageInjection(graph: ComfyUiWorkflowGraph, imageFilenames?: string[]): void {
   const loadNodes = Object.entries(graph)
     .filter(([, node]) => node.class_type.toLowerCase().includes('loadimage'))
-    .sort(([a], [b]) => compareNodeIds(a, b))
+    .sort(([leftId, leftNode], [rightId, rightNode]) => {
+      const slotRank = getFrameImageSlotRank(leftNode) - getFrameImageSlotRank(rightNode)
+      return slotRank || compareNodeIds(leftId, rightId)
+    })
 
   if (loadNodes.length === 0) return
 
@@ -1801,11 +1811,18 @@ function applyTemporalHeuristics(
 ): void {
   const nextFps = clampPositiveFloat(fps)
   const nextFrames = clampPositiveInteger(targetFrameCount)
+  const nextDurationSeconds = clampPositiveFloat(durationSeconds)
   const nextDurationSteps = ceilPositiveInteger(durationSeconds)
-  if (nextFps === null && nextFrames === null && nextDurationSteps === null) return
+  if (
+    nextFps === null
+    && nextFrames === null
+    && nextDurationSeconds === null
+    && nextDurationSteps === null
+  ) return
 
   const fpsFields = new Set(['frame_rate', 'fps'])
   const frameCountFields = new Set(['frames_number', 'frame_count', 'frames', 'length', 'max_frames'])
+  const durationFields = new Set(['duration_seconds'])
 
   for (const node of Object.values(graph)) {
     if (!isRecord(node.inputs)) continue
@@ -1833,9 +1850,14 @@ function applyTemporalHeuristics(
       const normalizedField = field.trim().toLowerCase()
       const wantsFps = nextFps !== null && fpsFields.has(normalizedField)
       const wantsFrames = nextFrames !== null && frameCountFields.has(normalizedField)
-      if (!wantsFps && !wantsFrames) continue
+      const wantsDuration = nextDurationSeconds !== null && durationFields.has(normalizedField)
+      if (!wantsFps && !wantsFrames && !wantsDuration) continue
 
-      const nextValue = wantsFps ? nextFps : nextFrames!
+      const nextValue = wantsFps
+        ? nextFps
+        : wantsFrames
+          ? nextFrames!
+          : nextDurationSeconds!
       if (isConnectionValue(rawValue)) {
         const sourceNodeId = normalizeNodeId(rawValue[0])
         if (!sourceNodeId) continue

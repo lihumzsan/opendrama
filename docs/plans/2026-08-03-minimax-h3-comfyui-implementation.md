@@ -6,7 +6,7 @@
 
 **Architecture:** RunningHub's H3 nodes run in the existing ComfyUI service. OpenDrama registers H3-specific workflow profiles and routes existing video generator inputs into API-format copies of the upstream workflows. The current generic ComfyUI client remains responsible for upload, queueing, polling, and output retrieval.
 
-**Stack:** ComfyUI 0.28, PyTorch 2.9/CUDA 13, RunningHub MiniMax H3 custom nodes, Next.js/TypeScript, Vitest.
+**Stack:** ComfyUI 0.30.1, PyTorch 2.9/CUDA 13, RunningHub MiniMax H3 custom nodes, Next.js/TypeScript, Vitest.
 
 ---
 

@@ -1,0 +1,33 @@
+{
+  "convertedWeightsRepository": "https://huggingface.co/Gluttony10/MiniMax-H3-INT8-CONVROT",
+  "convertedWeightsMirror": "https://modelscope.cn/models/Gluttony10/MiniMax-H3-INT8-CONVROT",
+  "officialModelRepository": "https://huggingface.co/MiniMaxAI/MiniMax-H3",
+  "license": "MiniMax H3 Community License Agreement",
+  "licenseUrl": "https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE",
+  "files": [
+    {
+      "path": "MiniMax-H3-FL2VA-int8_convrot.safetensors",
+      "bytes": 46997640192,
+      "sha256": "6674a39bf11b2e67b2e8d843ad8c5ad9199667ef5a3d8aff7165015edcc0552d",
+      "role": "FL2VA diffusion transformer"
+    },
+    {
+      "path": "qwen3-vl-32b-int8_convrot.safetensors",
+      "bytes": 27141373256,
+      "sha256": "e9d0a5cc9df09c99882bf0fffd82a71d16e9247338cc3990f7d332a969c53203",
+      "role": "Qwen3-VL text and multimodal encoder"
+    },
+    {
+      "path": "MiniMax-H3-video_vae.safetensors",
+      "bytes": 10415548320,
+      "sha256": "5f0c2e161d895a9fee7645ca32d4a7e3a22b90cacfcbeba62ec999cdbbefe0d3",
+      "role": "video VAE"
+    },
+    {
+      "path": "MiniMax-H3-audio_vae.safetensors",
+      "bytes": 605429308,
+      "sha256": "37dddc2f3e6d5d5139d823d5ea283bbf304dadcb885b1ccda818aa13dade5ea2",
+      "role": "audio VAE"
+    }
+  ]
+}

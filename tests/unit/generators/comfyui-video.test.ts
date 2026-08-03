@@ -179,6 +179,35 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
+  it('uses the safe local H3 canvas for a first-last-frame request', async () => {
+    const generator = new ComfyUIVideoGenerator()
+
+    const result = await generator.generate({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/first.png',
+      prompt: 'The actor walks from the doorway to the desk.',
+      options: {
+        modelId: 'basevideo/h3/fl2va-first-last-frame',
+        generationMode: 'firstlastframe',
+        aspectRatio: '16:9',
+        duration: 5,
+        fps: 24,
+        lastFrameImageUrl: 'https://example.com/last.png',
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowKey: 'basevideo/h3/fl2va-first-last-frame',
+      firstFrameImageUrl: 'https://example.com/first.png',
+      lastFrameImageUrl: 'https://example.com/last.png',
+      width: 832,
+      height: 480,
+      durationSeconds: 5,
+      fps: 24,
+    }))
+  })
+
   it('preserves Smart VBVR reference-audio requests even when prompt and duration look like long PromptRelay', async () => {
     const generator = new ComfyUIVideoGenerator()
 

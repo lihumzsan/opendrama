@@ -123,6 +123,8 @@ export const PRESET_MODELS: PresetModel[] = [
     // 视频模型
     { modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage', name: 'ComfyUI · LTX2.3 Goon First/Last Frame', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2', name: 'ComfyUI · LTX2.3 Smart VBVR I2V Audio', type: 'video', provider: 'comfyui' },
+    { modelId: 'basevideo/h3/fl2va-first-frame', name: 'ComfyUI · MiniMax H3 首帧图生视频', type: 'video', provider: 'comfyui' },
+    { modelId: 'basevideo/h3/fl2va-first-last-frame', name: 'ComfyUI · MiniMax H3 首尾帧视频', type: 'video', provider: 'comfyui' },
     // 音频模型
     { modelId: 'baseaudio/单人/LongCat-one', name: 'ComfyUI · LongCat 单人', type: 'audio', provider: 'comfyui' },
     { modelId: 'baseaudio/单人/s2-one', name: 'ComfyUI · S2 单人', type: 'audio', provider: 'comfyui' },

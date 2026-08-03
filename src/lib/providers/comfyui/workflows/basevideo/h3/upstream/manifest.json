@@ -1,0 +1,23 @@
+{
+  "sourceRepository": "https://github.com/HM-RunningHub/ComfyUI_RH_MinMaxH3",
+  "sourceRevision": "89d3a0222aff3a88df5d7ac3e4faedfcb967187a",
+  "sourceArchiveSha256": "ddb0d062584904c657c2cfcdbb917bcb6b285eb66f3dc0557e84a6ee9da86f05",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "path": "fl2va_first_frame.json",
+      "sourceUrl": "https://raw.githubusercontent.com/HM-RunningHub/ComfyUI_RH_MinMaxH3/89d3a0222aff3a88df5d7ac3e4faedfcb967187a/examples/workflows/fl2va_first_frame.json",
+      "sha256": "308e83823d06686d40b359b26189b63258ca26d0b72a675bdb650e06324abefe"
+    },
+    {
+      "path": "fl2va_last_frame.json",
+      "sourceUrl": "https://raw.githubusercontent.com/HM-RunningHub/ComfyUI_RH_MinMaxH3/89d3a0222aff3a88df5d7ac3e4faedfcb967187a/examples/workflows/fl2va_last_frame.json",
+      "sha256": "945affcfaad33e477a32aefd23627627533b5f1b8a6cb45b07d86a44f2d4afe8"
+    },
+    {
+      "path": "fl2va_first_last_frame.json",
+      "sourceUrl": "https://raw.githubusercontent.com/HM-RunningHub/ComfyUI_RH_MinMaxH3/89d3a0222aff3a88df5d7ac3e4faedfcb967187a/examples/workflows/fl2va_first_last_frame.json",
+      "sha256": "670e21918a237f7e6ff2e8c2c5f53222967a4982a3b6d234425137c3318ac157"
+    }
+  ]
+}

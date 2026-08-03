@@ -20,6 +20,8 @@ const ASPECT_TO_SIZE: Record<string, { w: number; h: number }> = {
 }
 
 const COMFYUI_VIDEO_DIMENSION_ALIGNMENT = 32
+const COMFYUI_H3_WORKFLOW_PREFIX = 'basevideo/h3/'
+const COMFYUI_H3_SAFE_LOCAL_SIZE = { w: 832, h: 480 } as const
 
 function alignComfyUiVideoDimension(value: number, alignment = COMFYUI_VIDEO_DIMENSION_ALIGNMENT): number {
   return Math.max(
@@ -71,6 +73,10 @@ function normalizeComfyUiVideoWorkflowKey(rawWorkflowKey: string): string {
   return normalizedModelKey.startsWith('comfyui::')
     ? normalizedModelKey.slice('comfyui::'.length)
     : normalizedModelKey
+}
+
+function isComfyUiH3Workflow(workflowKey: string): boolean {
+  return workflowKey.trim().replace(/\\/g, '/').startsWith(COMFYUI_H3_WORKFLOW_PREFIX)
 }
 
 type ComfyUiVideoWorkflowSelection = {
@@ -169,7 +175,9 @@ export class ComfyUIVideoGenerator extends BaseVideoGenerator {
     const aspectSize = requestedAspectRatio
       ? ASPECT_TO_SIZE[requestedAspectRatio]
       : undefined
-    const targetSize = normalizeComfyUiVideoSize(directSize || aspectSize || null)
+    const targetSize = isComfyUiH3Workflow(selectedWorkflowKey)
+      ? COMFYUI_H3_SAFE_LOCAL_SIZE
+      : normalizeComfyUiVideoSize(directSize || aspectSize || null)
 
     try {
       const llmApi = isComfyUiWorkflowLlmApiRequired(selectedWorkflowKey)

@@ -14,6 +14,8 @@ import { resolveModelSelection } from '@/lib/api-config'
 
 const GOON_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage'
 const KJ_MULTISHOT_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+const H3_FIRST_FRAME_MODEL_KEY = 'comfyui::basevideo/h3/fl2va-first-frame'
+const H3_FIRST_LAST_FRAME_MODEL_KEY = 'comfyui::basevideo/h3/fl2va-first-last-frame'
 
 describe('ComfyUI Goon runtime helper model', () => {
   beforeEach(() => {
@@ -48,6 +50,20 @@ describe('ComfyUI Goon runtime helper model', () => {
       provider: 'comfyui',
       modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       modelKey: KJ_MULTISHOT_MODEL_KEY,
+      mediaType: 'video',
+    })
+  })
+
+  it.each([
+    [H3_FIRST_FRAME_MODEL_KEY, 'basevideo/h3/fl2va-first-frame'],
+    [H3_FIRST_LAST_FRAME_MODEL_KEY, 'basevideo/h3/fl2va-first-last-frame'],
+  ])('resolves the auto-enabled MiniMax H3 workflow %s', async (modelKey, modelId) => {
+    await expect(
+      resolveModelSelection('user-1', modelKey, 'video'),
+    ).resolves.toMatchObject({
+      provider: 'comfyui',
+      modelId,
+      modelKey,
       mediaType: 'video',
     })
   })

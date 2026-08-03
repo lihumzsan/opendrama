@@ -70,4 +70,34 @@ describe('comfyui video capabilities catalog', () => {
     expect(normalizeVideoGenerationSelections({ definitions }).motionStrength).toBe(1)
   })
 
+  it('registers MiniMax H3 first-frame generation with native audio', () => {
+    const capabilities = findBuiltinCapabilities(
+      'video',
+      'comfyui',
+      'basevideo/h3/fl2va-first-frame',
+    )
+
+    expect(capabilities?.video?.generationModeOptions).toEqual(['normal'])
+    expect(capabilities?.video?.durationOptions).toEqual([4, 5, 6, 8])
+    expect(capabilities?.video?.fpsOptions).toEqual([24])
+    expect(capabilities?.video?.resolutionOptions).toEqual(['480p'])
+    expect(capabilities?.video?.firstlastframe).toBe(false)
+    expect(capabilities?.video?.supportGenerateAudio).toBe(true)
+  })
+
+  it('registers MiniMax H3 first-last-frame generation with native audio', () => {
+    const capabilities = findBuiltinCapabilities(
+      'video',
+      'comfyui',
+      'basevideo/h3/fl2va-first-last-frame',
+    )
+
+    expect(capabilities?.video?.generationModeOptions).toEqual(['firstlastframe'])
+    expect(capabilities?.video?.durationOptions).toEqual([4, 5, 6, 8])
+    expect(capabilities?.video?.fpsOptions).toEqual([24])
+    expect(capabilities?.video?.resolutionOptions).toEqual(['480p'])
+    expect(capabilities?.video?.firstlastframe).toBe(true)
+    expect(capabilities?.video?.supportGenerateAudio).toBe(true)
+  })
+
 })
