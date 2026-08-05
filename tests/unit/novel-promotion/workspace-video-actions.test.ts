@@ -166,4 +166,25 @@ describe('useWorkspaceVideoActions', () => {
       customPromptEditedByUser: false,
     })
   })
+
+  it('ignores duplicate clicks for the same panel while the first video submission is still pending', async () => {
+    let resolveSubmission!: () => void
+    generateVideoMutateAsyncMock.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveSubmission = resolve
+    }))
+
+    const actions = useWorkspaceVideoActions({
+      projectId: 'project-1',
+      episodeId: 'episode-1',
+      t: (key: string) => key,
+    })
+
+    const firstSubmit = actions.handleGenerateVideo('storyboard-1', 2, 'veo-3.1', undefined, undefined, 'panel-2')
+    const duplicateSubmit = actions.handleGenerateVideo('storyboard-1', 2, 'veo-3.1', undefined, undefined, 'panel-2')
+
+    expect(generateVideoMutateAsyncMock).toHaveBeenCalledTimes(1)
+
+    resolveSubmission()
+    await Promise.all([firstSubmit, duplicateSubmit])
+  })
 })

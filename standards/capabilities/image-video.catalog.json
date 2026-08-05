@@ -1182,36 +1182,6 @@
   {
     "modelType": "video",
     "provider": "comfyui",
-    "modelId": "basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2",
-    "capabilities": {
-      "video": {
-        "generationModeOptions": [
-          "normal"
-        ],
-        "durationOptions": [
-          4,
-          5,
-          6,
-          8,
-          10,
-          12,
-          16,
-          20
-        ],
-        "fpsOptions": [
-          25
-        ],
-        "resolutionOptions": [
-          "720p"
-        ],
-        "firstlastframe": false,
-        "supportGenerateAudio": false
-      }
-    }
-  },
-  {
-    "modelType": "video",
-    "provider": "comfyui",
     "modelId": "basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p",
     "capabilities": {
       "video": {
@@ -1257,32 +1227,6 @@
   {
     "modelType": "video",
     "provider": "comfyui",
-    "modelId": "basevideo/h3/fl2va-first-frame",
-    "capabilities": {
-      "video": {
-        "generationModeOptions": [
-          "normal"
-        ],
-        "durationOptions": [
-          4,
-          5,
-          6,
-          8
-        ],
-        "fpsOptions": [
-          24
-        ],
-        "resolutionOptions": [
-          "480p"
-        ],
-        "firstlastframe": false,
-        "supportGenerateAudio": true
-      }
-    }
-  },
-  {
-    "modelType": "video",
-    "provider": "comfyui",
     "modelId": "basevideo/minimax-h3/h3-i2va",
     "capabilities": {
       "video": {
@@ -1306,35 +1250,9 @@
           24
         ],
         "resolutionOptions": [
-          "720p"
+          "768P"
         ],
         "firstlastframe": false,
-        "supportGenerateAudio": true
-      }
-    }
-  },
-  {
-    "modelType": "video",
-    "provider": "comfyui",
-    "modelId": "basevideo/h3/fl2va-first-last-frame",
-    "capabilities": {
-      "video": {
-        "generationModeOptions": [
-          "firstlastframe"
-        ],
-        "durationOptions": [
-          4,
-          5,
-          6,
-          8
-        ],
-        "fpsOptions": [
-          24
-        ],
-        "resolutionOptions": [
-          "480p"
-        ],
-        "firstlastframe": true,
         "supportGenerateAudio": true
       }
     }
@@ -1365,7 +1283,7 @@
           24
         ],
         "resolutionOptions": [
-          "720p"
+          "768P"
         ],
         "firstlastframe": true,
         "supportGenerateAudio": true

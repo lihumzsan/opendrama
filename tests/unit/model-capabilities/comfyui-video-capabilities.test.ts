@@ -29,19 +29,14 @@ describe('comfyui video capabilities catalog', () => {
     expect(defaultSelection.duration).toBe(4)
   })
 
-  it('registers the current Smart VBVR LTX 2.3 workflow as a selectable video model', () => {
+  it('does not register the removed Smart VBVR LTX 2.3 workflow', () => {
     const capabilities = findBuiltinCapabilities(
       'video',
       'comfyui',
       'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
     )
 
-    expect(capabilities?.video?.generationModeOptions).toEqual(['normal'])
-    expect(capabilities?.video?.durationOptions).toEqual([4, 5, 6, 8, 10, 12, 16, 20])
-    expect(capabilities?.video?.fpsOptions).toEqual([25])
-    expect(capabilities?.video?.resolutionOptions).toEqual(['720p'])
-    expect(capabilities?.video?.firstlastframe).toBe(false)
-    expect(capabilities?.video?.supportGenerateAudio).toBe(false)
+    expect(capabilities).toBeUndefined()
   })
 
   it('registers separate H3 I2VA and FL2VA capabilities without replacing the LTX defaults', () => {
@@ -60,6 +55,7 @@ describe('comfyui video capabilities catalog', () => {
       generationModeOptions: ['normal'],
       durationOptions: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
       fpsOptions: [24],
+      resolutionOptions: ['768P'],
       firstlastframe: false,
       supportGenerateAudio: true,
     })
@@ -67,6 +63,7 @@ describe('comfyui video capabilities catalog', () => {
       generationModeOptions: ['firstlastframe'],
       durationOptions: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
       fpsOptions: [24],
+      resolutionOptions: ['768P'],
       firstlastframe: true,
       supportGenerateAudio: true,
     })
@@ -98,34 +95,24 @@ describe('comfyui video capabilities catalog', () => {
     expect(normalizeVideoGenerationSelections({ definitions }).motionStrength).toBe(1)
   })
 
-  it('registers MiniMax H3 first-frame generation with native audio', () => {
+  it('does not register the removed local MiniMax H3 first-frame workflow', () => {
     const capabilities = findBuiltinCapabilities(
       'video',
       'comfyui',
       'basevideo/h3/fl2va-first-frame',
     )
 
-    expect(capabilities?.video?.generationModeOptions).toEqual(['normal'])
-    expect(capabilities?.video?.durationOptions).toEqual([4, 5, 6, 8])
-    expect(capabilities?.video?.fpsOptions).toEqual([24])
-    expect(capabilities?.video?.resolutionOptions).toEqual(['480p'])
-    expect(capabilities?.video?.firstlastframe).toBe(false)
-    expect(capabilities?.video?.supportGenerateAudio).toBe(true)
+    expect(capabilities).toBeUndefined()
   })
 
-  it('registers MiniMax H3 first-last-frame generation with native audio', () => {
+  it('does not register the removed local MiniMax H3 first-last-frame workflow', () => {
     const capabilities = findBuiltinCapabilities(
       'video',
       'comfyui',
       'basevideo/h3/fl2va-first-last-frame',
     )
 
-    expect(capabilities?.video?.generationModeOptions).toEqual(['firstlastframe'])
-    expect(capabilities?.video?.durationOptions).toEqual([4, 5, 6, 8])
-    expect(capabilities?.video?.fpsOptions).toEqual([24])
-    expect(capabilities?.video?.resolutionOptions).toEqual(['480p'])
-    expect(capabilities?.video?.firstlastframe).toBe(true)
-    expect(capabilities?.video?.supportGenerateAudio).toBe(true)
+    expect(capabilities).toBeUndefined()
   })
 
 })

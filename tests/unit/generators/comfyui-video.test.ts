@@ -202,7 +202,7 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
-  it('uses the safe local H3 canvas for a first-last-frame request', async () => {
+  it('uses the official 768P canvas for the remote MiniMax H3 first-last-frame workflow', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -210,7 +210,7 @@ describe('ComfyUI video generator', () => {
       imageUrl: 'https://example.com/first.png',
       prompt: 'The actor walks from the doorway to the desk.',
       options: {
-        modelId: 'basevideo/h3/fl2va-first-last-frame',
+        modelId: 'basevideo/minimax-h3/h3-fl2va',
         generationMode: 'firstlastframe',
         aspectRatio: '16:9',
         duration: 5,
@@ -221,11 +221,38 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: 'basevideo/h3/fl2va-first-last-frame',
+      workflowKey: 'basevideo/minimax-h3/h3-fl2va',
       firstFrameImageUrl: 'https://example.com/first.png',
       lastFrameImageUrl: 'https://example.com/last.png',
-      width: 832,
-      height: 480,
+      width: 1344,
+      height: 768,
+      durationSeconds: 5,
+      fps: 24,
+    }))
+  })
+
+  it('uses the official 768P H3 canvas for the MiniMax H3 I2VA workflow', async () => {
+    const generator = new ComfyUIVideoGenerator()
+
+    const result = await generator.generate({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/first.png',
+      prompt: 'The actor turns toward the window.',
+      options: {
+        modelId: 'basevideo/minimax-h3/h3-i2va',
+        generationMode: 'normal',
+        aspectRatio: '16:9',
+        duration: 5,
+        fps: 24,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowKey: 'basevideo/minimax-h3/h3-i2va',
+      firstFrameImageUrl: 'https://example.com/first.png',
+      width: 1344,
+      height: 768,
       durationSeconds: 5,
       fps: 24,
     }))

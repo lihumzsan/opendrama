@@ -23,6 +23,7 @@ import {
   isLegacyLtx23VideoModelKey,
 } from '@/lib/novel-promotion/video-model-defaults'
 import { isRemovedLegacyLtx23WorkflowKey } from '@/lib/providers/comfyui/ltx23-legacy'
+import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
 import { CODEX_PROVIDER_KEY } from '@/lib/providers/codex/constants'
 import type { VideoPricingTier } from '@/lib/model-pricing/video-tier'
 
@@ -70,13 +71,6 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
     provider: 'comfyui',
   },
   {
-    modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-    modelKey: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-    name: 'ComfyUI · LTX2.3 Smart VBVR I2V Audio',
-    type: 'video',
-    provider: 'comfyui',
-  },
-  {
     modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
@@ -84,23 +78,9 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
     provider: 'comfyui',
   },
   {
-    modelId: 'basevideo/h3/fl2va-first-frame',
-    modelKey: 'comfyui::basevideo/h3/fl2va-first-frame',
-    name: 'ComfyUI · MiniMax H3 首帧图生视频',
-    type: 'video',
-    provider: 'comfyui',
-  },
-  {
     modelId: 'basevideo/minimax-h3/h3-i2va',
     modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
     name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
-    type: 'video',
-    provider: 'comfyui',
-  },
-  {
-    modelId: 'basevideo/h3/fl2va-first-last-frame',
-    modelKey: 'comfyui::basevideo/h3/fl2va-first-last-frame',
-    name: 'ComfyUI · MiniMax H3 首尾帧视频',
     type: 'video',
     provider: 'comfyui',
   },
@@ -243,6 +223,7 @@ function isUserSelectableModel(model: StoredModel): boolean {
       isRemovedLegacyLtx23WorkflowKey(modelKey)
       || isLegacyLtx23VideoModelKey(modelKey)
       || isLegacyLtx23SmoothFirstLastFrameModelKey(modelKey)
+      || isRemovedComfyUiVideoModel(modelKey)
     )
   ) {
     return false

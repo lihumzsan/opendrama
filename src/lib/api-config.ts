@@ -27,6 +27,7 @@ import {
   CODEX_PROVIDER_KEY,
 } from './providers/codex/constants'
 import { isCodexAutoPath } from './providers/codex/executable-resolver'
+import { isRemovedComfyUiVideoModel } from './providers/comfyui/removed-video-models'
 
 const ALLOWED_LLM_PROVIDER_KEYS = new Set([CODEX_PROVIDER_KEY])
 
@@ -63,25 +64,9 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
     price: 0,
   },
   {
-    modelId: 'basevideo/h3/fl2va-first-frame',
-    modelKey: 'comfyui::basevideo/h3/fl2va-first-frame',
-    name: 'ComfyUI · MiniMax H3 首帧图生视频',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
     modelId: 'basevideo/minimax-h3/h3-i2va',
     modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
     name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
-    modelId: 'basevideo/h3/fl2va-first-last-frame',
-    modelKey: 'comfyui::basevideo/h3/fl2va-first-last-frame',
-    name: 'ComfyUI · MiniMax H3 首尾帧视频',
     type: 'video',
     provider: 'comfyui',
     price: 0,
@@ -195,6 +180,13 @@ function filterRuntimeSupportedModels(models: CustomModel[]): CustomModel[] {
       return ALLOWED_LLM_PROVIDER_KEYS.has(getProviderKey(model.provider))
     }
     if (model.type === 'image' && getProviderKey(model.provider) === 'comfyui') {
+      return false
+    }
+    if (
+      model.type === 'video'
+      && getProviderKey(model.provider) === 'comfyui'
+      && isRemovedComfyUiVideoModel(model.modelId)
+    ) {
       return false
     }
     return true

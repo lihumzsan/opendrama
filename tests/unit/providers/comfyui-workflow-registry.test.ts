@@ -35,6 +35,15 @@ describe('comfyui workflow registry', () => {
     expect(listComfyUiWorkflowKeys().some((key) => key.startsWith('baseimage/'))).toBe(false)
   })
 
+  it.each([
+    'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+    'basevideo/h3/fl2va-first-frame',
+    'basevideo/h3/fl2va-first-last-frame',
+    'basevideo/h3/fl2va-last-frame',
+  ])('does not expose removed ComfyUI video workflow %s', (workflowKey) => {
+    expect(listComfyUiWorkflowKeys()).not.toContain(workflowKey)
+  })
+
   it('injects only the fixed first-frame slot for the H3 I2VA workflow', () => {
     const workflow = resolveComfyUiWorkflow(COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID, {
       imageFilenames: ['first.png'],
@@ -537,7 +546,9 @@ describe('comfyui workflow registry', () => {
   })
 
   it('keeps bundled LoadAudio placeholders for LTX2.3 workflows when no audio is injected', () => {
-    for (const profile of getLtx23WorkflowProfiles()) {
+    for (const profile of getLtx23WorkflowProfiles().filter(
+      (profile) => profile.workflowKey !== 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+    )) {
       const workflow = resolveComfyUiWorkflow(profile.workflowKey, {
         prompt: 'quiet shot',
         imageFilenames: ['source.png'],
@@ -754,9 +765,8 @@ describe('comfyui workflow registry', () => {
     })
   })
 
-  it('locks PromptRelaySmartEncode global and smart prompts for updated single-image workflows', () => {
+  it('locks PromptRelaySmartEncode global and smart prompts for the retained single-image workflow', () => {
     for (const workflowKey of [
-      COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
       COMFYUI_LTX23_WORKFLOW_KEYS.microDetail,
     ]) {
       const workflow = resolveComfyUiWorkflow(workflowKey, {
@@ -785,253 +795,6 @@ describe('comfyui workflow registry', () => {
     }
   })
 
-  it('splits same-line GLOBAL and LOCAL sections for PromptRelaySmartEncode workflows', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: 'GLOBAL: office scene with two men at a desk. LOCAL: the doctor leans forward and speaks calmly.',
-      imageFilenames: ['source.png'],
-      audioFilenames: ['silence.wav'],
-      fps: 25,
-      durationSeconds: 6,
-      targetFrameCount: 150,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const globalPromptSourceId = Array.isArray(relay?.inputs.global_prompt)
-      ? String(relay.inputs.global_prompt[0])
-      : ''
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-
-    expect(workflow[globalPromptSourceId]?.inputs.prompt).toBe('office scene with two men at a desk.')
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-    expect(smartPrompt).toContain('the doctor leans forward and speaks calmly.')
-    expect(smartPrompt).toContain('Audio-backed talking-head:')
-    expect(smartPrompt).toContain('same visible subject count')
-    expect(smartPrompt.toLowerCase()).not.toContain('no profile turn')
-    expect(smartPrompt.toLowerCase()).not.toContain('no subtitles')
-    expect(smartPrompt).toContain('[113-150]')
-    expect(smartPrompt).not.toContain('same single visible subject')
-  })
-
-  it('locks Smart VBVR image, audio, frame count, and trim duration controls', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: 'GLOBAL: office scene\nLOCAL: person speaks calmly to camera',
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 6,
-      targetFrameCount: 150,
-    })
-
-    expect(workflow['620']?.class_type).toBe('LoadImage')
-    expect(workflow['620']?.inputs.image).toBe('source.png')
-    expect(workflow['627']?.class_type).toBe('LoadAudio')
-    expect(workflow['627']?.inputs.audio).toBe('voice.wav')
-    expect(workflow['623']?.inputs.value).toBe(150)
-    expect(workflow['628']?.class_type).toBe('TrimAudioDuration')
-    expect(workflow['628']?.inputs.duration).toBe(6)
-    expect(workflow['604']?.class_type).toBe('VHS_VideoCombine')
-    expect(workflow['604']?.inputs.audio).toEqual(['550', 0])
-  })
-
-  it('builds repeated positive talking-head Smart VBVR stages for audio-backed single-local prompts', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: '中年男子坐在书桌后方靠墙的办公椅上微微前倾，镜片反着白炽灯冷光，嘴唇开合正在说话，办公室压抑安静，镜头缓缓推近',
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 10.34,
-      targetFrameCount: 259,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-
-    expect(smartPrompt).toContain('[0-65]')
-    expect(smartPrompt).toContain('[195-259]')
-    expect(smartPrompt).toContain('requested head and gaze direction')
-    expect(smartPrompt).toContain('lower portion of the frame stays clean')
-    expect(smartPrompt.toLowerCase()).not.toContain('no profile turn')
-    expect(smartPrompt.toLowerCase()).not.toContain('no new people')
-    expect(smartPrompt.toLowerCase()).not.toContain('no subtitles')
-    expect(smartPrompt.toLowerCase()).not.toContain('rotation')
-    expect(smartPrompt.toLowerCase()).not.toContain('crowd')
-    expect(new Set(smartPrompt.split(' | ').map((segment) => segment.replace(/\s*\[\d+-\d+\]$/, '').trim())).size).toBe(1)
-  })
-
-  it('keeps Chinese speaking action but strips subtitle and dialogue-text instructions from Smart VBVR audio prompts', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: '中年医生坐在办公室里正在说话，嘴唇开合，画面无字幕，不显示台词文字，字幕不能出现',
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 10,
-      targetFrameCount: 250,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-
-    expect(smartPrompt).toContain('正在说话')
-    expect(smartPrompt).toContain('Audio-backed talking-head')
-    expect(smartPrompt).not.toMatch(/字幕|台词|文字/)
-  })
-
-  it('uses real negative text conditioning for audio-backed Smart VBVR subtitle suppression', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: [
-        'GLOBAL: night office, Chen Ji, same source-frame composition, stable lighting.',
-        'LOCAL: Chen Ji sits near the right-side window, turns his face toward the window, and speaks softly.',
-      ].join('\n'),
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 6,
-      targetFrameCount: 150,
-    })
-
-    const negativeSourceId = Array.isArray(workflow['164']?.inputs.negative)
-      ? String(workflow['164'].inputs.negative[0])
-      : ''
-    const negativeNode = workflow[negativeSourceId]
-    const negativeText = String(negativeNode?.inputs.text ?? '')
-
-    expect(negativeNode?.class_type).toBe('CLIPTextEncode')
-    expect(negativeNode?.inputs.clip).toEqual(['416', 0])
-    expect(negativeText.toLowerCase()).toContain('subtitle')
-    expect(negativeText.toLowerCase()).toContain('caption')
-    expect(negativeText.toLowerCase()).toContain('lower third')
-    expect(negativeText).toContain('Chinese characters')
-    expect(Object.values(workflow).some((node) => node.class_type === 'ConditioningZeroOut')).toBe(false)
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-
-    expect(smartPrompt).toContain('turns his face toward the window')
-    expect(smartPrompt).toContain('requested head and gaze direction')
-    expect(smartPrompt).toContain('lower portion of the frame stays clean')
-    expect(smartPrompt.toLowerCase()).not.toContain('subtitle')
-    expect(smartPrompt.toLowerCase()).not.toContain('caption')
-    expect(smartPrompt.toLowerCase()).not.toContain('text overlay')
-  })
-
-  it('does not inject continuity packet or negative concepts into Smart VBVR positive prompts', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: [
-        'GLOBAL: night office, Doctor, same source-frame composition, frontal close-up, stable lighting.',
-        'LOCAL: Doctor sits behind the desk, leans slightly forward, and speaks calmly to camera.',
-      ].join('\n'),
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 12,
-      targetFrameCount: 300,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const globalPromptSourceId = Array.isArray(relay?.inputs.global_prompt)
-      ? String(relay.inputs.global_prompt[0])
-      : ''
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-    const globalPrompt = String(workflow[globalPromptSourceId]?.inputs.prompt ?? '')
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-    const combined = `${globalPrompt}\n${smartPrompt}`.toLowerCase()
-
-    expect(globalPrompt).toContain('night office')
-    expect(smartPrompt).toContain('[0-75]')
-    expect(smartPrompt).toContain('[225-300]')
-    expect(combined).not.toContain('panel continuity packet')
-    expect(combined).not.toContain('hard constraints')
-    expect(combined).not.toContain('crowd')
-    expect(combined).not.toContain('guards')
-    expect(combined).not.toContain('police')
-    expect(combined).not.toContain('subtitles')
-    expect(combined).not.toContain('profile turn')
-    expect(combined).not.toContain('new people')
-  })
-
-  it('sanitizes raw continuity packet fallback before Smart VBVR injection', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: [
-        'Panel continuity packet:',
-        'Current shot action: Doctor sits behind the desk, leans slightly forward, and speaks calmly to camera.',
-        'Hard constraints:',
-        'Do not add new people, crowds, guards, police, subtitles, or profile turns.',
-      ].join('\n'),
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 12,
-      targetFrameCount: 300,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-    const smartPrompt = String(workflow[smartPromptSourceId]?.inputs.prompt ?? '')
-    const normalized = smartPrompt.toLowerCase()
-
-    expect(smartPrompt).toContain('Doctor sits behind the desk')
-    expect(normalized).not.toContain('panel continuity packet')
-    expect(normalized).not.toContain('hard constraints')
-    expect(normalized).not.toContain('crowd')
-    expect(normalized).not.toContain('guards')
-    expect(normalized).not.toContain('police')
-    expect(normalized).not.toContain('subtitles')
-    expect(normalized).not.toContain('profile')
-    expect(normalized).not.toContain('new people')
-  })
-
-  it('maps Smart VBVR content segments across the requested audio-backed duration', () => {
-    const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
-      prompt: [
-        'GLOBAL: same subject as the reference image, preserve identity and lighting',
-        'LOCAL: subject walks in rain [0-120] | camera moves up toward the face [120-240] | subject turns naturally [240-360] | subject waves once [360-420] | camera pulls back [420-489]',
-      ].join('\n'),
-      imageFilenames: ['source.png'],
-      audioFilenames: ['voice.wav'],
-      fps: 25,
-      durationSeconds: 19.56,
-      targetFrameCount: 489,
-    })
-
-    const relay = getPromptRelayNodes(workflow).find((node) => node.class_type === 'PromptRelaySmartEncode')
-    expect(relay).toBeTruthy()
-
-    const smartPromptSourceId = Array.isArray(relay?.inputs.smart_prompt)
-      ? String(relay.inputs.smart_prompt[0])
-      : ''
-
-    expect(workflow['623']?.inputs.value).toBe(489)
-    expect(workflow['628']?.inputs.duration).toBe(19.56)
-    expect(workflow[smartPromptSourceId]?.inputs.prompt).toBe(
-      'subject walks in rain [0-98] | camera moves up toward the face [98-196] | subject turns naturally [196-294] | subject waves once [294-392] | camera pulls back [392-489]',
-    )
-  })
-
   it('drops disabled video outputs when an active video output remains', () => {
     const workflow = resolveComfyUiWorkflow(COMFYUI_LTX23_WORKFLOW_KEYS.damaichaLongPromptRelay, {
       prompt: 'quiet shot',
@@ -1049,55 +812,14 @@ describe('comfyui workflow registry', () => {
     expect(videoOutputs).toEqual([{ nodeId: '280', saveOutput: true }])
   })
 
-  it('registers the three bundled MiniMax H3 FL2VA workflows', () => {
+  it('does not expose any removed local MiniMax H3 workflows', () => {
     const workflowKeys = listComfyUiWorkflowKeys()
 
-    expect(workflowKeys).toContain('basevideo/h3/fl2va-first-frame')
-    expect(workflowKeys).toContain('basevideo/h3/fl2va-last-frame')
-    expect(workflowKeys).toContain('basevideo/h3/fl2va-first-last-frame')
-    expect(getComfyUiWorkflowImageInputCount('basevideo/h3/fl2va-first-frame')).toBe(1)
-    expect(getComfyUiWorkflowImageInputCount('basevideo/h3/fl2va-first-last-frame')).toBe(2)
-  })
-
-  it('injects H3 first and last frames with the requested prompt and target shape', () => {
-    const workflow = resolveComfyUiWorkflow('basevideo/h3/fl2va-first-last-frame', {
-      prompt: 'The actor crosses the room while the camera arcs left.',
-      imageFilenames: ['first.png', 'last.png'],
-      width: 832,
-      height: 480,
-      durationSeconds: 6,
-      fps: 24,
-    })
-
-    expect(workflow['4']).toMatchObject({
-      class_type: 'LoadImage',
-      inputs: { image: 'first.png' },
-      _meta: { title: 'First frame' },
-    })
-    expect(workflow['6']).toMatchObject({
-      class_type: 'LoadImage',
-      inputs: { image: 'last.png' },
-      _meta: { title: 'Last frame' },
-    })
-    expect(workflow['7']?.inputs).toMatchObject({
-      aspect_ratio: '16:9',
-      duration_seconds: 6,
-      width: 832,
-      height: 480,
-    })
-    expect(workflow['8']?.inputs.prompt).toBe(
-      'The actor crosses the room while the camera arcs left.',
-    )
-    expect(workflow['10']?.inputs).toMatchObject({
-      sigma_points: 21,
-      accel: 'off',
-      sampler_mode: 'res_multistep',
-    })
-    expect(workflow['12']?.inputs.fps).toBe(24)
+    expect(workflowKeys.some((key) => key.startsWith('basevideo/h3/'))).toBe(false)
   })
 
   it('uses first and last frame titles instead of numeric node order for image slots', () => {
-    writeExternalWorkflow('basevideo/h3/test-title-aware-slots', {
+    writeExternalWorkflow('basevideo/test-title-aware-slots', {
       '1': {
         class_type: 'LoadImage',
         inputs: { image: 'last-placeholder.png' },
@@ -1118,7 +840,7 @@ describe('comfyui workflow registry', () => {
       },
     })
 
-    const workflow = resolveComfyUiWorkflow('basevideo/h3/test-title-aware-slots', {
+    const workflow = resolveComfyUiWorkflow('basevideo/test-title-aware-slots', {
       imageFilenames: ['first.png', 'last.png'],
     })
 

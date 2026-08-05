@@ -16,6 +16,9 @@ const GOON_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-
 const KJ_MULTISHOT_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 const H3_FIRST_FRAME_MODEL_KEY = 'comfyui::basevideo/h3/fl2va-first-frame'
 const H3_FIRST_LAST_FRAME_MODEL_KEY = 'comfyui::basevideo/h3/fl2va-first-last-frame'
+const REMOTE_H3_FIRST_LAST_FRAME_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-fl2va'
+const SMART_VBVR_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
+const WAN_REMIX_MODEL_KEY = 'comfyui::basevideo/demo/Wan2.2Remix'
 
 describe('ComfyUI Goon runtime helper model', () => {
   beforeEach(() => {
@@ -54,17 +57,24 @@ describe('ComfyUI Goon runtime helper model', () => {
     })
   })
 
-  it.each([
-    [H3_FIRST_FRAME_MODEL_KEY, 'basevideo/h3/fl2va-first-frame'],
-    [H3_FIRST_LAST_FRAME_MODEL_KEY, 'basevideo/h3/fl2va-first-last-frame'],
-  ])('resolves the auto-enabled MiniMax H3 workflow %s', async (modelKey, modelId) => {
+  it('resolves the retained remote MiniMax H3 first-last-frame workflow', async () => {
     await expect(
-      resolveModelSelection('user-1', modelKey, 'video'),
+      resolveModelSelection('user-1', REMOTE_H3_FIRST_LAST_FRAME_MODEL_KEY, 'video'),
     ).resolves.toMatchObject({
       provider: 'comfyui',
-      modelId,
-      modelKey,
+      modelId: 'basevideo/minimax-h3/h3-fl2va',
+      modelKey: REMOTE_H3_FIRST_LAST_FRAME_MODEL_KEY,
       mediaType: 'video',
     })
+  })
+
+  it.each([
+    H3_FIRST_FRAME_MODEL_KEY,
+    H3_FIRST_LAST_FRAME_MODEL_KEY,
+    SMART_VBVR_MODEL_KEY,
+    WAN_REMIX_MODEL_KEY,
+  ])('rejects removed ComfyUI video model %s at runtime', async (modelKey) => {
+    await expect(resolveModelSelection('user-1', modelKey, 'video'))
+      .rejects.toThrow(`MODEL_NOT_FOUND: ${modelKey} is not enabled for video`)
   })
 })

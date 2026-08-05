@@ -115,9 +115,6 @@ export const PRESET_MODELS: PresetModel[] = [
     { modelId: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', type: 'image', provider: 'google' },
     // 视频模型
     { modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage', name: 'ComfyUI · LTX2.3 Goon First/Last Frame', type: 'video', provider: 'comfyui' },
-    { modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2', name: 'ComfyUI · LTX2.3 Smart VBVR I2V Audio', type: 'video', provider: 'comfyui' },
-    { modelId: 'basevideo/h3/fl2va-first-frame', name: 'ComfyUI · MiniMax H3 首帧图生视频', type: 'video', provider: 'comfyui' },
-    { modelId: 'basevideo/h3/fl2va-first-last-frame', name: 'ComfyUI · MiniMax H3 首尾帧视频', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/minimax-h3/h3-i2va', name: 'ComfyUI · MiniMax H3 Image to Video with Audio', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/minimax-h3/h3-fl2va', name: 'ComfyUI · MiniMax H3 First/Last Frame with Audio', type: 'video', provider: 'comfyui' },
     // 音频模型

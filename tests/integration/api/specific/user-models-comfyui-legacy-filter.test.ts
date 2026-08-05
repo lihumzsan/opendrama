@@ -71,7 +71,7 @@ describe('api specific - user models ComfyUI LTX2.3 filter', () => {
     expect(values).not.toContain('comfyui::basevideo/demo/LTX2.3-fast')
     expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame')
     expect(values).toContain('comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage')
-    expect(values).toContain('comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')
+    expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')
     expect(values).toContain('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
     expect(values).not.toContain('comfyui::basevideo/seedance2/bernini-480p-i2v')
     expect(body.video.find((item) => item.value.endsWith('t8-multishot-precise-promptrelay-kj-720p'))?.label)

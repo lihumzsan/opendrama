@@ -8,8 +8,8 @@ describe('ComfyUI Goon settings helper', () => {
       .map((model) => model.modelId)
 
     expect(comfyUiVideoModelIds).toContain('basevideo/ltx23-profiles/goon-first-last-frame-2stage')
-    expect(comfyUiVideoModelIds).toContain('basevideo/h3/fl2va-first-frame')
-    expect(comfyUiVideoModelIds).toContain('basevideo/h3/fl2va-first-last-frame')
+    expect(comfyUiVideoModelIds).not.toContain('basevideo/h3/fl2va-first-frame')
+    expect(comfyUiVideoModelIds).not.toContain('basevideo/h3/fl2va-first-last-frame')
     expect(comfyUiVideoModelIds).not.toContain('basevideo/ltx23-profiles/t8-smooth-first-last-frame')
   })
 })

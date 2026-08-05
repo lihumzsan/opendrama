@@ -19,6 +19,8 @@ interface UseWorkspaceVideoActionsParams {
   t: (key: string) => string
 }
 
+const inFlightVideoSubmissionKeys = new Set<string>()
+
 function isAbortError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
   return err.name === 'AbortError' || err.message === 'Failed to fetch'
@@ -33,6 +35,29 @@ function assertClipUpdateData(data: unknown): asserts data is Record<string, unk
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new TypeError('Clip update payload must be an object')
   }
+}
+
+function buildVideoSubmissionKey(params: {
+  projectId: string
+  storyboardId: string
+  panelIndex: number
+  panelId?: string
+  firstLastFrame?: {
+    lastFrameStoryboardId: string
+    lastFramePanelIndex: number
+  }
+}): string {
+  const firstPanelKey = params.panelId
+    ? `panel:${params.panelId}`
+    : `storyboard:${params.storyboardId}:${params.panelIndex}`
+  if (!params.firstLastFrame) return `${params.projectId}:normal:${firstPanelKey}`
+  return [
+    params.projectId,
+    'first-last-frame',
+    firstPanelKey,
+    params.firstLastFrame.lastFrameStoryboardId,
+    params.firstLastFrame.lastFramePanelIndex,
+  ].join(':')
 }
 
 export function useWorkspaceVideoActions({
@@ -72,6 +97,16 @@ export function useWorkspaceVideoActions({
       alert('Video model is required')
       return
     }
+    const submissionKey = buildVideoSubmissionKey({
+      projectId,
+      storyboardId,
+      panelIndex,
+      panelId,
+      firstLastFrame,
+    })
+    if (inFlightVideoSubmissionKeys.has(submissionKey)) return
+
+    inFlightVideoSubmissionKeys.add(submissionKey)
     try {
       await generateVideoMutation.mutateAsync({
         storyboardId,
@@ -91,6 +126,8 @@ export function useWorkspaceVideoActions({
       }
       alert(`${t('execution.generationFailed')}: ${getErrorMessage(err)}`)
       throw err
+    } finally {
+      inFlightVideoSubmissionKeys.delete(submissionKey)
     }
   }
 

@@ -26,6 +26,13 @@ const prismaMock = vi.hoisted(() => ({
           type: 'audio',
           provider: 'comfyui',
         },
+        {
+          modelId: 'basevideo/demo/Wan2.2Remix',
+          modelKey: 'comfyui::basevideo/demo/Wan2.2Remix',
+          name: 'ComfyUI · Wan 2.2 Remix 图生视频',
+          type: 'video',
+          provider: 'comfyui',
+        },
       ]),
       customProviders: JSON.stringify([
         {
@@ -72,11 +79,8 @@ describe('api specific - user models audio filter', () => {
     ])
     expect(body.video.map((item) => item.value)).toEqual([
       'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-      'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
       'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-      'comfyui::basevideo/h3/fl2va-first-frame',
       'comfyui::basevideo/minimax-h3/h3-i2va',
-      'comfyui::basevideo/h3/fl2va-first-last-frame',
       'comfyui::basevideo/minimax-h3/h3-fl2va',
     ])
   })
