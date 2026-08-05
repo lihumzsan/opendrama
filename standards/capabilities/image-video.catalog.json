@@ -1253,5 +1253,71 @@
         }
       }
     }
+  },
+  {
+    "modelType": "video",
+    "provider": "comfyui",
+    "modelId": "basevideo/minimax-h3/h3-i2va",
+    "capabilities": {
+      "video": {
+        "generationModeOptions": [
+          "normal"
+        ],
+        "durationOptions": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "fpsOptions": [
+          24
+        ],
+        "resolutionOptions": [
+          "720p"
+        ],
+        "firstlastframe": false,
+        "supportGenerateAudio": true
+      }
+    }
+  },
+  {
+    "modelType": "video",
+    "provider": "comfyui",
+    "modelId": "basevideo/minimax-h3/h3-fl2va",
+    "capabilities": {
+      "video": {
+        "generationModeOptions": [
+          "firstlastframe"
+        ],
+        "durationOptions": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "fpsOptions": [
+          24
+        ],
+        "resolutionOptions": [
+          "720p"
+        ],
+        "firstlastframe": true,
+        "supportGenerateAudio": true
+      }
+    }
   }
 ]

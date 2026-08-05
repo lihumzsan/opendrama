@@ -12,6 +12,10 @@ import {
   runComfyUiWorkflow,
 } from '@/lib/providers/comfyui/client'
 import { COMFYUI_LTX23_WORKFLOW_KEYS } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import {
+  COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+  COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+} from '@/lib/providers/comfyui/minimax-h3'
 
 function writeWorkflow(root: string, workflowKey: string, workflow: unknown) {
   const filePath = join(root, `${workflowKey}.json`)
@@ -642,6 +646,27 @@ describe('comfyui client media refs', () => {
       mimeType: 'video/mp4',
     })
     expect((submittedWorkflow as Record<string, { inputs: Record<string, unknown> }>)['1']?.inputs.image).toBe('uploaded-first.png')
+  })
+
+  it('rejects H3 image-role mismatches before any upload side effect', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+
+    await expect(runComfyUiVideoWorkflow({
+      baseUrl: 'http://127.0.0.1:8878',
+      workflowKey: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+      prompt: 'integrated_multimodal_description: a silent motion.',
+      firstFrameImageUrl: 'https://assets.test/first.png',
+      lastFrameImageUrl: 'https://assets.test/last.png',
+    })).rejects.toThrow('COMFYUI_MINIMAX_H3_IMAGE_INPUTS_INVALID')
+
+    await expect(runComfyUiVideoWorkflow({
+      baseUrl: 'http://127.0.0.1:8878',
+      workflowKey: COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+      prompt: 'integrated_multimodal_description: a transition.',
+      firstFrameImageUrl: 'https://assets.test/first.png',
+    })).rejects.toThrow('COMFYUI_MINIMAX_H3_IMAGE_INPUTS_INVALID')
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('injects a neutral audio upload into video workflows that contain LoadAudio placeholders', async () => {

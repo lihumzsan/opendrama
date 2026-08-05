@@ -96,4 +96,36 @@ describe('getProjectModelConfig image defaults', () => {
     expect(config.storyboardModel).toBe('fal::banana-storyboard')
     expect(config.editModel).toBe('fal::banana-edit')
   })
+
+  it('replaces retired ComfyUI image workflow selections with Codex Image', async () => {
+    prismaMock.novelPromotionProject.findUnique.mockResolvedValue({
+      projectId: 'project-1',
+      analysisModel: null,
+      characterModel: 'comfyui::baseimage/图片生成/Flux2Klein文生图',
+      locationModel: null,
+      storyboardModel: 'comfyui::baseimage/图片分镜/Qwen剧情分镜制作',
+      editModel: 'comfyui::baseimage/图片编辑/qwen单图编辑',
+      videoModel: null,
+      audioModel: null,
+      videoRatio: '16:9',
+      artStyle: null,
+      capabilityOverrides: null,
+    })
+    prismaMock.userPreference.findUnique.mockResolvedValue({
+      analysisModel: null,
+      characterModel: null,
+      locationModel: 'comfyui::baseimage/图片生成/ZImageTurbo造相',
+      storyboardModel: null,
+      editModel: null,
+      audioModel: null,
+      capabilityDefaults: null,
+    })
+
+    const config = await getProjectModelConfig('project-1', 'user-1')
+
+    expect(config.characterModel).toBe(CODEX_DEFAULT_IMAGE_MODEL_KEY)
+    expect(config.locationModel).toBe(CODEX_DEFAULT_IMAGE_MODEL_KEY)
+    expect(config.storyboardModel).toBe(CODEX_DEFAULT_IMAGE_MODEL_KEY)
+    expect(config.editModel).toBe(CODEX_DEFAULT_IMAGE_MODEL_KEY)
+  })
 })

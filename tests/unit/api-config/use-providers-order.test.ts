@@ -199,40 +199,13 @@ describe('useProviders provider order merge', () => {
     expect(result.models[0]?.enabled).toBe(true)
   })
 
-  it('applies comfyui fallback defaults and enables the default workflows', () => {
+  it('applies ComfyUI fallback defaults only for supported video and audio workflows', () => {
     const result = applyComfyUiPresetDefaults({
       models: [
         {
-          modelId: 'baseimage/\u56fe\u7247\u5206\u955c/Qwen\u5267\u60c5\u5206\u955c\u5236\u4f5c',
-          modelKey: 'comfyui::baseimage/\u56fe\u7247\u5206\u955c/Qwen\u5267\u60c5\u5206\u955c\u5236\u4f5c',
-          name: 'ComfyUI · Qwen storyboard',
-          type: 'image',
-          provider: 'comfyui',
-          price: 0,
-          enabled: false,
-        },
-        {
-          modelId: 'baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-          modelKey: 'comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-          name: 'ComfyUI · Flux2Klein image',
-          type: 'image',
-          provider: 'comfyui',
-          price: 0,
-          enabled: false,
-        },
-        {
-          modelId: 'baseimage/\u56fe\u7247\u7f16\u8f91/qwen\u5355\u56fe\u7f16\u8f91',
-          modelKey: 'comfyui::baseimage/\u56fe\u7247\u7f16\u8f91/qwen\u5355\u56fe\u7f16\u8f91',
-          name: 'ComfyUI · Qwen edit',
-          type: 'image',
-          provider: 'comfyui',
-          price: 0,
-          enabled: false,
-        },
-        {
-          modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-          modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-          name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
+          modelId: 'basevideo/minimax-h3/h3-i2va',
+          modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
+          name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
           type: 'video',
           provider: 'comfyui',
           price: 0,
@@ -262,20 +235,15 @@ describe('useProviders provider order merge', () => {
 
     expect(result.changed).toBe(true)
     expect(result.defaultModels).toMatchObject({
-      characterModel: 'comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-      locationModel: 'comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-      storyboardModel: 'comfyui::baseimage/\u56fe\u7247\u5206\u955c/Qwen\u5267\u60c5\u5206\u955c\u5236\u4f5c',
-      editModel: 'comfyui::baseimage/\u56fe\u7247\u7f16\u8f91/qwen\u5355\u56fe\u7f16\u8f91',
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+      videoModel: 'comfyui::basevideo/minimax-h3/h3-i2va',
       audioModel: 'comfyui::baseaudio/单人/LongCat-one',
       voiceDesignModel: 'comfyui::baseaudio/\u97f3\u8272/s2-se',
     })
     const enabledByKey = new Map(result.models.map((model) => [model.modelKey, model.enabled]))
-    expect(enabledByKey.get('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')).toBe(true)
-    expect(enabledByKey.get('comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe')).toBe(true)
+    expect(enabledByKey.get('comfyui::basevideo/minimax-h3/h3-i2va')).toBe(true)
   })
 
-  it('does not overwrite an existing explicit default model selection', () => {
+  it('does not overwrite an existing explicit image default model selection', () => {
     const result = applyComfyUiPresetDefaults({
       models: [
         {
@@ -287,15 +255,6 @@ describe('useProviders provider order merge', () => {
           price: 0,
           enabled: true,
         },
-        {
-          modelId: 'baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-          modelKey: 'comfyui::baseimage/\u56fe\u7247\u751f\u6210/Flux2Klein\u6587\u751f\u56fe',
-          name: 'ComfyUI · Flux2Klein image',
-          type: 'image',
-          provider: 'comfyui',
-          price: 0,
-          enabled: false,
-        },
       ],
       defaultModels: {
         characterModel: 'custom::image-model',
@@ -303,7 +262,6 @@ describe('useProviders provider order merge', () => {
     })
 
     expect(result.defaultModels.characterModel).toBe('custom::image-model')
-    expect(result.models[1]?.enabled).toBe(true)
   })
 
   it('does not overwrite an existing explicit audio default model selection', () => {

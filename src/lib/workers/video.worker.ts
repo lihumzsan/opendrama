@@ -44,7 +44,6 @@ import {
   type PanelContinuityPacket,
 } from '@/lib/novel-promotion/panel-continuity'
 import {
-  DEFAULT_VIDEO_MODEL_KEY,
   isRetiredBerniniVideoModelKey,
   normalizeRetiredBerniniVideoGenerationOptions,
   normalizeVideoModelKey,
@@ -52,10 +51,20 @@ import {
 import {
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
+  COMFYUI_LTX23_WORKFLOW_KEYS,
   getLtx23WorkflowProfile,
   normalizeLtx23GoonDurationSeconds,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
+import {
+  getMiniMaxH3ModeForWorkflow,
+  normalizeMiniMaxH3Request,
+} from '@/lib/providers/comfyui/minimax-h3'
+import {
+  buildMiniMaxH3PromptFingerprint,
+  planMiniMaxH3Prompt,
+  type MiniMaxH3PromptPlanInput,
+} from '@/lib/novel-promotion/h3-prompt-planner'
 
 type AnyObj = Record<string, unknown>
 type VideoOptionValue = string | number | boolean
@@ -65,6 +74,7 @@ type WorkflowVideoGenerationMode = 'normal' | 'firstlastframe'
 
 const DEFAULT_LEGACY_LTX23_SINGLE_SHOT_DURATION_SECONDS = 2
 const DEFAULT_LEGACY_LTX23_SINGLE_SHOT_FPS = 24
+const RETIRED_BERNINI_MIGRATION_MODEL_KEY = `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`
 
 function readNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null
@@ -82,11 +92,32 @@ function normalizeWorkerVideoModelKey(raw: string | null | undefined): string {
   ) {
     return normalized
   }
-  return isRetiredBerniniVideoModelKey(trimmed) ? DEFAULT_VIDEO_MODEL_KEY : trimmed
+  return isRetiredBerniniVideoModelKey(trimmed) ? RETIRED_BERNINI_MIGRATION_MODEL_KEY : trimmed
 }
 
 function readPositiveFiniteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+}
+
+function readMiniMaxH3PromptFromPayload(payload: AnyObj, fingerprint: string): string | null {
+  const plan = payload.h3PromptPlan
+  if (!plan || typeof plan !== 'object' || Array.isArray(plan)) return null
+  const record = plan as AnyObj
+  return readNonEmptyString(record.fingerprint) === fingerprint
+    ? readNonEmptyString(record.prompt)
+    : null
+}
+
+async function persistMiniMaxH3PromptOnJob(
+  job: Job<TaskJobData>,
+  payload: AnyObj,
+  plan: { prompt: string; fingerprint: string },
+): Promise<void> {
+  payload.h3PromptPlan = plan
+  await job.updateData({
+    ...job.data,
+    payload,
+  })
 }
 
 function readBooleanFlag(value: unknown): boolean | null {
@@ -475,6 +506,7 @@ async function generateVideoForPanel(
   modelId: string,
   projectVideoRatio: string | null | undefined,
   projectArtStyle: string | null | undefined,
+  projectAnalysisModel: string | null | undefined,
   generationOptions: VideoOptionMap,
 ): Promise<{
   cosKey: string
@@ -633,9 +665,13 @@ async function generateVideoForPanel(
   if (audioDrivenDuration && !audioDrivenDuration.canGenerate) {
     throwBlockedAudioTiming(audioDrivenDuration)
   }
+  const h3Mode = getMiniMaxH3ModeForWorkflow(model)
+  if (h3Mode && ((h3Mode === 'i2va' && generationMode !== 'normal') || (h3Mode === 'fl2va' && generationMode !== 'firstlastframe'))) {
+    throw new Error(`COMFYUI_MINIMAX_H3_GENERATION_MODE_INVALID: ${model} does not match ${generationMode}`)
+  }
   const shouldKeepDialogueAudioOnly = referenceAudioUrls.length > 0
     && isLtx23VideoModel(model)
-  const effectiveGenerationOptions = withVideoWorkflowTimingDefaults({
+  let effectiveGenerationOptions = withVideoWorkflowTimingDefaults({
     ...routedGenerationOptions,
     ...(audioDrivenDuration ? {
       duration: audioDrivenDuration.targetDurationSeconds,
@@ -645,6 +681,19 @@ async function generateVideoForPanel(
     modelId: model,
     generationMode,
   })
+  const normalizedH3Request = h3Mode
+    ? normalizeMiniMaxH3Request({
+        durationSeconds: effectiveGenerationOptions.duration,
+        fps: effectiveGenerationOptions.fps,
+      })
+    : null
+  if (normalizedH3Request) {
+    effectiveGenerationOptions = {
+      ...effectiveGenerationOptions,
+      duration: normalizedH3Request.durationSeconds,
+      fps: normalizedH3Request.fps,
+    }
+  }
   const continuityPacket = await assembleVideoContinuityPacket({
     panel,
     nextPanel: lastPanel,
@@ -652,7 +701,7 @@ async function generateVideoForPanel(
     durationSeconds: typeof effectiveGenerationOptions.duration === 'number'
       ? effectiveGenerationOptions.duration
       : null,
-    includeDialogueText: !shouldKeepDialogueAudioOnly,
+    includeDialogueText: !shouldKeepDialogueAudioOnly && !h3Mode,
   })
   const continuityPrompt = renderPanelContinuityPrompt({
     packet: continuityPacket,
@@ -663,7 +712,29 @@ async function generateVideoForPanel(
   const isGoonFirstLastFrame = Boolean(
     firstLastFramePayload && model === COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
   )
-  const effectivePrompt = isGoonFirstLastFrame
+  const effectivePrompt = h3Mode && normalizedH3Request
+    ? await (async () => {
+        const plannerInput: MiniMaxH3PromptPlanInput = {
+          userId: job.data.userId,
+          projectId: job.data.projectId,
+          analysisModel: projectAnalysisModel,
+          mode: h3Mode,
+          creatorPrompt: basePrompt,
+          continuityPrompt,
+          durationSeconds: normalizedH3Request.durationSeconds,
+          firstFrameUrl: sourceImageBase64,
+          ...(lastFrameImageBase64 ? { lastFrameUrl: lastFrameImageBase64 } : {}),
+          aspectRatio: projectVideoRatio || '16:9',
+        }
+        const fingerprint = buildMiniMaxH3PromptFingerprint(plannerInput)
+        const persistedPrompt = readMiniMaxH3PromptFromPayload(payload, fingerprint)
+        if (persistedPrompt) return persistedPrompt
+
+        const plan = await planMiniMaxH3Prompt(plannerInput)
+        await persistMiniMaxH3PromptOnJob(job, payload, plan)
+        return plan.prompt
+      })()
+    : isGoonFirstLastFrame
     ? basePrompt
     : isLtx23VideoModel(model)
     ? (
@@ -788,6 +859,7 @@ async function handleVideoPanelTask(job: Job<TaskJobData>) {
     modelId,
     projectModels.videoRatio,
     projectModels.artStyle,
+    projectModels.analysisModel,
     generationOptions,
   )
 

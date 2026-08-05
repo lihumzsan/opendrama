@@ -44,6 +44,34 @@ describe('comfyui video capabilities catalog', () => {
     expect(capabilities?.video?.supportGenerateAudio).toBe(false)
   })
 
+  it('registers separate H3 I2VA and FL2VA capabilities without replacing the LTX defaults', () => {
+    const i2va = findBuiltinCapabilities(
+      'video',
+      'comfyui',
+      'basevideo/minimax-h3/h3-i2va',
+    )
+    const fl2va = findBuiltinCapabilities(
+      'video',
+      'comfyui',
+      'basevideo/minimax-h3/h3-fl2va',
+    )
+
+    expect(i2va?.video).toMatchObject({
+      generationModeOptions: ['normal'],
+      durationOptions: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      fpsOptions: [24],
+      firstlastframe: false,
+      supportGenerateAudio: true,
+    })
+    expect(fl2va?.video).toMatchObject({
+      generationModeOptions: ['firstlastframe'],
+      durationOptions: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      fpsOptions: [24],
+      firstlastframe: true,
+      supportGenerateAudio: true,
+    })
+  })
+
   it('registers the KJ multi-shot PromptRelay workflow as fixed 720p at 25 fps', () => {
     const capabilities = findBuiltinCapabilities(
       'video',

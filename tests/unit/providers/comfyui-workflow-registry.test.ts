@@ -7,19 +7,17 @@ import {
   getLtx23WorkflowProfiles,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import {
+  COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+  COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+} from '@/lib/providers/comfyui/minimax-h3'
+import {
   comfyUiWorkflowRequiresLlmApi,
-  getComfyUiWorkflowParameterContract,
   getComfyUiWorkflowImageInputCount,
   getComfyUiWorkflowVideoInputCount,
   listComfyUiWorkflowKeys,
   resolveComfyUiWorkflow,
-  validateResolvedWorkflowPreflight,
 } from '@/lib/providers/comfyui/workflow-registry'
 import { VIDEO_SEAM_CONCAT_MAX_TRIM_FRAMES } from '@/lib/video-tools/trim-frames'
-
-function getLoadImageNodes(workflow: ReturnType<typeof resolveComfyUiWorkflow>) {
-  return Object.values(workflow).filter((node) => node.class_type.toLowerCase().includes('loadimage'))
-}
 
 function getLoadAudioNodes(workflow: ReturnType<typeof resolveComfyUiWorkflow>) {
   return Object.values(workflow).filter((node) => node.class_type.toLowerCase().includes('loadaudio'))
@@ -32,6 +30,74 @@ function getPromptRelayNodes(workflow: ReturnType<typeof resolveComfyUiWorkflow>
 describe('comfyui workflow registry', () => {
   let workflowRoot: string | null = null
   const VIDEO_SEAM_CONCAT_WORKFLOW_KEY = 'basevideo/tools/video-seam-concat-nvenc'
+
+  it('does not expose bundled ComfyUI image workflows', () => {
+    expect(listComfyUiWorkflowKeys().some((key) => key.startsWith('baseimage/'))).toBe(false)
+  })
+
+  it('injects only the fixed first-frame slot for the H3 I2VA workflow', () => {
+    const workflow = resolveComfyUiWorkflow(COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID, {
+      imageFilenames: ['first.png'],
+      prompt: 'integrated_multimodal_description: a silent first-frame motion.',
+      width: 1344,
+      height: 768,
+      durationSeconds: 10,
+      fps: 24,
+      seed: 42,
+    })
+
+    expect(workflow['1']?.inputs.image).toBe('first.png')
+    expect(workflow['14']).toMatchObject({
+      class_type: 'MiniMaxH3ImageToVideo',
+      inputs: {
+        first_frame: ['2', 0],
+        prompt: 'integrated_multimodal_description: a silent first-frame motion.',
+        width: 1344,
+        height: 768,
+        length: 243,
+      },
+    })
+    expect(workflow['14']?.inputs).not.toHaveProperty('last_frame')
+    expect(workflow['13']?.inputs.noise_seed).toBe(42)
+    expect(workflow['16']?.inputs).toMatchObject({ scheduler: 'simple', steps: 20, denoise: 1 })
+    expect(workflow['20']?.inputs).toMatchObject({ fps: 24, bit_depth: 8 })
+    expect(workflow['21']?.inputs).toMatchObject({ format: 'auto', codec: 'h264' })
+  })
+
+  it('injects H3 FL2VA first and last frames into their fixed slots', () => {
+    const workflow = resolveComfyUiWorkflow(COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID, {
+      imageFilenames: ['first.png', 'last.png'],
+      prompt: 'integrated_multimodal_description: transition from Picture 1 to Picture 2.',
+      width: 768,
+      height: 1344,
+      durationSeconds: 5,
+      fps: 24,
+    })
+
+    expect(workflow['1']?.inputs.image).toBe('first.png')
+    expect(workflow['3']?.inputs.image).toBe('last.png')
+    expect(workflow['14']?.inputs).toMatchObject({
+      first_frame: ['2', 0],
+      last_frame: ['4', 0],
+      length: 124,
+    })
+  })
+
+  it.each([
+    {
+      workflowKey: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+      imageFilenames: ['first.png', 'unexpected-last.png'],
+    },
+    {
+      workflowKey: COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+      imageFilenames: ['first.png'],
+    },
+  ])('rejects an image list that does not match the H3 workflow mode', ({ workflowKey, imageFilenames }) => {
+    expect(() => resolveComfyUiWorkflow(workflowKey, {
+      imageFilenames,
+      prompt: 'integrated_multimodal_description: test.',
+    })).toThrow('COMFYUI_MINIMAX_H3_IMAGE_INPUTS_INVALID')
+  })
 
   it('injects both video files and exact frame trims into the fixed seam-concat workflow', () => {
     expect(getComfyUiWorkflowVideoInputCount(VIDEO_SEAM_CONCAT_WORKFLOW_KEY)).toBe(2)
@@ -333,148 +399,6 @@ describe('comfyui workflow registry', () => {
     expect(() => resolveComfyUiWorkflow('basevideo/test/rh-llm-missing-config')).toThrow(
       'COMFYUI_LLM_MODEL_NOT_CONFIGURED',
     )
-  })
-
-  it('applies target aspect ratio and longest side to Qwen storyboard resize nodes', () => {
-    const workflowKey = listComfyUiWorkflowKeys().find((key) =>
-      key.includes('baseimage/')
-      && key.includes('Qwen')
-    )
-
-    expect(workflowKey).toBeTruthy()
-
-    const workflow = resolveComfyUiWorkflow(workflowKey!, {
-      prompt: 'dimension test',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['reference.jpg'],
-      llmApi: {
-        baseUrl: 'https://openrouter.ai/api/v1',
-        apiKey: 'or-test-key',
-        model: 'openrouter/test-model',
-      },
-    })
-
-    const resizeNode = Object.values(workflow).find((node) =>
-      Object.prototype.hasOwnProperty.call(node.inputs, 'aspect_ratio')
-      && Object.prototype.hasOwnProperty.call(node.inputs, 'scale_to_length')
-    )
-    expect(resizeNode?.inputs.aspect_ratio).toBe('16:9')
-
-    const scaleToLength = resizeNode?.inputs.scale_to_length
-    expect(Array.isArray(scaleToLength)).toBe(true)
-    const intNodeId = Array.isArray(scaleToLength) ? String(scaleToLength[0]) : ''
-    expect(workflow[intNodeId]?.inputs.value).toBe(1280)
-  })
-
-  it('locks Qwen storyboard workflow parameters before submit', () => {
-    const workflowKey = listComfyUiWorkflowKeys().find((key) =>
-      key.includes('baseimage/')
-      && key.includes('Qwen')
-    )
-
-    expect(workflowKey).toBeTruthy()
-    expect(getComfyUiWorkflowParameterContract(workflowKey!)).toEqual(expect.objectContaining({
-      allowInternalLlmExpansion: false,
-      finalOutputNodeIds: ['105'],
-    }))
-
-    const workflow = resolveComfyUiWorkflow(workflowKey!, {
-      prompt: 'locked current panel prompt',
-      negativePrompt: 'locked negative prompt',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['reference.jpg'],
-      llmApi: {
-        baseUrl: 'https://openrouter.ai/api/v1',
-        apiKey: 'or-test-key',
-        model: 'openrouter/test-model',
-      },
-    })
-
-    const result = validateResolvedWorkflowPreflight(workflowKey!, workflow, {
-      prompt: 'locked current panel prompt',
-      negativePrompt: 'locked negative prompt',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['reference.jpg'],
-      llmApi: {
-        baseUrl: 'https://openrouter.ai/api/v1',
-        apiKey: 'or-test-key',
-        model: 'openrouter/test-model',
-      },
-    }, { expect: 'image' })
-
-    expect(result.ok).toBe(true)
-    expect(workflow['68']?.inputs.prompt).toBe('locked current panel prompt')
-    expect(workflow['61']?.inputs.prompt).toBe('locked negative prompt')
-    expect(workflow['105']?.class_type).toBe('SaveImage')
-  })
-
-  it('rejects Qwen storyboard workflows when final conditioning is not locked', () => {
-    const workflowKey = listComfyUiWorkflowKeys().find((key) =>
-      key.includes('baseimage/')
-      && key.includes('Qwen')
-    )
-
-    expect(workflowKey).toBeTruthy()
-
-    const workflow = resolveComfyUiWorkflow(workflowKey!, {
-      prompt: 'locked current panel prompt',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['reference.jpg'],
-      llmApi: {
-        baseUrl: 'https://openrouter.ai/api/v1',
-        apiKey: 'or-test-key',
-        model: 'openrouter/test-model',
-      },
-    })
-    workflow['68']!.inputs.prompt = ['76', 0]
-
-    expect(() => validateResolvedWorkflowPreflight(workflowKey!, workflow, {
-      prompt: 'locked current panel prompt',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['reference.jpg'],
-      llmApi: {
-        baseUrl: 'https://openrouter.ai/api/v1',
-        apiKey: 'or-test-key',
-        model: 'openrouter/test-model',
-      },
-    }, { expect: 'image' })).toThrow('COMFYUI_PREFLIGHT_PROMPT_NOT_LOCKED')
-  })
-
-  it('duplicates the last provided reference into every remaining LoadImage slot', () => {
-    const workflowKey = 'baseimage/图片编辑/qwen双图编辑'
-    expect(getComfyUiWorkflowImageInputCount(workflowKey)).toBeGreaterThan(1)
-
-    const workflow = resolveComfyUiWorkflow(workflowKey, {
-      prompt: 'single reference edit',
-      width: 1280,
-      height: 720,
-      imageFilenames: ['only-reference.png'],
-    })
-
-    const loadImageNodes = getLoadImageNodes(workflow)
-    expect(loadImageNodes.length).toBeGreaterThan(1)
-    expect(loadImageNodes.every((node) => node.inputs.image === 'only-reference.png')).toBe(true)
-    expect(loadImageNodes.every((node) => !Object.prototype.hasOwnProperty.call(node.inputs, 'upload'))).toBe(true)
-    expect(loadImageNodes.every((node) => !Object.prototype.hasOwnProperty.call(node.inputs, 'imageUI'))).toBe(true)
-    expect(loadImageNodes.every((node) => !Object.prototype.hasOwnProperty.call(node.inputs, 'imageui'))).toBe(true)
-  })
-
-  it('removes bundled demo image inputs when no reference image is injected', () => {
-    const workflow = resolveComfyUiWorkflow('baseimage/图片编辑/qwen双图编辑', {
-      prompt: 'text only edit should not inherit bundled demo images',
-      width: 1280,
-      height: 720,
-    })
-
-    const loadImageNodes = getLoadImageNodes(workflow)
-    expect(loadImageNodes.length).toBeGreaterThan(1)
-    expect(loadImageNodes.every((node) => !Object.prototype.hasOwnProperty.call(node.inputs, 'image'))).toBe(true)
-    expect(loadImageNodes.every((node) => !Object.prototype.hasOwnProperty.call(node.inputs, 'upload'))).toBe(true)
   })
 
   it('keeps S2 voice-clone reference transcription prompt separate from render text', () => {

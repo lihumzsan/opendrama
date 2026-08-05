@@ -2,16 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { testProviderConnection } from '@/lib/user-api/provider-test'
 
 const listComfyUiWorkflowKeysMock = vi.hoisted(() =>
-  vi.fn(() => ['baseimage/图片生成/Flux2Klein文生图']),
-)
-
-const hasComfyUiWorkflowKeyMock = vi.hoisted(() =>
-  vi.fn((workflowKey: string) => workflowKey === 'baseimage/图片生成/Flux2Klein文生图'),
+  vi.fn(() => ['basevideo/minimax-h3/h3-i2va']),
 )
 
 vi.mock('@/lib/providers/comfyui/workflow-registry', () => ({
-  COMFYUI_DEFAULT_IMAGE_WORKFLOW_ID: 'baseimage/图片生成/Flux2Klein文生图',
-  hasComfyUiWorkflowKey: hasComfyUiWorkflowKeyMock,
   listComfyUiWorkflowKeys: listComfyUiWorkflowKeysMock,
 }))
 
@@ -102,10 +96,7 @@ describe('provider test connection', () => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', fetchMock)
     codexClientMock.runCodexSelfCheck.mockReset()
-    listComfyUiWorkflowKeysMock.mockReturnValue(['baseimage/图片生成/Flux2Klein文生图'])
-    hasComfyUiWorkflowKeyMock.mockImplementation(
-      (workflowKey: string) => workflowKey === 'baseimage/图片生成/Flux2Klein文生图',
-    )
+    listComfyUiWorkflowKeysMock.mockReturnValue(['basevideo/minimax-h3/h3-i2va'])
   })
 
   it('passes bailian probe with models step and credits skip', async () => {
@@ -368,7 +359,7 @@ describe('provider test connection', () => {
     })
   })
 
-  it('passes ComfyUI probe when the server and default workflow are both available', async () => {
+  it('passes ComfyUI probe when the server and a bundled workflow are available', async () => {
     const result = await testProviderConnection({
       apiType: 'comfyui',
       apiKey: '',
@@ -386,14 +377,13 @@ describe('provider test connection', () => {
         name: 'imageGen',
         status: 'pass',
         message: 'Found 1 local workflows',
-        detail: 'baseimage/图片生成/Flux2Klein文生图',
+        detail: 'basevideo/minimax-h3/h3-i2va',
       },
     ])
   })
 
   it('fails ComfyUI probe when no local workflow files are registered', async () => {
     listComfyUiWorkflowKeysMock.mockReturnValue([])
-    hasComfyUiWorkflowKeyMock.mockReturnValue(false)
 
     const result = await testProviderConnection({
       apiType: 'comfyui',
@@ -412,7 +402,7 @@ describe('provider test connection', () => {
         name: 'imageGen',
         status: 'fail',
         message: 'No local ComfyUI workflows found',
-        detail: 'Set COMFYUI_WORKFLOW_ROOT or restore src/lib/providers/comfyui/workflows. Expected workflow: baseimage/图片生成/Flux2Klein文生图.json',
+        detail: 'Set COMFYUI_WORKFLOW_ROOT or restore src/lib/providers/comfyui/workflows.',
       },
     ])
   })

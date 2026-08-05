@@ -47,30 +47,6 @@ export interface CustomModel {
 
 const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
   {
-    modelId: 'baseimage/图片编辑/qwen双图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/qwen双图编辑',
-    name: 'ComfyUI · Qwen 双图编辑',
-    type: 'image',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
-    modelId: 'baseimage/图片编辑/qwen三图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/qwen三图编辑',
-    name: 'ComfyUI · Qwen 三图编辑',
-    type: 'image',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
-    modelId: 'baseimage/图片编辑/Flux2多图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/Flux2多图编辑',
-    name: 'ComfyUI · Flux2 多图编辑',
-    type: 'image',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
     modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     modelKey: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     name: 'ComfyUI · LTX2.3 Goon First/Last Frame',
@@ -82,6 +58,22 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
     modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
     name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
+    type: 'video',
+    provider: 'comfyui',
+    price: 0,
+  },
+  {
+    modelId: 'basevideo/minimax-h3/h3-i2va',
+    modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
+    name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
+    type: 'video',
+    provider: 'comfyui',
+    price: 0,
+  },
+  {
+    modelId: 'basevideo/minimax-h3/h3-fl2va',
+    modelKey: 'comfyui::basevideo/minimax-h3/h3-fl2va',
+    name: 'ComfyUI · MiniMax H3 First/Last Frame with Audio',
     type: 'video',
     provider: 'comfyui',
     price: 0,
@@ -185,6 +177,9 @@ function filterRuntimeSupportedModels(models: CustomModel[]): CustomModel[] {
   return models.filter((model) => {
     if (model.type === 'llm') {
       return ALLOWED_LLM_PROVIDER_KEYS.has(getProviderKey(model.provider))
+    }
+    if (model.type === 'image' && getProviderKey(model.provider) === 'comfyui') {
+      return false
     }
     return true
   })

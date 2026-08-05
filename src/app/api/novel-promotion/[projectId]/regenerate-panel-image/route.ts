@@ -6,8 +6,11 @@ import { resolveRequiredTaskLocale } from '@/lib/task/resolve-locale'
 import { TASK_TYPE } from '@/lib/task/types'
 import { hasPanelImageOutput } from '@/lib/task/has-output'
 import { withTaskUiPayload } from '@/lib/task/ui-payload'
-import { getProjectModelConfig } from '@/lib/config-service'
-import { resolveProjectModelCapabilityGenerationOptions } from '@/lib/config-service'
+import {
+  getProjectModelConfig,
+  normalizeRetiredComfyUiImageModelKey,
+  resolveProjectModelCapabilityGenerationOptions,
+} from '@/lib/config-service'
 import { resolveModelSelection } from '@/lib/api-config'
 import { prisma } from '@/lib/prisma'
 
@@ -44,7 +47,9 @@ export const POST = apiHandler(async (
   }
 
   const projectModelConfig = await getProjectModelConfig(projectId, session.user.id)
-  const selectedImageModel = requestImageModel || panel.imageModel || projectModelConfig.storyboardModel || ''
+  const selectedImageModel = normalizeRetiredComfyUiImageModelKey(
+    requestImageModel || panel.imageModel || projectModelConfig.storyboardModel,
+  ) || ''
   if (!selectedImageModel) {
     throw new ApiError('INVALID_PARAMS', {
       code: 'STORYBOARD_MODEL_NOT_CONFIGURED'})

@@ -43,6 +43,7 @@ const LTX23_LARGE_MOTION_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-single-im
 const BERNINI_MODEL = 'comfyui::basevideo/seedance2/bernini-480p-i2v'
 const BERNINI_AUDIO_MODEL = 'comfyui::basevideo/seedance2/bernini-480p-i2v-audio-lipsync'
 const T8_PROMPTRELAY_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+const H3_I2VA_MODEL = 'comfyui::basevideo/minimax-h3/h3-i2va'
 
 const reportTaskProgressMock = vi.hoisted(() => vi.fn(async () => undefined))
 const videoSeamConcatHandlerMock = vi.hoisted(() => vi.fn(async () => ({ videoKey: 'output.mp4' })))
@@ -55,7 +56,10 @@ const withTaskLifecycleMock = vi.hoisted(() =>
 
 const utilsMock = vi.hoisted(() => ({
   assertTaskActive: vi.fn(async () => undefined),
-  getProjectModels: vi.fn(async () => ({ videoRatio: '16:9' })),
+  getProjectModels: vi.fn<(...args: unknown[]) => Promise<{
+    videoRatio: string
+    analysisModel: string | null
+  }>>(async () => ({ videoRatio: '16:9', analysisModel: null })),
   resolveLipSyncVideoSource: vi.fn(async () => 'https://provider.example/lipsync.mp4'),
   resolveVideoSourceFromGeneration:
     vi.fn<(...args: unknown[]) => Promise<{
@@ -111,6 +115,17 @@ const ltxPromptEnhanceMock = vi.hoisted(() => ({
       || normalized.includes('/ltx')
       || normalized.includes('ltxv')
   }),
+}))
+const h3PromptPlannerMock = vi.hoisted(() => ({
+  buildMiniMaxH3PromptFingerprint: vi.fn(() => 'h3-prompt-fingerprint'),
+  planMiniMaxH3Prompt: vi.fn(async () => ({
+    prompt: [
+      'integrated_multimodal_description: Picture 1 begins the motion.',
+      'overall_soundscape: room tone and footsteps; no dialogue.',
+      'non_diegetic_music: restrained score.',
+    ].join('\n'),
+    fingerprint: 'h3-prompt-fingerprint',
+  })),
 }))
 
 const prismaMock = vi.hoisted(() => ({
@@ -194,6 +209,7 @@ vi.mock('@/lib/api-config', () => ({
 vi.mock('@/lib/config-service', () => configServiceMock)
 vi.mock('@/lib/workers/user-concurrency-gate', () => concurrencyGateMock)
 vi.mock('@/lib/video-duration/ltx23-prompt-enhance', () => ltxPromptEnhanceMock)
+vi.mock('@/lib/novel-promotion/h3-prompt-planner', () => h3PromptPlannerMock)
 
 function buildPanel(overrides?: Partial<PanelRow>): PanelRow {
   return {
@@ -243,6 +259,7 @@ function buildJob(params: {
       payload: params.payload ?? {},
       userId: 'user-1',
     },
+    updateData: vi.fn(async () => undefined),
   } as unknown as Job<TaskJobData>
 }
 
@@ -250,7 +267,7 @@ describe('worker video processor behavior', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     workerState.processor = null
-    utilsMock.getProjectModels.mockResolvedValue({ videoRatio: '16:9' })
+    utilsMock.getProjectModels.mockResolvedValue({ videoRatio: '16:9', analysisModel: null })
     utilsMock.resolveVideoSourceFromGeneration.mockResolvedValue({ url: 'https://provider.example/video.mp4' })
     utilsMock.renderStaticCameraMotionVideo.mockResolvedValue(Buffer.from('static-camera-video'))
     utilsMock.resolveLipSyncVideoSource.mockResolvedValue('https://provider.example/lipsync.mp4')
@@ -359,6 +376,44 @@ describe('worker video processor behavior', () => {
         mimeType: 'video/mp4',
         contentLength: 321,
       },
+    )
+  })
+
+  it('VIDEO_PANEL: plans an H3 I2VA prompt with the unified vision model before ComfyUI generation', async () => {
+    const processor = workerState.processor
+    expect(processor).toBeTruthy()
+    utilsMock.getProjectModels.mockResolvedValueOnce({
+      videoRatio: '16:9',
+      analysisModel: 'codex::gpt-5.3-codex',
+    })
+
+    await processor!(buildJob({
+      type: TASK_TYPE.VIDEO_PANEL,
+      payload: {
+        videoModel: H3_I2VA_MODEL,
+        generationOptions: { duration: 5 },
+      },
+    }))
+
+    expect(h3PromptPlannerMock.planMiniMaxH3Prompt).toHaveBeenCalledWith(expect.objectContaining({
+      analysisModel: 'codex::gpt-5.3-codex',
+      mode: 'i2va',
+      firstFrameUrl: 'https://signed.example/cos/panel-image.png',
+      durationSeconds: 5,
+      aspectRatio: '16:9',
+    }))
+    expect(ltxPromptEnhanceMock.enhanceLtx23VideoPrompt).not.toHaveBeenCalled()
+    expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        modelId: H3_I2VA_MODEL,
+        options: expect.objectContaining({
+          prompt: expect.stringContaining('integrated_multimodal_description'),
+          generationMode: 'normal',
+          duration: 5,
+          fps: 24,
+        }),
+      }),
     )
   })
 

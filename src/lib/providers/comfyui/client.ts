@@ -16,6 +16,10 @@ import {
   type ComfyUiWorkflowLlmApiInject,
 } from './workflow-registry'
 import { COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID } from './ltx23-workflow-profiles'
+import {
+  getMiniMaxH3ModeForWorkflow,
+  normalizeMiniMaxH3Request,
+} from './minimax-h3'
 import { COMFYUI_NEUTRAL_REFERENCE_IMAGE } from './neutral-reference'
 
 function normalizeComfyBaseUrl(raw: string): string {
@@ -1158,28 +1162,55 @@ export async function runComfyUiVideoWorkflow(params: {
   height?: number
   durationSeconds?: number
   fps?: number
+  seed?: number
   motionStrength?: number
   llmApi?: ComfyUiWorkflowLlmApiInject
 }): Promise<{ videoUrl: string; mimeType: string; contentLength?: number }> {
   const base = normalizeComfyBaseUrl(params.baseUrl)
   const workflowKey = params.workflowKey?.trim() || COMFYUI_DEFAULT_VIDEO_WORKFLOW_ID
+  const h3Mode = getMiniMaxH3ModeForWorkflow(workflowKey)
+  const referenceImageUrls = (params.referenceImageUrls || [])
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+  const firstFrameImageUrl = typeof params.firstFrameImageUrl === 'string' ? params.firstFrameImageUrl.trim() : ''
+  const lastFrameImageUrl = typeof params.lastFrameImageUrl === 'string' ? params.lastFrameImageUrl.trim() : ''
+  const h3Request = h3Mode
+    ? normalizeMiniMaxH3Request({
+        durationSeconds: params.durationSeconds,
+        fps: params.fps,
+        width: params.width,
+        height: params.height,
+        seed: params.seed,
+      })
+    : null
+  if (h3Mode && (!firstFrameImageUrl || referenceImageUrls.length > 0 || (h3Mode === 'i2va' && lastFrameImageUrl) || (h3Mode === 'fl2va' && !lastFrameImageUrl))) {
+    throw new Error(`COMFYUI_MINIMAX_H3_IMAGE_INPUTS_INVALID: ${h3Mode} requires its exact first/last-frame image contract`)
+  }
+  if (h3Mode && !params.prompt?.trim()) {
+    throw new Error('COMFYUI_MINIMAX_H3_PROMPT_INVALID: H3 requires a non-empty planned prompt')
+  }
+  const imageUrls = h3Mode === 'i2va'
+    ? [firstFrameImageUrl]
+    : h3Mode === 'fl2va'
+      ? [firstFrameImageUrl, lastFrameImageUrl]
+      : [
+          firstFrameImageUrl,
+          ...referenceImageUrls,
+          lastFrameImageUrl,
+        ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
   const imageFilenames = await uploadComfyUiImages(
     base,
-    [
-      params.firstFrameImageUrl,
-      ...(params.referenceImageUrls || []),
-      params.lastFrameImageUrl,
-    ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0),
+    imageUrls,
   )
-  const fps = typeof params.fps === 'number' && Number.isFinite(params.fps) && params.fps > 0
+  const fps = h3Request?.fps ?? (typeof params.fps === 'number' && Number.isFinite(params.fps) && params.fps > 0
     ? params.fps
-    : undefined
-  const durationSeconds = typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
+    : undefined)
+  const durationSeconds = h3Request?.durationSeconds ?? (typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds) && params.durationSeconds > 0
     ? params.durationSeconds
     : undefined
-  const targetFrameCount = fps && durationSeconds
+  )
+  const targetFrameCount = h3Request?.frameCount ?? (fps && durationSeconds
     ? Math.max(1, Math.round(fps * durationSeconds))
-    : undefined
+    : undefined)
   const audioInputCount = getComfyUiWorkflowAudioInputCount(workflowKey)
   const referenceAudioUrls = (params.referenceAudioUrls || [])
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -1197,11 +1228,12 @@ export async function runComfyUiVideoWorkflow(params: {
       prompt: params.prompt,
       imageFilenames,
       audioFilenames,
-      width: params.width,
-      height: params.height,
+      width: h3Request?.width ?? params.width,
+      height: h3Request?.height ?? params.height,
       fps,
       durationSeconds,
       targetFrameCount,
+      seed: h3Request?.seed,
       motionStrength: params.motionStrength,
       llmApi: params.llmApi,
     },

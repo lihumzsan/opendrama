@@ -20,6 +20,7 @@ import {
   type WorkflowConcurrencyConfig,
   normalizeWorkflowConcurrencyConfig,
 } from '@/lib/workflow-concurrency'
+import { CODEX_DEFAULT_IMAGE_MODEL_KEY } from '@/lib/providers/codex/constants'
 
 export type ParsedModelKey = { provider: string, modelId: string }
 
@@ -135,6 +136,24 @@ function resolveProjectScopedModel(
   return extractModelKey(projectModel) || extractModelKey(userModel) || null
 }
 
+export function normalizeRetiredComfyUiImageModelKey(
+  rawModelKey: string | null | undefined,
+): string | null {
+  const modelKey = extractModelKey(rawModelKey)
+  return modelKey?.startsWith('comfyui::baseimage/')
+    ? CODEX_DEFAULT_IMAGE_MODEL_KEY
+    : modelKey
+}
+
+function resolveProjectScopedImageModel(
+  projectModel: string | null | undefined,
+  userModel: string | null | undefined,
+): string | null {
+  return normalizeRetiredComfyUiImageModelKey(
+    resolveProjectScopedModel(projectModel, userModel),
+  )
+}
+
 export interface ProjectModelConfig {
   analysisModel: string | null
   characterModel: string | null
@@ -194,10 +213,10 @@ export async function getProjectModelConfig(
 
   return {
     analysisModel: await resolveEnabledAnalysisModel(userId, projectData?.analysisModel, userPref?.analysisModel),
-    characterModel: resolveProjectScopedModel(projectData?.characterModel, userPref?.characterModel),
-    locationModel: resolveProjectScopedModel(projectData?.locationModel, userPref?.locationModel),
-    storyboardModel: resolveProjectScopedModel(projectData?.storyboardModel, userPref?.storyboardModel),
-    editModel: resolveProjectScopedModel(projectData?.editModel, userPref?.editModel),
+    characterModel: resolveProjectScopedImageModel(projectData?.characterModel, userPref?.characterModel),
+    locationModel: resolveProjectScopedImageModel(projectData?.locationModel, userPref?.locationModel),
+    storyboardModel: resolveProjectScopedImageModel(projectData?.storyboardModel, userPref?.storyboardModel),
+    editModel: resolveProjectScopedImageModel(projectData?.editModel, userPref?.editModel),
     videoModel: extractModelKey(projectData?.videoModel) || null,
     audioModel: extractModelKey(projectData?.audioModel) || extractModelKey(userPref?.audioModel) || null,
     videoRatio: projectData?.videoRatio || '16:9',
@@ -217,10 +236,10 @@ export async function getUserModelConfig(userId: string): Promise<UserModelConfi
 
   return {
     analysisModel: await resolveEnabledAnalysisModel(userId, userPref?.analysisModel),
-    characterModel: extractModelKey(userPref?.characterModel) || null,
-    locationModel: extractModelKey(userPref?.locationModel) || null,
-    storyboardModel: extractModelKey(userPref?.storyboardModel) || null,
-    editModel: extractModelKey(userPref?.editModel) || null,
+    characterModel: resolveProjectScopedImageModel(userPref?.characterModel, null),
+    locationModel: resolveProjectScopedImageModel(userPref?.locationModel, null),
+    storyboardModel: resolveProjectScopedImageModel(userPref?.storyboardModel, null),
+    editModel: resolveProjectScopedImageModel(userPref?.editModel, null),
     videoModel: extractModelKey(userPref?.videoModel) || null,
     audioModel: extractModelKey(userPref?.audioModel) || null,
     voiceDesignModel: extractModelKey(userPref?.voiceDesignModel) || null,

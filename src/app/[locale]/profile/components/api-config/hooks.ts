@@ -150,20 +150,10 @@ export function mergeProvidersForDisplay(
 }
 
 const COMFYUI_PRESET_DEFAULT_MODEL_IDS = {
-    characterModel: 'baseimage/图片生成/Flux2Klein文生图',
-    locationModel: 'baseimage/图片生成/Flux2Klein文生图',
-    storyboardModel: 'baseimage/图片分镜/Qwen剧情分镜制作',
-    editModel: 'baseimage/图片编辑/qwen单图编辑',
-    videoModel: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+    videoModel: 'basevideo/minimax-h3/h3-i2va',
     audioModel: 'baseaudio/单人/LongCat-one',
     voiceDesignModel: 'baseaudio/\u97f3\u8272/s2-se',
 } as const
-
-const COMFYUI_REQUIRED_IMAGE_HELPER_MODEL_IDS = [
-    'baseimage/图片编辑/qwen双图编辑',
-    'baseimage/图片编辑/qwen三图编辑',
-    'baseimage/图片编辑/Flux2多图编辑',
-] as const
 
 const CODEX_IMAGE_DEFAULT_FIELDS = [
     'characterModel',
@@ -216,22 +206,6 @@ export function applyComfyUiPresetDefaults(params: {
             }
             changed = true
         }
-    }
-
-    for (const helperModelId of COMFYUI_REQUIRED_IMAGE_HELPER_MODEL_IDS) {
-        const modelIndex = nextModels.findIndex((model) =>
-            model.provider === 'comfyui' && model.modelId === helperModelId,
-        )
-        if (modelIndex < 0) continue
-
-        const targetModel = nextModels[modelIndex]
-        if (!targetModel || targetModel.enabled) continue
-
-        nextModels[modelIndex] = {
-            ...targetModel,
-            enabled: true,
-        }
-        changed = true
     }
 
     return {
@@ -582,6 +556,7 @@ export function useProviders(): UseProvidersReturn {
             })
             const customModels = savedModels.filter((m: CustomModel) =>
                 !PRESET_MODELS.find((preset) => encodeModelKey(preset.provider, preset.modelId) === m.modelKey)
+                && !(m.type === 'image' && getProviderKey(m.provider) === 'comfyui')
             ).map((m: CustomModel) => ({
                 ...applyPricingDisplay(m, pricingDisplay),
                 // 尊重服务端返回的 enabled 字段（后端对 disabled presets 会明确返回 enabled: false）

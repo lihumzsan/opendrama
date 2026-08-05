@@ -3,8 +3,14 @@ import {
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
   COMFYUI_LTX23_WORKFLOW_KEYS,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import {
+  COMFYUI_MINIMAX_H3_FL2VA_MODEL_KEY,
+  COMFYUI_MINIMAX_H3_I2VA_MODEL_KEY,
+} from '@/lib/providers/comfyui/minimax-h3'
 
-export const DEFAULT_VIDEO_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+export const DEFAULT_VIDEO_MODEL_KEY = COMFYUI_MINIMAX_H3_I2VA_MODEL_KEY
+export const DEFAULT_FIRST_LAST_FRAME_VIDEO_MODEL_KEY = COMFYUI_MINIMAX_H3_FL2VA_MODEL_KEY
+const RETIRED_BERNINI_MIGRATION_MODEL_KEY = `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`
 
 export const CURRENT_LTX23_VIDEO_MODEL_KEYS = [
   `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`,
@@ -78,11 +84,18 @@ export function normalizeVideoModelKey(raw: string | null | undefined): string {
       ? COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY
       : COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID
   }
-  return isLegacyLtx23VideoModelKey(modelKey) || isRetiredBerniniVideoModelKey(modelKey)
-    ? DEFAULT_VIDEO_MODEL_KEY
-    : modelKey
+  if (isRetiredBerniniVideoModelKey(modelKey)) return RETIRED_BERNINI_MIGRATION_MODEL_KEY
+  return isLegacyLtx23VideoModelKey(modelKey) ? RETIRED_BERNINI_MIGRATION_MODEL_KEY : modelKey
 }
 
 export function normalizeDefaultVideoModel(raw: string | null | undefined): string {
   return normalizeVideoModelKey(raw) || DEFAULT_VIDEO_MODEL_KEY
+}
+
+export function resolveDefaultFirstLastFrameVideoModel(
+  modelKeys: readonly string[],
+): string {
+  return modelKeys.includes(DEFAULT_FIRST_LAST_FRAME_VIDEO_MODEL_KEY)
+    ? DEFAULT_FIRST_LAST_FRAME_VIDEO_MODEL_KEY
+    : modelKeys[0] || ''
 }

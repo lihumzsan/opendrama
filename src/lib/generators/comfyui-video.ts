@@ -190,6 +190,7 @@ export class ComfyUIVideoGenerator extends BaseVideoGenerator {
         height: targetSize?.h,
         durationSeconds: selectedWorkflow.durationSeconds ?? (typeof normalizedOptions.duration === 'number' ? normalizedOptions.duration : undefined),
         fps: typeof normalizedOptions.fps === 'number' ? normalizedOptions.fps : undefined,
+        seed: typeof normalizedOptions.seed === 'number' ? normalizedOptions.seed : undefined,
         motionStrength: typeof normalizedOptions.motionStrength === 'number' ? normalizedOptions.motionStrength : undefined,
         llmApi,
       })
