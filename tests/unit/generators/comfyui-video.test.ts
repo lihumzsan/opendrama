@@ -4,6 +4,7 @@ import {
   COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
   COMFYUI_LTX23_WORKFLOW_KEYS,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import { COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID } from '@/lib/providers/comfyui/minimax-h3'
 import { getProviderConfig } from '@/lib/api-config'
 import { isComfyUiWorkflowLlmApiRequired, runComfyUiVideoWorkflow } from '@/lib/providers/comfyui/client'
 
@@ -102,6 +103,28 @@ describe('ComfyUI video generator', () => {
       workflowKey: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
       durationSeconds: 10,
       lastFrameImageUrl: 'https://example.com/last.png',
+    }))
+  })
+
+  it('forwards the requested H3 seed into the ComfyUI submission contract', async () => {
+    const generator = new ComfyUIVideoGenerator()
+
+    const result = await generator.generate({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/first.png',
+      prompt: 'integrated_multimodal_description: Picture 1 begins the motion.',
+      options: {
+        modelId: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+        duration: 5,
+        fps: 24,
+        seed: 42,
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowKey: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+      seed: 42,
     }))
   })
 

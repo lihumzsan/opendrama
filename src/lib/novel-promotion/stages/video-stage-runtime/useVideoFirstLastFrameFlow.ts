@@ -13,6 +13,7 @@ import {
   resolveEffectiveVideoCapabilityFields,
 } from '@/lib/model-capabilities/video-effective'
 import { supportsFirstLastFrame } from '@/lib/model-capabilities/video-model-options'
+import { resolveDefaultFirstLastFrameVideoModel } from '@/lib/novel-promotion/video-model-defaults'
 import { projectVideoPricingTiersByFixedSelections } from '@/lib/model-pricing/video-tier'
 import {
   buildFirstLastFrameVideoPrompt,
@@ -107,19 +108,22 @@ export function useVideoFirstLastFrameFlow({
     () => videoModelOptions.filter((option) => supportsFirstLastFrame(option)),
     [videoModelOptions],
   )
-  const [flModel, setFlModel] = useState(firstLastFrameModelOptions[0]?.value || '')
+  const defaultFirstLastFrameModel = resolveDefaultFirstLastFrameVideoModel(
+    firstLastFrameModelOptions.map((option) => option.value),
+  )
+  const [flModel, setFlModel] = useState(defaultFirstLastFrameModel)
   const [flGenerationOptions, setFlGenerationOptions] = useState<VideoGenerationOptions>({})
   const [flGenerationOptionsByPanel, setFlGenerationOptionsByPanel] = useState<Map<string, VideoGenerationOptions>>(new Map())
 
   useEffect(() => {
     if (!flModel && firstLastFrameModelOptions.length > 0) {
-      setFlModel(firstLastFrameModelOptions[0].value)
+      setFlModel(defaultFirstLastFrameModel)
       return
     }
     if (flModel && !firstLastFrameModelOptions.some((option) => option.value === flModel)) {
-      setFlModel(firstLastFrameModelOptions[0]?.value || '')
+      setFlModel(defaultFirstLastFrameModel)
     }
-  }, [firstLastFrameModelOptions, flModel])
+  }, [defaultFirstLastFrameModel, firstLastFrameModelOptions, flModel])
 
   const selectedFlModelOption = useMemo(
     () => firstLastFrameModelOptions.find((option) => option.value === flModel),

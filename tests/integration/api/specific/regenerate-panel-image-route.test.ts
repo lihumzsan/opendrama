@@ -24,6 +24,11 @@ const configMock = vi.hoisted(() => ({
   getProjectModelConfig: vi.fn(async () => ({
     storyboardModel: 'comfyui::baseimage/图片生成/ZImageTurbo造相',
   })),
+  normalizeRetiredComfyUiImageModelKey: vi.fn((modelKey: string | null | undefined) =>
+    typeof modelKey === 'string' && modelKey.startsWith('comfyui::baseimage/')
+      ? CODEX_DEFAULT_IMAGE_MODEL_KEY
+      : modelKey || null,
+  ),
   resolveProjectModelCapabilityGenerationOptions: vi.fn(async () => ({
     resolution: '1536x864',
   })),
@@ -77,7 +82,7 @@ describe('api specific - regenerate panel image route', () => {
     }
   })
 
-  it('prefers request imageModel when provided', async () => {
+  it('replaces a retired request image workflow with Codex Image', async () => {
     const res = await invokeRoute({
       panelId: 'panel-1',
       imageModel: 'comfyui::baseimage/图片生成/ZImageTurbo造相',
@@ -86,17 +91,17 @@ describe('api specific - regenerate panel image route', () => {
     expect(res.status).toBe(200)
     expect(resolveModelSelectionMock).toHaveBeenCalledWith(
       'user-1',
-      'comfyui::baseimage/图片生成/ZImageTurbo造相',
+      CODEX_DEFAULT_IMAGE_MODEL_KEY,
       'image',
     )
     expect(configMock.resolveProjectModelCapabilityGenerationOptions).toHaveBeenCalledWith(
       expect.objectContaining({
-        modelKey: 'comfyui::baseimage/图片生成/ZImageTurbo造相',
+        modelKey: CODEX_DEFAULT_IMAGE_MODEL_KEY,
       }),
     )
     expect(submitTaskMock).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
-        imageModel: 'comfyui::baseimage/图片生成/ZImageTurbo造相',
+        imageModel: CODEX_DEFAULT_IMAGE_MODEL_KEY,
       }),
     }))
   })
@@ -125,7 +130,7 @@ describe('api specific - regenerate panel image route', () => {
     }))
   })
 
-  it('falls back to panel imageModel when request body omits imageModel', async () => {
+  it('replaces a retired panel image workflow with Codex Image when request body omits imageModel', async () => {
     const res = await invokeRoute({
       panelId: 'panel-1',
     })
@@ -133,12 +138,12 @@ describe('api specific - regenerate panel image route', () => {
     expect(res.status).toBe(200)
     expect(resolveModelSelectionMock).toHaveBeenCalledWith(
       'user-1',
-      'comfyui::baseimage/图片生成/Flux2Klein文生图',
+      CODEX_DEFAULT_IMAGE_MODEL_KEY,
       'image',
     )
     expect(submitTaskMock).toHaveBeenCalledWith(expect.objectContaining({
       payload: expect.objectContaining({
-        imageModel: 'comfyui::baseimage/图片生成/Flux2Klein文生图',
+        imageModel: CODEX_DEFAULT_IMAGE_MODEL_KEY,
       }),
     }))
   })

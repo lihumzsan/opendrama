@@ -4,6 +4,7 @@ import { getArtStylePrompt } from '@/lib/constants'
 import { createScopedLogger } from '@/lib/logging/core'
 import { type TaskJobData } from '@/lib/task/types'
 import { getUserModels as getEnabledUserModels } from '@/lib/api-config'
+import { CODEX_DEFAULT_IMAGE_MODEL_KEY } from '@/lib/providers/codex/constants'
 import { reportTaskProgress } from '../shared'
 import {
   assertTaskActive,
@@ -1350,6 +1351,9 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
   const modelConfig = await getProjectModels(job.data.projectId, job.data.userId)
   const requestedModelKey = pickFirstString(payload.imageModel, modelConfig.storyboardModel)
   if (!requestedModelKey) throw new Error('Storyboard model not configured')
+  const resolvedModelKey = requestedModelKey.startsWith('comfyui::baseimage/')
+    ? CODEX_DEFAULT_IMAGE_MODEL_KEY
+    : requestedModelKey
 
   const candidateCount = clampCount(payload.candidateCount ?? payload.count, 1, 4, 1)
   const referenceBundle = buildPanelReferenceBundle({
@@ -1361,7 +1365,7 @@ export async function handlePanelImageTask(job: Job<TaskJobData>) {
     projectData,
   })
   const definitionAwarePlan = buildDefinitionAwareQwenStoryboardPlan({
-    requestedModelKey,
+    requestedModelKey: resolvedModelKey,
     referenceBundle,
     aspectRatio: projectData.videoRatio,
     shotType: panel.shotType,

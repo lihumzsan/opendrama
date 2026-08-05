@@ -75,7 +75,9 @@ describe('api specific - user models audio filter', () => {
       'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
       'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       'comfyui::basevideo/h3/fl2va-first-frame',
+      'comfyui::basevideo/minimax-h3/h3-i2va',
       'comfyui::basevideo/h3/fl2va-first-last-frame',
+      'comfyui::basevideo/minimax-h3/h3-fl2va',
     ])
   })
 })

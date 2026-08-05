@@ -63,27 +63,6 @@ interface UserModelsPayload {
 
 const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
   {
-    modelId: 'baseimage/图片编辑/qwen双图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/qwen双图编辑',
-    name: 'ComfyUI · Qwen 双图编辑',
-    type: 'image',
-    provider: 'comfyui',
-  },
-  {
-    modelId: 'baseimage/图片编辑/qwen三图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/qwen三图编辑',
-    name: 'ComfyUI · Qwen 三图编辑',
-    type: 'image',
-    provider: 'comfyui',
-  },
-  {
-    modelId: 'baseimage/图片编辑/Flux2多图编辑',
-    modelKey: 'comfyui::baseimage/图片编辑/Flux2多图编辑',
-    name: 'ComfyUI · Flux2 多图编辑',
-    type: 'image',
-    provider: 'comfyui',
-  },
-  {
     modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     modelKey: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
     name: 'ComfyUI · LTX2.3 Goon First/Last Frame',
@@ -112,9 +91,23 @@ const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
     provider: 'comfyui',
   },
   {
+    modelId: 'basevideo/minimax-h3/h3-i2va',
+    modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
+    name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
+    type: 'video',
+    provider: 'comfyui',
+  },
+  {
     modelId: 'basevideo/h3/fl2va-first-last-frame',
     modelKey: 'comfyui::basevideo/h3/fl2va-first-last-frame',
     name: 'ComfyUI · MiniMax H3 首尾帧视频',
+    type: 'video',
+    provider: 'comfyui',
+  },
+  {
+    modelId: 'basevideo/minimax-h3/h3-fl2va',
+    modelKey: 'comfyui::basevideo/minimax-h3/h3-fl2va',
+    name: 'ComfyUI · MiniMax H3 First/Last Frame with Audio',
     type: 'video',
     provider: 'comfyui',
   },
@@ -241,6 +234,9 @@ function hasStoredProviderConnection(provider: StoredProvider): boolean {
 
 function isUserSelectableModel(model: StoredModel): boolean {
   const modelKey = toModelKey(model)
+  if (model.type === 'image' && getProviderKey(toProvider(model)) === 'comfyui') {
+    return false
+  }
   if (
     model.type === 'video'
     && (

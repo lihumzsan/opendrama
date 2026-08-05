@@ -16,6 +16,11 @@ import {
   resolveLtx23KjImageGuideStrength,
   resolveLtx23GoonFinalFrameIndex,
 } from './ltx23-workflow-profiles'
+import {
+  getMiniMaxH3ModeForWorkflow,
+  normalizeMiniMaxH3Request,
+  type MiniMaxH3Mode,
+} from './minimax-h3'
 export const COMFYUI_DEFAULT_IMAGE_WORKFLOW_ID = 'baseimage/图片生成/Flux2Klein文生图'
 export const COMFYUI_DEFAULT_VIDEO_WORKFLOW_ID = 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 
@@ -1655,6 +1660,129 @@ function applyImageInjection(graph: ComfyUiWorkflowGraph, imageFilenames?: strin
   })
 }
 
+type MiniMaxH3WorkflowNodeContract = {
+  firstImage: string
+  lastImage?: string
+  firstFrameResize: string
+  lastFrameResize?: string
+  generator: string
+  noise: string
+  scheduler: string
+  video: string
+  output: string
+}
+
+const MINIMAX_H3_WORKFLOW_NODE_CONTRACTS: Record<MiniMaxH3Mode, MiniMaxH3WorkflowNodeContract> = {
+  i2va: {
+    firstImage: '1',
+    firstFrameResize: '2',
+    generator: '14',
+    noise: '13',
+    scheduler: '16',
+    video: '20',
+    output: '21',
+  },
+  fl2va: {
+    firstImage: '1',
+    lastImage: '3',
+    firstFrameResize: '2',
+    lastFrameResize: '4',
+    generator: '14',
+    noise: '13',
+    scheduler: '16',
+    video: '20',
+    output: '21',
+  },
+}
+
+function requireMiniMaxH3Node(
+  graph: ComfyUiWorkflowGraph,
+  nodeId: string,
+  classType: string,
+): ComfyUiWorkflowGraphNode {
+  const node = graph[nodeId]
+  if (!node || node.class_type !== classType || !isRecord(node.inputs)) {
+    throw new Error(`COMFYUI_MINIMAX_H3_WORKFLOW_CONTRACT_INVALID: node ${nodeId} must be ${classType}`)
+  }
+  return node
+}
+
+function applyMiniMaxH3WorkflowControls(
+  graph: ComfyUiWorkflowGraph,
+  workflowKey: string,
+  inject: ComfyUiWorkflowInject,
+): boolean {
+  const mode = getMiniMaxH3ModeForWorkflow(workflowKey)
+  if (!mode) return false
+
+  const imageFilenames = Array.isArray(inject.imageFilenames)
+    ? inject.imageFilenames.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    : []
+  const expectedImageCount = mode === 'i2va' ? 1 : 2
+  if (imageFilenames.length !== expectedImageCount) {
+    throw new Error(
+      `COMFYUI_MINIMAX_H3_IMAGE_INPUTS_INVALID: ${mode} requires exactly ${expectedImageCount} image input(s), got ${imageFilenames.length}`,
+    )
+  }
+
+  const prompt = readTrimmedString(inject.prompt)
+  if (!prompt) {
+    throw new Error('COMFYUI_MINIMAX_H3_PROMPT_INVALID: H3 requires a non-empty planned prompt')
+  }
+
+  const normalized = normalizeMiniMaxH3Request({
+    durationSeconds: inject.durationSeconds,
+    fps: inject.fps,
+    width: inject.width,
+    height: inject.height,
+    seed: inject.seed,
+  })
+  const contract = MINIMAX_H3_WORKFLOW_NODE_CONTRACTS[mode]
+  const firstImage = requireMiniMaxH3Node(graph, contract.firstImage, 'LoadImage')
+  const firstFrameResize = requireMiniMaxH3Node(graph, contract.firstFrameResize, 'ResizeImagesByLongerEdge')
+  const generator = requireMiniMaxH3Node(graph, contract.generator, 'MiniMaxH3ImageToVideo')
+  const noise = requireMiniMaxH3Node(graph, contract.noise, 'RandomNoise')
+  const scheduler = requireMiniMaxH3Node(graph, contract.scheduler, 'BasicScheduler')
+  const video = requireMiniMaxH3Node(graph, contract.video, 'CreateVideo')
+  const output = requireMiniMaxH3Node(graph, contract.output, 'SaveVideo')
+
+  if (!isConnectionValue(generator.inputs.first_frame) || generator.inputs.first_frame[0] !== contract.firstFrameResize) {
+    throw new Error('COMFYUI_MINIMAX_H3_WORKFLOW_CONTRACT_INVALID: first frame must use its fixed resize node')
+  }
+  firstImage.inputs.image = imageFilenames[0]!
+  delete firstImage.inputs.upload
+  firstFrameResize.inputs.longer_edge = 800
+
+  if (mode === 'fl2va') {
+    const lastImage = requireMiniMaxH3Node(graph, contract.lastImage!, 'LoadImage')
+    const lastFrameResize = requireMiniMaxH3Node(graph, contract.lastFrameResize!, 'ResizeImagesByLongerEdge')
+    if (!isConnectionValue(generator.inputs.last_frame) || generator.inputs.last_frame[0] !== contract.lastFrameResize) {
+      throw new Error('COMFYUI_MINIMAX_H3_WORKFLOW_CONTRACT_INVALID: last frame must use its fixed resize node')
+    }
+    lastImage.inputs.image = imageFilenames[1]!
+    delete lastImage.inputs.upload
+    lastFrameResize.inputs.longer_edge = 800
+  } else if (Object.prototype.hasOwnProperty.call(generator.inputs, 'last_frame')) {
+    throw new Error('COMFYUI_MINIMAX_H3_WORKFLOW_CONTRACT_INVALID: I2VA cannot contain a last_frame input')
+  }
+
+  generator.inputs.prompt = prompt
+  if (normalized.width !== undefined && normalized.height !== undefined) {
+    generator.inputs.width = normalized.width
+    generator.inputs.height = normalized.height
+  }
+  generator.inputs.length = normalized.frameCount
+  noise.inputs.noise_seed = normalized.seed ?? noise.inputs.noise_seed
+  scheduler.inputs.scheduler = 'simple'
+  scheduler.inputs.steps = 20
+  scheduler.inputs.denoise = 1
+  video.inputs.fps = normalized.fps
+  video.inputs.bit_depth = 8
+  output.inputs.format = 'auto'
+  output.inputs.codec = 'h264'
+  return true
+}
+
 function applyAudioInjection(graph: ComfyUiWorkflowGraph, audioFilenames?: string[]): void {
   const loadNodes = Object.entries(graph)
     .filter(([, node]) => node.class_type.toLowerCase().includes('loadaudio'))
@@ -2717,13 +2845,13 @@ function removePreviewImageOutputsFromVideoGraphs(graph: ComfyUiWorkflowGraph): 
   }
 }
 
-function assignRandomSeedValues(graph: ComfyUiWorkflowGraph): void {
+function assignRandomSeedValues(graph: ComfyUiWorkflowGraph, fixedSeed?: number): void {
   for (const node of Object.values(graph)) {
     if (!isRecord(node.inputs)) continue
     for (const seedField of ['seed', 'noise_seed']) {
       if (!Object.prototype.hasOwnProperty.call(node.inputs, seedField)) continue
       if (isConnectionValue(node.inputs[seedField])) continue
-      node.inputs[seedField] = Math.floor(Math.random() * (COMFYUI_SAFE_RANDOM_SEED_MAX + 1))
+      node.inputs[seedField] = fixedSeed ?? Math.floor(Math.random() * (COMFYUI_SAFE_RANDOM_SEED_MAX + 1))
     }
   }
 }
@@ -2969,22 +3097,29 @@ export function resolveComfyUiWorkflow(
 
   const graph = cloneWorkflow(readWorkflowGraphFromFile(filePath))
   const isGoonFirstLastFrameWorkflow = isComfyUiLtx23GoonFirstLastFrameWorkflow(workflowKey)
+  const isMiniMaxH3Workflow = getMiniMaxH3ModeForWorkflow(workflowKey) !== null
   bypassOptionalModelNodes(graph)
-  if (!isGoonFirstLastFrameWorkflow) {
+  if (!isGoonFirstLastFrameWorkflow && !isMiniMaxH3Workflow) {
     applyPromptHeuristics(graph, inject.prompt, inject.negativePrompt)
   }
-  applyDimensionHeuristics(graph, inject.width, inject.height)
   const imageFilenames = isGoonFirstLastFrameWorkflow && inject.videoSeamMotionAnchors
     ? inject.imageFilenames
     : expandLtx23WorkflowImageFilenames(workflowKey, inject.imageFilenames)
-  applyImageInjection(graph, imageFilenames)
+  if (isMiniMaxH3Workflow) {
+    applyMiniMaxH3WorkflowControls(graph, workflowKey, inject)
+  } else {
+    applyDimensionHeuristics(graph, inject.width, inject.height)
+    applyImageInjection(graph, imageFilenames)
+  }
   applyAudioInjection(graph, inject.audioFilenames)
   validateVideoSeamWorkflowContract(graph, workflowKey)
   applyVideoInjection(graph, inject.videoFilenames)
   applyVideoSeamTrimInjection(graph, workflowKey, inject.videoTrimFrames)
   applyRhLlmApiInjection(graph, inject.llmApi)
   applyKjResizeHeuristics(graph)
-  applyTemporalHeuristics(graph, inject.fps, inject.targetFrameCount, inject.durationSeconds)
+  if (!isMiniMaxH3Workflow) {
+    applyTemporalHeuristics(graph, inject.fps, inject.targetFrameCount, inject.durationSeconds)
+  }
   applyLtx23WorkflowProfileControls(graph, workflowKey, inject)
   applyGoonFirstLastFrameWorkflowControls(graph, workflowKey, {
     ...inject,
@@ -2997,7 +3132,7 @@ export function resolveComfyUiWorkflow(
   removeDanglingVideoOutputNodes(graph)
   removeDisabledVideoOutputNodes(graph)
   pruneUnreachableFromMediaOutputs(graph)
-  assignRandomSeedValues(graph)
+  assignRandomSeedValues(graph, inject.seed)
   applyStableAudio3MediumControls(graph, workflowKey, inject)
   return graph
 }
