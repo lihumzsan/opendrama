@@ -134,6 +134,7 @@ model NovelPromotionEpisode {
   createdAt               DateTime                   @default(now())
   updatedAt               DateTime                   @default(now()) @updatedAt
   speakerVoices           String?                    @db.Text
+  screenplay              NovelPromotionScreenplay?
   clips                   NovelPromotionClip[]
   novelPromotionProject   NovelPromotionProject      @relation(fields: [novelPromotionProjectId], references: [id], onDelete: Cascade)
   shots                   NovelPromotionShot[]
@@ -146,6 +147,43 @@ model NovelPromotionEpisode {
   @@index([audioMediaId])
   @@index([coverImageMediaId])
   @@map("novel_promotion_episodes")
+}
+
+model NovelPromotionScreenplay {
+  id                String                       @id @default(uuid())
+  episodeId         String                       @unique
+  title             String
+  sourceFingerprint String                       @db.VarChar(64)
+  rawJson           String                       @db.Text
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  episode           NovelPromotionEpisode        @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  scenes            NovelPromotionScreenplayScene[]
+
+  @@map("novel_promotion_screenplays")
+}
+
+model NovelPromotionScreenplayScene {
+  id            String                  @id @default(uuid())
+  screenplayId  String
+  sceneNumber   Int
+  sourceStart   Int
+  sourceEnd     Int
+  sourceText    String                  @db.Text
+  heading        String                  @db.Text
+  entryState    String                  @db.Text
+  goal          String                  @db.Text
+  conflict      String                  @db.Text
+  outcome       String                  @db.Text
+  exitState     String                  @db.Text
+  content       String                  @db.Text
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  screenplay    NovelPromotionScreenplay @relation(fields: [screenplayId], references: [id], onDelete: Cascade)
+
+  @@unique([screenplayId, sceneNumber])
+  @@index([screenplayId])
+  @@map("novel_promotion_screenplay_scenes")
 }
 
 // 视频编辑器项目 - 存储剪辑数据

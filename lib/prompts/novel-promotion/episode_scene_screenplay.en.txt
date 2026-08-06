@@ -1,0 +1,21 @@
+# Task: Write one narrative scene in a complete episode screenplay
+
+Adapt only this scene source into shootable screenplay content. Do not include source outside this scene and do not split it into shots or production segments. Preserve motivation, conflict, and state continuity.
+
+Return strict JSON only: {"content":[{"type":"action","text":"action"},{"type":"dialogue","character":"character","lines":"dialogue","parenthetical":"optional performance note"},{"type":"voiceover","character":"optional character","text":"voice-over"}]}
+
+Scene number: {scene_number}
+Heading: {scene_heading}
+Previous exit state: {previous_exit_state}
+Entry state: {entry_state}
+Goal: {goal}
+Conflict: {conflict}
+Outcome: {outcome}
+Exit state: {exit_state}
+Characters: {characters_lib_name}
+Locations: {locations_lib_name}
+Props: {props_lib_name}
+Character notes: {characters_introduction}
+
+Scene source:
+{scene_source}

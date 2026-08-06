@@ -11,6 +11,8 @@ export const PROMPT_IDS = {
   NP_AGENT_CHARACTER_VISUAL: 'np_agent_character_visual',
   NP_AGENT_CINEMATOGRAPHER: 'np_agent_cinematographer',
   NP_AGENT_CLIP: 'np_agent_clip',
+  NP_EPISODE_SCREENPLAY_PLAN: 'np_episode_screenplay_plan',
+  NP_EPISODE_SCENE_SCREENPLAY: 'np_episode_scene_screenplay',
   NP_AGENT_SHOT_VARIANT_ANALYSIS: 'np_agent_shot_variant_analysis',
   NP_AGENT_SHOT_VARIANT_GENERATE: 'np_agent_shot_variant_generate',
   NP_AGENT_STORYBOARD_DETAIL: 'np_agent_storyboard_detail',

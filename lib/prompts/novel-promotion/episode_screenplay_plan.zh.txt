@@ -1,0 +1,28 @@
+# 任务：中长剧单集场景规划
+
+把下方小说原文规划为一集完整中长剧的**叙事场景**。场景不是镜头、分镜或视频片段；只在时间、地点、主要人物组合或戏剧目标发生实质变化时切场。通常一集为 3–8 个场景。
+
+必须覆盖原文的全部内容，场景按原文顺序首尾相接，不能跳段、重叠或补写情节。第一场的 `startText` 必须从原文正文的第一句开始，最后一场的 `endText` 必须包含原文最后一句；开场环境、时间地点句也必须归入第一场。每场给出原文中可精确定位的 `startText` 和 `endText`，短而唯一（建议 12–40 字）。
+
+输出严格 JSON：
+{
+  "title": "本集标题",
+  "scenes": [{
+    "startText": "原文起始锚点",
+    "endText": "原文结束锚点",
+    "heading": {"intExt":"INT 或 EXT", "location":"地点", "time":"时间"},
+    "entryState":"人物进场时的关系/信息状态",
+    "goal":"本场主要目标",
+    "conflict":"阻碍或冲突",
+    "outcome":"本场结果/信息变化",
+    "exitState":"离场时承接下一场的状态"
+  }]
+}
+
+已有角色：{characters_lib_name}
+已有场景：{locations_lib_name}
+已有道具：{props_lib_name}
+角色介绍：{characters_introduction}
+
+小说原文：
+{input}

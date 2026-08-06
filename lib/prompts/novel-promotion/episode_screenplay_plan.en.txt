@@ -1,0 +1,15 @@
+# Task: Mid/long episode scene plan
+
+Plan the source into one complete episode using narrative scenes, not shots or production segments. A scene changes only when time, location, principal character combination, or dramatic objective materially changes. Use 3–8 scenes where appropriate.
+
+Cover the complete source in order without gaps or overlaps. The first scene `startText` must begin with the first sentence of the source body, and the final scene `endText` must include its final sentence; opening setting and time/place lines belong to scene one. `startText` and `endText` must be short, exact, uniquely locatable source anchors.
+
+Return strict JSON: {"title":"episode title","scenes":[{"startText":"source start","endText":"source end","heading":{"intExt":"INT or EXT","location":"location","time":"time"},"entryState":"entry state","goal":"goal","conflict":"conflict","outcome":"outcome","exitState":"exit state"}]}
+
+Characters: {characters_lib_name}
+Locations: {locations_lib_name}
+Props: {props_lib_name}
+Character notes: {characters_introduction}
+
+Source:
+{input}

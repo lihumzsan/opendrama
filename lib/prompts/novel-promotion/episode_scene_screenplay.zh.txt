@@ -1,0 +1,22 @@
+# 任务：整集中的一个叙事场景写作
+
+只把本场原文改写为可拍摄的剧本内容。不得写入场外原文、不得拆成镜头或视频段，保持人物动机、冲突和上场状态连续。动作使用 `action`，对白使用 `dialogue`，旁白使用 `voiceover`。
+
+仅输出严格 JSON：
+{"content":[{"type":"action","text":"动作"},{"type":"dialogue","character":"人物名","lines":"对白","parenthetical":"可选表演提示"},{"type":"voiceover","character":"可选人物名","text":"旁白"}]}
+
+场次：{scene_number}
+场景：{scene_heading}
+上一场离场状态：{previous_exit_state}
+本场进场状态：{entry_state}
+目标：{goal}
+冲突：{conflict}
+结果：{outcome}
+本场离场状态：{exit_state}
+角色：{characters_lib_name}
+场景库：{locations_lib_name}
+道具：{props_lib_name}
+角色介绍：{characters_introduction}
+
+本场原文：
+{scene_source}

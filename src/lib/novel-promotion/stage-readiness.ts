@@ -37,6 +37,7 @@ type EpisodeLike = {
   artifactReadiness?: StageArtifactReadiness | null
   novelText?: string | null
   clips?: unknown[] | null
+  screenplay?: { rawJson?: string | null } | null
   storyboards?: unknown[] | null
   voiceLines?: unknown[] | null
 }
@@ -82,7 +83,7 @@ export function resolveEpisodeStageArtifacts(episode: EpisodeLike | null | undef
   }
   return {
     hasStory: hasNonEmptyText(episode?.novelText),
-    hasScript: hasScriptArtifacts(episode?.clips),
+    hasScript: hasNonEmptyText(episode?.screenplay?.rawJson) || hasScriptArtifacts(episode?.clips),
     hasStoryboard: hasStoryboardArtifacts(episode?.storyboards),
     hasVideo: hasVideoArtifacts(episode?.storyboards),
     hasVoice: Array.isArray(episode?.voiceLines) && episode.voiceLines.length > 0,

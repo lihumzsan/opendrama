@@ -19,11 +19,7 @@ import { DEFAULT_STYLE_PRESET_VALUE, STYLE_PRESETS } from '@/lib/style-presets'
 import { PROJECT_STORY_INPUT_MIN_ROWS } from '@/lib/ui/textarea-height'
 import { apiFetch } from '@/lib/api-fetch'
 import { expandHomeStory } from '@/lib/home/ai-story-expand'
-
-/** 触发智能分集建议的字数阈值 */
-const LONG_TEXT_THRESHOLD = 1000
-
-
+import { shouldRecommendSmartSplit } from '@/lib/novel-promotion/smart-split-recommendation'
 
 interface NovelInputStageProps {
   // 核心数据
@@ -99,8 +95,7 @@ export default function NovelInputStage({
 
   /** 点击"开始创作"时，先检测文本长度 */
   const handleStartClick = useCallback(() => {
-    const textLength = localText.trim().length
-    if (textLength > LONG_TEXT_THRESHOLD && onSmartSplit) {
+    if (shouldRecommendSmartSplit(localText) && onSmartSplit) {
       setShowLongTextPrompt(true)
     } else {
       onNext()

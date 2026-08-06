@@ -270,6 +270,9 @@ async function loadConfigEpisode(projectId: string, episodeId: string) {
       name: true,
       coverImageMediaId: true,
       novelText: true,
+      screenplay: {
+        select: { id: true, title: true, rawJson: true },
+      },
       createdAt: true,
       clips: {
         select: {
@@ -347,6 +350,9 @@ async function loadWorkspaceVisualEpisode(projectId: string, episodeId: string) 
       createdAt: true,
       updatedAt: true,
       novelText: true,
+      screenplay: {
+        include: { scenes: { orderBy: { sceneNumber: 'asc' } } },
+      },
       clips: {
         orderBy: { createdAt: 'asc' },
       },
@@ -518,6 +524,9 @@ async function loadFullEpisode(projectId: string, episodeId: string) {
     include: {
       clips: {
         orderBy: { createdAt: 'asc' }
+      },
+      screenplay: {
+        include: { scenes: { orderBy: { sceneNumber: 'asc' } } },
       },
       storyboards: {
         include: {

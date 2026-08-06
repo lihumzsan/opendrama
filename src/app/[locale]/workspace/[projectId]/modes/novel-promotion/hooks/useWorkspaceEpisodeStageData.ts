@@ -11,6 +11,22 @@ interface EpisodeStagePayload {
   coverImageUrl?: string | null
   novelText?: string | null
   clips?: NovelPromotionClip[]
+  screenplay?: {
+    id: string
+    title: string
+    rawJson: string
+    scenes?: Array<{
+      id: string
+      sceneNumber: number
+      heading: string
+      entryState: string
+      goal: string
+      conflict: string
+      outcome: string
+      exitState: string
+      content: string
+    }>
+  } | null
   storyboards?: NovelPromotionStoryboard[]
 }
 
@@ -25,6 +41,7 @@ export function useWorkspaceEpisodeStageData(profile: EpisodeDataProfile) {
     coverImageUrl: payload?.coverImageUrl || null,
     novelText: payload?.novelText || '',
     clips: payload?.clips || [],
+    screenplay: payload?.screenplay || null,
     storyboards: payload?.storyboards || [],
   }
 }

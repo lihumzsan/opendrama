@@ -71,6 +71,14 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
     pathStem: 'novel-promotion/agent_clip',
     variableKeys: ['input', 'locations_lib_name', 'characters_lib_name', 'props_lib_name', 'characters_introduction'],
   },
+  [PROMPT_IDS.NP_EPISODE_SCREENPLAY_PLAN]: {
+    pathStem: 'novel-promotion/episode_screenplay_plan',
+    variableKeys: ['input', 'locations_lib_name', 'characters_lib_name', 'props_lib_name', 'characters_introduction'],
+  },
+  [PROMPT_IDS.NP_EPISODE_SCENE_SCREENPLAY]: {
+    pathStem: 'novel-promotion/episode_scene_screenplay',
+    variableKeys: ['scene_number', 'scene_source', 'scene_heading', 'entry_state', 'goal', 'conflict', 'outcome', 'exit_state', 'previous_exit_state', 'locations_lib_name', 'characters_lib_name', 'props_lib_name', 'characters_introduction'],
+  },
   [PROMPT_IDS.NP_AGENT_SHOT_VARIANT_ANALYSIS]: {
     pathStem: 'novel-promotion/agent_shot_variant_analysis',
     variableKeys: ['panel_description', 'shot_type', 'camera_move', 'location', 'characters_info'],

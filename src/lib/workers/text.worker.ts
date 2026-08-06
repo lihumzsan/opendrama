@@ -22,7 +22,7 @@ import {
 import { getProjectModelConfig } from '@/lib/config-service'
 import { reportTaskProgress, reportTaskStreamChunk, withTaskLifecycle } from './shared'
 import { assertTaskActive } from './utils'
-import { handleStoryToScriptTask } from './handlers/story-to-script'
+import { handleEpisodeScreenplayTask } from './handlers/episode-screenplay'
 import { handleScriptToStoryboardTask } from './handlers/script-to-storyboard'
 import { handleVoiceAnalyzeTask } from './handlers/voice-analyze'
 import { handleAssetHubAIDesignTask } from './handlers/asset-hub-ai-design'
@@ -656,7 +656,7 @@ async function processTextTask(job: Job<TaskJobData>) {
 
   switch (job.data.type) {
     case TASK_TYPE.STORY_TO_SCRIPT_RUN:
-      return await handleStoryToScriptTask(job)
+      return await handleEpisodeScreenplayTask(job)
     case TASK_TYPE.SCRIPT_TO_STORYBOARD_RUN:
       return await handleScriptToStoryboardTask(job)
     case TASK_TYPE.VOICE_ANALYZE:

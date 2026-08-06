@@ -14,6 +14,9 @@ function buildEpisodeSummaryInclude() {
   return {
     orderBy: { episodeNumber: 'asc' as const },
     include: {
+      screenplay: {
+        select: { id: true, rawJson: true },
+      },
       clips: {
         where: {
           screenplay: {

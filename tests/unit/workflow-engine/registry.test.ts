@@ -11,9 +11,9 @@ describe('workflow registry', () => {
       'analyze_characters',
       'analyze_locations',
       'analyze_props',
-      'split_clips',
-      'screenplay_convert',
-      'persist_script_artifacts',
+      'plan_episode_scenes',
+      'screenplay_scene',
+      'persist_episode_screenplay',
     ])
     expect(scriptToStoryboard?.orderedSteps.map((step) => step.key)).toEqual([
       'plan_panels',
@@ -23,16 +23,16 @@ describe('workflow registry', () => {
     ])
   })
 
-  it('invalidates downstream story-to-script screenplay steps when split inputs change', () => {
+  it('invalidates the scene plan and every scene screenplay when analysis changes', () => {
     expect(resolveWorkflowRetryInvalidationStepKeys({
       workflowType: TASK_TYPE.STORY_TO_SCRIPT_RUN,
       stepKey: 'analyze_props',
-      existingStepKeys: ['analyze_props', 'split_clips', 'screenplay_clip-a', 'screenplay_clip-b'],
+      existingStepKeys: ['analyze_props', 'plan_episode_scenes', 'screenplay_scene_1', 'screenplay_scene_2'],
     }).sort()).toEqual([
       'analyze_props',
-      'screenplay_clip-a',
-      'screenplay_clip-b',
-      'split_clips',
+      'plan_episode_scenes',
+      'screenplay_scene_1',
+      'screenplay_scene_2',
     ])
   })
 

@@ -33,17 +33,17 @@ function resolveStoryToScriptInvalidation(params: {
     || params.stepKey === 'analyze_locations'
     || params.stepKey === 'analyze_props'
   ) {
-    if (params.existingStepKeys.has('split_clips')) {
-      affected.add('split_clips')
+    if (params.existingStepKeys.has('plan_episode_scenes')) {
+      affected.add('plan_episode_scenes')
     }
     for (const stepKey of params.existingStepKeys) {
-      if (stepKey.startsWith('screenplay_')) {
+      if (stepKey.startsWith('screenplay_scene_')) {
         affected.add(stepKey)
       }
     }
-  } else if (params.stepKey === 'split_clips') {
+  } else if (params.stepKey === 'plan_episode_scenes') {
     for (const stepKey of params.existingStepKeys) {
-      if (stepKey.startsWith('screenplay_')) {
+      if (stepKey.startsWith('screenplay_scene_')) {
         affected.add(stepKey)
       }
     }
@@ -120,24 +120,24 @@ const STORY_TO_SCRIPT_DEFINITION: WorkflowDefinition = {
       failureMode: 'fail_run',
     },
     {
-      key: 'split_clips',
+      key: 'plan_episode_scenes',
       dependsOn: ['analyze_characters', 'analyze_locations', 'analyze_props'],
       retryable: true,
-      artifactTypes: ['clips.split'],
+      artifactTypes: ['screenplay.episode.plan'],
       failureMode: 'fail_run',
     },
     {
-      key: 'screenplay_convert',
-      dependsOn: ['split_clips'],
-      retryable: true,
-      artifactTypes: ['screenplay.clip'],
-      failureMode: 'fail_run',
-    },
-    {
-      key: 'persist_script_artifacts',
-      dependsOn: ['screenplay_convert'],
+      key: 'screenplay_scene',
+      dependsOn: ['plan_episode_scenes'],
       retryable: false,
-      artifactTypes: [],
+      artifactTypes: ['screenplay.episode.scene'],
+      failureMode: 'fail_run',
+    },
+    {
+      key: 'persist_episode_screenplay',
+      dependsOn: ['screenplay_scene'],
+      retryable: false,
+      artifactTypes: ['screenplay.episode'],
       failureMode: 'fail_run',
     },
   ],
