@@ -23,14 +23,14 @@ describe('api-config preset coming soon', () => {
     expect(modelIds).toEqual([])
   })
 
-  it('keeps the supported ComfyUI video preset available and non-coming-soon', () => {
-    const modelKey = encodeModelKey('comfyui', 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')
+  it('keeps the supported MiniMax H3 preset available and non-coming-soon', () => {
+    const modelKey = encodeModelKey('comfyui', 'basevideo/minimax-h3/h3-i2va')
     expect(PRESET_MODELS).toContainEqual(expect.objectContaining({
       provider: 'comfyui',
-      modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      modelId: 'basevideo/minimax-h3/h3-i2va',
       type: 'video',
     }))
-    expect(isPresetComingSoonModel('comfyui', 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')).toBe(false)
+    expect(isPresetComingSoonModel('comfyui', 'basevideo/minimax-h3/h3-i2va')).toBe(false)
     expect(isPresetComingSoonModelKey(modelKey)).toBe(false)
   })
 

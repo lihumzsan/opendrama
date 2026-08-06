@@ -5,7 +5,7 @@
   "6": {"class_type":"VRAM_Debug","inputs":{"any_input":["5",0],"empty_cache":true,"gc_collect":true,"unload_all_models":true},"_meta":{"title":"H3 VRAM cleanup"}},
   "7": {"class_type":"VAELoader","inputs":{"vae_name":"h3\\minimax_h3_video_vae_fp16.safetensors"},"_meta":{"title":"H3 video VAE"}},
   "8": {"class_type":"VAELoader","inputs":{"vae_name":"h3\\minimax_h3_audio_vae_fp32.safetensors"},"_meta":{"title":"H3 audio VAE"}},
-  "9": {"class_type":"UNETLoader","inputs":{"unet_name":"h3\\minimax_h3_fl2va_pruned_int8_convrot.safetensors","weight_dtype":"default"},"_meta":{"title":"MiniMax H3 FL2VA"}},
+  "9": {"class_type":"UNETLoader","inputs":{"unet_name":"h3\\minimax_h3_i2va_pruned_int8_convrot.safetensors","weight_dtype":"default"},"_meta":{"title":"MiniMax H3 I2VA"}},
   "10": {"class_type":"PathchSageAttentionKJ","inputs":{"model":["9",0],"sage_attention":"auto","allow_compile":false},"_meta":{"title":"H3 SageAttention"}},
   "11": {"class_type":"EasyCache","inputs":{"model":["10",0],"reuse_threshold":0.12,"start_percent":0.1,"end_percent":0.9,"verbose":false},"_meta":{"title":"H3 EasyCache"}},
   "12": {"class_type":"BasicGuider","inputs":{"model":["11",0],"conditioning":["14",0]},"_meta":{"title":"H3 guider"}},

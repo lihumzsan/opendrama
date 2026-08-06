@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { COMFYUI_LTX23_WORKFLOW_KEYS } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import {
+  COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
+  COMFYUI_LTX23_WORKFLOW_KEYS,
+} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
 
-const DEFAULT_MODEL = `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`
+const DEFAULT_MODEL = `comfyui::${COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID}`
 
 describe('ltx23 workflow router', () => {
   it('keeps non-ltx23 models outside the router', () => {
@@ -13,14 +16,14 @@ describe('ltx23 workflow router', () => {
     })).toBeNull()
   })
 
-  it('routes normal stable single-image shots to Smart VBVR', () => {
+  it('routes normal stable single-image shots to KJ PromptRelay', () => {
     const result = resolveLtx23WorkflowRoute({
       modelKey: DEFAULT_MODEL,
       selectionMode: 'auto',
       panel: { description: '年轻男子坐在桌前，表情稳定，轻声说话' },
     })
 
-    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
+    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj)
     expect(result?.reasons).toContain('default_single_image_precise')
   })
 
@@ -38,7 +41,6 @@ describe('ltx23 workflow router', () => {
   it('routes large motion and camera movement to the four-stage profile and stretches duration', () => {
     const result = resolveLtx23WorkflowRoute({
       modelKey: DEFAULT_MODEL,
-      selectionMode: 'auto',
       requestedDurationSeconds: 6,
       panel: { description: '男子突然转身奔跑，镜头跟拍并逐渐推近' },
     })
@@ -48,7 +50,7 @@ describe('ltx23 workflow router', () => {
     expect(result?.reasons).toContain('large_motion_or_camera_movement')
   })
 
-  it('keeps audio-backed Smart VBVR requests on the Smart VBVR workflow up to its profile max', () => {
+  it('keeps audio-backed KJ PromptRelay requests on the KJ workflow up to its profile max', () => {
     const result = resolveLtx23WorkflowRoute({
       modelKey: DEFAULT_MODEL,
       selectionMode: 'auto',
@@ -58,9 +60,9 @@ describe('ltx23 workflow router', () => {
       },
     })
 
-    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
+    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj)
     expect(result?.durationSeconds).toBe(19.56)
-    expect(result?.reasons).toContain('audio_backed_smart_vbvr')
+    expect(result?.reasons).toContain('audio_backed_promptrelay')
   })
 
   it('keeps slow Chinese push-in camera prompts on the single-image profile for 12s', () => {
@@ -75,7 +77,7 @@ describe('ltx23 workflow router', () => {
       },
     })
 
-    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
+    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj)
     expect(result?.durationSeconds).toBe(12)
     expect(result?.reasons).toContain('slow_stable_camera_movement')
   })
@@ -141,7 +143,7 @@ describe('ltx23 workflow router', () => {
       panel: { description: 'two people sit still in an office' },
     })
 
-    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
+    expect(result?.selectedWorkflowKey).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj)
     expect(result?.selectionMode).toBe('auto')
     expect(result?.routed).toBe(true)
     expect(result?.reasons).toContain('first_last_frame_model_in_normal_mode')

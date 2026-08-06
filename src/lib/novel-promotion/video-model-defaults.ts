@@ -1,6 +1,5 @@
 import {
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
-  COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
   COMFYUI_LTX23_WORKFLOW_KEYS,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import {
@@ -13,7 +12,7 @@ export const DEFAULT_FIRST_LAST_FRAME_VIDEO_MODEL_KEY = COMFYUI_MINIMAX_H3_FL2VA
 const RETIRED_BERNINI_MIGRATION_MODEL_KEY = `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`
 
 export const CURRENT_LTX23_VIDEO_MODEL_KEYS = [
-  `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`,
+  `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`,
   COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
 ] as const
 
@@ -79,11 +78,6 @@ export function normalizeRetiredBerniniVideoGenerationOptions<T extends Record<s
 export function normalizeVideoModelKey(raw: string | null | undefined): string {
   const modelKey = readTrimmedModelKey(raw)
   if (!modelKey) return ''
-  if (isLegacyLtx23SmoothFirstLastFrameModelKey(modelKey)) {
-    return modelKey.startsWith('comfyui::')
-      ? COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY
-      : COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID
-  }
   if (isRetiredBerniniVideoModelKey(modelKey)) return RETIRED_BERNINI_MIGRATION_MODEL_KEY
   return isLegacyLtx23VideoModelKey(modelKey) ? RETIRED_BERNINI_MIGRATION_MODEL_KEY : modelKey
 }

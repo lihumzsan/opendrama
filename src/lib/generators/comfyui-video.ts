@@ -5,6 +5,7 @@ import {
 } from '@/lib/novel-promotion/video-model-defaults'
 import { isComfyUiWorkflowLlmApiRequired, runComfyUiVideoWorkflow } from '@/lib/providers/comfyui/client'
 import { isRemovedLegacyLtx23WorkflowKey } from '@/lib/providers/comfyui/ltx23-legacy'
+import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
 import { resolveComfyUiLlmApiConfig } from '@/lib/providers/comfyui/llm-api-config'
 import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
 import { BaseVideoGenerator, type GenerateResult, type VideoGenerateParams } from './base'
@@ -140,9 +141,24 @@ export class ComfyUIVideoGenerator extends BaseVideoGenerator {
       typeof options.modelId === 'string' ? options.modelId : null,
       options,
     )
-    const workflowKey = typeof normalizedOptions.modelId === 'string' && normalizedOptions.modelId.trim()
-      ? normalizeComfyUiVideoWorkflowKey(normalizedOptions.modelId.trim())
+    const rawWorkflowKey = typeof normalizedOptions.modelId === 'string' && normalizedOptions.modelId.trim()
+      ? normalizedOptions.modelId.trim()
+      : null
+    if (isRemovedComfyUiVideoModel(rawWorkflowKey)) {
+      return {
+        success: false,
+        error: `COMFYUI_VIDEO_MODEL_REMOVED: ${rawWorkflowKey}`,
+      }
+    }
+    const workflowKey = rawWorkflowKey
+      ? normalizeComfyUiVideoWorkflowKey(rawWorkflowKey)
       : 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+    if (isRemovedComfyUiVideoModel(workflowKey)) {
+      return {
+        success: false,
+        error: `COMFYUI_VIDEO_MODEL_REMOVED: ${workflowKey}`,
+      }
+    }
     if (isRemovedLegacyLtx23WorkflowKey(workflowKey)) {
       return {
         success: false,

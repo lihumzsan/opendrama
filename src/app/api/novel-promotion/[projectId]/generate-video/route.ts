@@ -30,6 +30,7 @@ import {
 } from '@/lib/providers/comfyui/ltx23-workflow-router'
 import { normalizeLtx23GoonDurationSeconds } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { isRemovedLegacyLtx23WorkflowKey } from '@/lib/providers/comfyui/ltx23-legacy'
+import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -68,23 +69,31 @@ function isSeedance2Model(modelKey: string): boolean {
     )
 }
 
-function rejectRemovedLegacyLtx23ModelKey(modelKey: string | null | undefined) {
-  if (!isRemovedLegacyLtx23WorkflowKey(modelKey)) return
-  throw new ApiError('INVALID_PARAMS', {
-    code: 'LEGACY_LTX23_WORKFLOW_REMOVED',
-    field: 'videoModel',
-    details: { model: modelKey },
-  })
+function rejectRemovedComfyUiVideoModelKey(modelKey: string | null | undefined) {
+  if (isRemovedLegacyLtx23WorkflowKey(modelKey)) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'LEGACY_LTX23_WORKFLOW_REMOVED',
+      field: 'videoModel',
+      details: { model: modelKey },
+    })
+  }
+  if (isRemovedComfyUiVideoModel(modelKey)) {
+    throw new ApiError('INVALID_PARAMS', {
+      code: 'COMFYUI_VIDEO_MODEL_REMOVED',
+      field: 'videoModel',
+      details: { model: modelKey },
+    })
+  }
 }
 
 function resolveVideoModelKeyFromPayload(payload: Record<string, unknown>): string | null {
   const firstLast = isRecord(payload.firstLastFrame) ? payload.firstLastFrame : null
   if (firstLast && typeof firstLast.flModel === 'string' && parseModelKeyStrict(firstLast.flModel)) {
-    rejectRemovedLegacyLtx23ModelKey(firstLast.flModel)
+    rejectRemovedComfyUiVideoModelKey(firstLast.flModel)
     return normalizeVideoModelKey(firstLast.flModel)
   }
   if (typeof payload.videoModel === 'string' && parseModelKeyStrict(payload.videoModel)) {
-    rejectRemovedLegacyLtx23ModelKey(payload.videoModel)
+    rejectRemovedComfyUiVideoModelKey(payload.videoModel)
     return normalizeVideoModelKey(payload.videoModel)
   }
   return null
@@ -97,7 +106,7 @@ function requireVideoModelKeyFromPayload(payload: unknown): string {
       field: 'videoModel',
     })
   }
-  rejectRemovedLegacyLtx23ModelKey(payload.videoModel)
+  rejectRemovedComfyUiVideoModelKey(payload.videoModel)
   return normalizeVideoModelKey(payload.videoModel)
 }
 
@@ -106,6 +115,7 @@ function normalizeVideoPayloadModelKeys(payload: unknown): Record<string, unknow
 
   const normalized: Record<string, unknown> = { ...payload }
   if (typeof normalized.videoModel === 'string') {
+    rejectRemovedComfyUiVideoModelKey(normalized.videoModel)
     if (isRecord(normalized.generationOptions)) {
       normalized.generationOptions = normalizeRetiredBerniniVideoGenerationOptions(
         normalized.videoModel,
@@ -115,6 +125,7 @@ function normalizeVideoPayloadModelKeys(payload: unknown): Record<string, unknow
     normalized.videoModel = normalizeVideoModelKey(normalized.videoModel)
   }
   if (isRecord(normalized.firstLastFrame) && typeof normalized.firstLastFrame.flModel === 'string') {
+    rejectRemovedComfyUiVideoModelKey(normalized.firstLastFrame.flModel)
     normalized.firstLastFrame = {
       ...normalized.firstLastFrame,
       flModel: normalizeVideoModelKey(normalized.firstLastFrame.flModel),

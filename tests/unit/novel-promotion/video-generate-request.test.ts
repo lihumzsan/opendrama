@@ -3,6 +3,7 @@ import { buildGenerateVideoRequestBody } from '@/lib/novel-promotion/video-gener
 
 describe('video generate request body', () => {
   const SMART_VBVR_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
+  const REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame'
   const LEGACY_LTX23_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-sulphur2-promptrelay-micro'
   const T8_PROMPTRELAY_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 
@@ -26,6 +27,24 @@ describe('video generate request body', () => {
       panelIndex: 2,
       videoModel: LEGACY_LTX23_MODEL_KEY,
     }).videoModel).toBe(T8_PROMPTRELAY_MODEL_KEY)
+  })
+
+  it('preserves removed first-last-frame models for the API rejection contract', () => {
+    expect(buildGenerateVideoRequestBody({
+      storyboardId: 'storyboard-1',
+      panelIndex: 2,
+      videoModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+      firstLastFrame: {
+        flModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+        lastFrameStoryboardId: 'storyboard-1',
+        lastFramePanelIndex: 3,
+      },
+    })).toMatchObject({
+      videoModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+      firstLastFrame: {
+        flModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+      },
+    })
   })
 
   it('migrates retired Bernini audio options to T8 before submit', () => {

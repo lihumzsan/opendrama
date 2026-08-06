@@ -33,13 +33,13 @@ describe('ComfyUI video workflow selection', () => {
     expect(selectComfyUiVideoWorkflowKey(
       COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
       '男子突然转身奔跑，镜头跟拍并逐渐推近',
-      { generationMode: 'normal', duration: 6 },
+      { generationMode: 'normal', duration: 6, ltx23WorkflowSelection: 'auto' },
     )).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion)
 
     expect(selectComfyUiVideoWorkflowKey(
       COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
       'GLOBAL: hospital room. LOCAL: Scene 1：女子抬头 | Scene 2：镜头缓慢推近',
-      { generationMode: 'normal', duration: 16 },
+      { generationMode: 'normal', duration: 16, ltx23WorkflowSelection: 'auto' },
     )).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.damaichaLongPromptRelay)
   })
 
@@ -84,7 +84,7 @@ describe('ComfyUI video generator', () => {
     })
   })
 
-  it('canonicalizes the old smooth first-last-frame key to Goon', async () => {
+  it('rejects the removed smooth first-last-frame key before generation', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -98,12 +98,10 @@ describe('ComfyUI video generator', () => {
       },
     })
 
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-      durationSeconds: 10,
-      lastFrameImageUrl: 'https://example.com/last.png',
-    }))
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('COMFYUI_VIDEO_MODEL_REMOVED')
+    expect(getProviderConfigMock).not.toHaveBeenCalled()
+    expect(runComfyUiVideoWorkflowMock).not.toHaveBeenCalled()
   })
 
   it('forwards the requested H3 seed into the ComfyUI submission contract', async () => {
@@ -128,7 +126,7 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
-  it('normalizes removed LTX2.3 profile requests to T8 and forwards non-empty reference images', async () => {
+  it('auto-routes large-motion LTX2.3 requests and forwards non-empty reference images', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -150,7 +148,7 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: T8_PROMPTRELAY_WORKFLOW_ID,
+      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
       referenceImageUrls: [
         'https://example.com/ref-a.png',
         'https://example.com/ref-b.png',
@@ -158,7 +156,7 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
-  it('preserves Smart VBVR requests and forwards reference image and audio URLs', async () => {
+  it('preserves KJ PromptRelay requests and forwards reference image and audio URLs', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -188,7 +186,7 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj,
       durationSeconds: 6,
       fps: 25,
       referenceImageUrls: [
@@ -258,7 +256,7 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
-  it('preserves Smart VBVR reference-audio requests even when prompt and duration look like long PromptRelay', async () => {
+  it('preserves KJ PromptRelay reference-audio requests even when prompt and duration look like long PromptRelay', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -275,11 +273,29 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj,
       durationSeconds: 19.56,
       fps: 25,
       referenceAudioUrls: ['https://example.com/line-1.wav'],
     }))
+  })
+
+  it('rejects removed ComfyUI video models before loading provider configuration', async () => {
+    const generator = new ComfyUIVideoGenerator()
+
+    const result = await generator.generate({
+      userId: 'user-1',
+      imageUrl: 'https://example.com/first.png',
+      prompt: 'The actor turns toward the window.',
+      options: {
+        modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      },
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('COMFYUI_VIDEO_MODEL_REMOVED')
+    expect(getProviderConfigMock).not.toHaveBeenCalled()
+    expect(runComfyUiVideoWorkflowMock).not.toHaveBeenCalled()
   })
 
   it('migrates retired Bernini audio requests to T8 while forwarding reference audio', async () => {
@@ -356,7 +372,7 @@ describe('ComfyUI video generator', () => {
     }))
   })
 
-  it('uses the T8 landscape canvas for retired Bernini project requests', async () => {
+  it('auto-routes retired Bernini project requests with a large-motion prompt', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
@@ -371,7 +387,7 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: T8_PROMPTRELAY_WORKFLOW_ID,
+      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
       width: 1280,
       height: 736,
     }))

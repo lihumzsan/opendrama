@@ -17,7 +17,7 @@ describe('removed legacy LTX2.3 workflow keys', () => {
 
   it('does not mark new profile workflows as legacy', () => {
     expect(isRemovedLegacyLtx23WorkflowKey(
-      `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`,
+      `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`,
     )).toBe(false)
     expect(isRemovedLegacyLtx23WorkflowKey(
       COMFYUI_LTX23_WORKFLOW_KEYS.damaichaLongPromptRelay,

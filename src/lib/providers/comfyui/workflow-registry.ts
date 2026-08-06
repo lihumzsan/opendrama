@@ -2010,10 +2010,6 @@ type Ltx23WorkflowNodeContract = {
 }
 
 const LTX23_WORKFLOW_NODE_CONTRACTS: Record<string, Ltx23WorkflowNodeContract> = {
-  [COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise]: {
-    audioTrimDurationNodeIds: ['628'],
-    promptRelaySmartSegmentCount: 4,
-  },
   [COMFYUI_LTX23_WORKFLOW_KEYS.microDetail]: {
     promptRelaySmartSegmentCount: 4,
   },
@@ -2589,10 +2585,6 @@ function applyLtx23WorkflowProfileControls(
   const durationSeconds = clampPositiveFloat(inject.durationSeconds) ?? profile.defaultDurationSeconds
   const targetFrameCount = clampPositiveInteger(inject.targetFrameCount)
     ?? Math.max(1, Math.round(durationSeconds * fps))
-  const audioTalkingHeadStages = normalizedKey === COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise
-    && Array.isArray(inject.audioFilenames)
-    && inject.audioFilenames.some((filename) => typeof filename === 'string' && filename.trim().length > 0)
-
   for (const nodeId of contract?.durationNodeIds || []) {
     setNumericNodeValue(graph, nodeId, durationSeconds)
   }
@@ -2627,7 +2619,7 @@ function applyLtx23WorkflowProfileControls(
     targetFrameCount,
     segmentCount: contract?.promptRelaySegmentCount,
     largeMotionStages: profile.promptPolicy === 'large_motion_single_image',
-    audioTalkingHeadStages,
+    audioTalkingHeadStages: false,
     lockInputs: contract?.lockPromptRelayInputs,
   })
   applyPromptRelaySmartControls(graph, {
@@ -2635,11 +2627,8 @@ function applyLtx23WorkflowProfileControls(
     targetFrameCount,
     segmentCount: contract?.promptRelaySmartSegmentCount,
     largeMotionStages: profile.promptPolicy === 'large_motion_single_image',
-    audioTalkingHeadStages,
+    audioTalkingHeadStages: false,
   })
-  if (audioTalkingHeadStages) {
-    applyAudioTalkingHeadTextArtifactNegativeConditioning(graph)
-  }
 }
 
 const GOON_FIRST_LAST_FRAME_NODE_CONTRACT = {

@@ -12,18 +12,10 @@ import {
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 
 describe('ltx23 workflow profiles', () => {
-  it('defaults to the T8 Smart VBVR single-image profile', () => {
-    expect(COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
-    expect(getLtx23WorkflowProfile(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)).toMatchObject({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
-      category: 'single_image_precise',
-      promptPolicy: 'stable_single_image',
-      imageSlotPolicy: 'single',
-      maxDurationSeconds: 20,
-      defaultDurationSeconds: 19.56,
-      durationOptions: [4, 5, 6, 8, 10, 12, 16, 20],
-      selectableInPanel: true,
-    })
+  it('defaults to the bundled KJ PromptRelay profile', () => {
+    expect(COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID).toBe(
+      COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj,
+    )
   })
 
   it('registers the KJ multi-shot PromptRelay workflow as a fixed 720p profile', () => {
@@ -41,9 +33,8 @@ describe('ltx23 workflow profiles', () => {
     })
   })
 
-  it('exposes only the eight current selectable workflow profiles', () => {
+  it('exposes only the seven bundled selectable workflow profiles', () => {
     expect(getLtx23WorkflowProfiles().map((profile) => profile.workflowKey)).toEqual([
-      COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
       COMFYUI_LTX23_WORKFLOW_KEYS.microDetail,
       COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
       COMFYUI_LTX23_WORKFLOW_KEYS.goonFirstLastFrame,

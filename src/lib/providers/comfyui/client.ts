@@ -16,6 +16,7 @@ import {
   type ComfyUiWorkflowLlmApiInject,
 } from './workflow-registry'
 import { COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID } from './ltx23-workflow-profiles'
+import { isRemovedComfyUiVideoModel } from './removed-video-models'
 import {
   getMiniMaxH3ModeForWorkflow,
   normalizeMiniMaxH3Request,
@@ -1168,6 +1169,9 @@ export async function runComfyUiVideoWorkflow(params: {
 }): Promise<{ videoUrl: string; mimeType: string; contentLength?: number }> {
   const base = normalizeComfyBaseUrl(params.baseUrl)
   const workflowKey = params.workflowKey?.trim() || COMFYUI_DEFAULT_VIDEO_WORKFLOW_ID
+  if (isRemovedComfyUiVideoModel(workflowKey)) {
+    throw new Error(`COMFYUI_VIDEO_MODEL_REMOVED: ${workflowKey}`)
+  }
   const h3Mode = getMiniMaxH3ModeForWorkflow(workflowKey)
   const referenceImageUrls = (params.referenceImageUrls || [])
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)

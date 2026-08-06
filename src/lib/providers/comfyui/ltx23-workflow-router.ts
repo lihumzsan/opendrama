@@ -212,7 +212,10 @@ function resolveTargetDurationSeconds(input: ResolveLtx23WorkflowRouteInput): nu
   return Math.max(...durations)
 }
 
-function normalizeSelectionMode(raw: unknown, normalizedWorkflowKey: string): Ltx23WorkflowSelectionMode {
+function normalizeSelectionMode(
+  raw: unknown,
+  normalizedWorkflowKey: string,
+): Ltx23WorkflowSelectionMode {
   if (raw === 'auto' || raw === true) return 'auto'
   if (raw === 'manual' || raw === false) return 'manual'
   return normalizedWorkflowKey === COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID ? 'auto' : 'manual'
@@ -328,14 +331,14 @@ export function resolveLtx23WorkflowRoute(
     || readFinitePositiveNumber(input.audioDurationSeconds) !== null
   if (
     hasReferenceAudio
-    && routingProfile.workflowKey === COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise
+    && routingProfile.workflowKey === COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID
   ) {
     return buildResult({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+      workflowKey: COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
       previousWorkflowKey: normalizedWorkflowKey,
       selectionMode,
       confidence: 1,
-      reasons: [...routingReasonPrefix, 'audio_backed_smart_vbvr'],
+      reasons: [...routingReasonPrefix, 'audio_backed_promptrelay'],
       requestedDurationSeconds: targetDurationSeconds,
     })
   }
@@ -349,7 +352,7 @@ export function resolveLtx23WorkflowRoute(
   const fallbackScore = countMatches(text, COMPLEX_FALLBACK_PATTERNS)
   const slowStableDurationSeconds = Math.max(targetDurationSeconds ?? 0, 12)
   const largeMotionDurationSeconds = Math.max(targetDurationSeconds ?? 0, 12)
-  const slowStableProfile = getLtx23WorkflowProfile(COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise)
+  const slowStableProfile = getLtx23WorkflowProfile(COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID)
   const largeMotionProfile = getLtx23WorkflowProfile(COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion)
   const hasLongPromptRelayStructure = targetDurationSeconds !== null
     && targetDurationSeconds > 12
@@ -365,7 +368,7 @@ export function resolveLtx23WorkflowRoute(
     )
   ) {
     return buildResult({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+      workflowKey: COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
       previousWorkflowKey: normalizedWorkflowKey,
       selectionMode,
       confidence: slowStableCameraScore >= 2 ? 0.92 : 0.86,
@@ -442,7 +445,7 @@ export function resolveLtx23WorkflowRoute(
   }
 
   return buildResult({
-    workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+    workflowKey: COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
     previousWorkflowKey: normalizedWorkflowKey,
     selectionMode,
     confidence: 0.7,

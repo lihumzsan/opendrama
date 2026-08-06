@@ -56,6 +56,9 @@ describe('comfyui workflow registry', () => {
     })
 
     expect(workflow['1']?.inputs.image).toBe('first.png')
+    expect(workflow['9']?.inputs).toMatchObject({
+      unet_name: 'h3\\minimax_h3_i2va_pruned_int8_convrot.safetensors',
+    })
     expect(workflow['14']).toMatchObject({
       class_type: 'MiniMaxH3ImageToVideo',
       inputs: {
@@ -85,6 +88,9 @@ describe('comfyui workflow registry', () => {
 
     expect(workflow['1']?.inputs.image).toBe('first.png')
     expect(workflow['3']?.inputs.image).toBe('last.png')
+    expect(workflow['9']?.inputs).toMatchObject({
+      unet_name: 'h3\\minimax_h3_fl2va_pruned_int8_convrot.safetensors',
+    })
     expect(workflow['14']?.inputs).toMatchObject({
       first_frame: ['2', 0],
       last_frame: ['4', 0],

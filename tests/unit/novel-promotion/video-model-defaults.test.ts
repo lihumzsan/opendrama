@@ -42,11 +42,11 @@ describe('video model defaults', () => {
     }
   })
 
-  it('canonicalizes the old smooth first-last-frame key to Goon before generic legacy normalization', () => {
+  it('preserves the removed smooth first-last-frame key for submission-time rejection', () => {
     expect(LEGACY_LTX23_VIDEO_MODEL_KEYS).not.toContain(LEGACY_FIRST_LAST_MODEL_KEY)
-    expect(normalizeVideoModelKey(LEGACY_FIRST_LAST_MODEL_KEY)).toBe(GOON_FIRST_LAST_MODEL_KEY)
+    expect(normalizeVideoModelKey(LEGACY_FIRST_LAST_MODEL_KEY)).toBe(LEGACY_FIRST_LAST_MODEL_KEY)
     expect(normalizeVideoModelKey(LEGACY_FIRST_LAST_MODEL_KEY.replace('comfyui::', ''))).toBe(
-      GOON_FIRST_LAST_MODEL_KEY.replace('comfyui::', ''),
+      LEGACY_FIRST_LAST_MODEL_KEY.replace('comfyui::', ''),
     )
   })
 

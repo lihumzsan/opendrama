@@ -36,7 +36,7 @@ const workerState = vi.hoisted(() => ({
   processor: null as WorkerProcessor | null,
 }))
 
-const LTX23_DEFAULT_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
+const LTX23_DEFAULT_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
 const LTX23_FIRST_LAST_MODEL = 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage'
 const LEGACY_LTX23_FIRST_LAST_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame'
 const LTX23_LARGE_MOTION_MODEL = 'comfyui::basevideo/ltx23-profiles/t8-single-image-large-motion-4stage'
@@ -429,7 +429,7 @@ describe('worker video processor behavior', () => {
     const job = buildJob({
       type: TASK_TYPE.VIDEO_PANEL,
       payload: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: LTX23_DEFAULT_MODEL,
         generationOptions: {
           duration: 5,
           resolution: '720p',
@@ -446,7 +446,7 @@ describe('worker video processor behavior', () => {
     expect(result).toEqual({
       panelId: 'panel-1',
       videoUrl: 'cos/lip-sync/video.mp4',
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      videoModel: LTX23_DEFAULT_MODEL,
       actualVideoTokens: 108000,
     })
   })
@@ -650,7 +650,7 @@ describe('worker video processor behavior', () => {
     )
   })
 
-  it('VIDEO_PANEL: canonicalizes the legacy first-last-frame key to Goon', async () => {
+  it('VIDEO_PANEL: rejects the removed first-last-frame key before generation', async () => {
     const processor = workerState.processor
     expect(processor).toBeTruthy()
 
@@ -677,36 +677,10 @@ describe('worker video processor behavior', () => {
       },
     })
 
-    await processor!(job)
-
-    expect(utilsMock.renderStaticCameraMotionVideo).not.toHaveBeenCalled()
-    expect(utilsMock.resolveVideoSourceFromGeneration).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        imageUrl: 'https://signed.example/cos/panel-image.png',
-        modelId: LTX23_FIRST_LAST_MODEL,
-        allowCustomDuration: true,
-        options: expect.objectContaining({
-          duration: 12,
-          fps: 24,
-          generationMode: 'firstlastframe',
-          lastFrameImageUrl: 'https://signed.example/cos/panel-image.png',
-        }),
-      }),
+    await expect(processor!(job)).rejects.toThrow(
+      `COMFYUI_VIDEO_MODEL_REMOVED: ${LEGACY_LTX23_FIRST_LAST_MODEL}`,
     )
-    expect(utilsMock.uploadVideoSourceToCos).toHaveBeenCalledWith(
-      'https://provider.example/video.mp4',
-      'panel-video',
-      'panel-1',
-      undefined,
-    )
-    expect(prismaMock.novelPromotionPanel.update).toHaveBeenCalledWith({
-      where: { id: 'panel-1' },
-      data: expect.objectContaining({
-        videoUrl: 'cos/lip-sync/video.mp4',
-        videoGenerationMode: 'firstlastframe',
-      }),
-    })
+    expect(utilsMock.resolveVideoSourceFromGeneration).not.toHaveBeenCalled()
   })
 
   it('VIDEO_PANEL: uses first-last duration binding when payload dropdown duration is stale', async () => {
@@ -716,9 +690,9 @@ describe('worker video processor behavior', () => {
     const job = buildJob({
       type: TASK_TYPE.VIDEO_PANEL,
       payload: {
-        videoModel: LEGACY_LTX23_FIRST_LAST_MODEL,
+        videoModel: LTX23_FIRST_LAST_MODEL,
         firstLastFrame: {
-          flModel: LEGACY_LTX23_FIRST_LAST_MODEL,
+          flModel: LTX23_FIRST_LAST_MODEL,
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 0,
         },
@@ -778,9 +752,9 @@ describe('worker video processor behavior', () => {
     const job = buildJob({
       type: TASK_TYPE.VIDEO_PANEL,
       payload: {
-        videoModel: LEGACY_LTX23_FIRST_LAST_MODEL,
+        videoModel: LTX23_FIRST_LAST_MODEL,
         firstLastFrame: {
-          flModel: LEGACY_LTX23_FIRST_LAST_MODEL,
+          flModel: LTX23_FIRST_LAST_MODEL,
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 0,
         },

@@ -111,7 +111,7 @@ describe('worker utils video generation resume', () => {
 
     const result = await resolveVideoSourceFromGeneration(buildJob(), {
       userId: 'user-1',
-      modelId: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       imageUrl: 'data:image/png;base64,QQ==',
       options: {
         prompt: 'animate this frame',
@@ -209,7 +209,7 @@ describe('worker utils video generation resume', () => {
 
     const result = await resolveVideoSourceFromGeneration(buildJob(), {
       userId: 'user-1',
-      modelId: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       imageUrl: 'data:image/png;base64,QQ==',
       allowCustomDuration: true,
       options: {
@@ -230,7 +230,7 @@ describe('worker utils video generation resume', () => {
     )
     expect(generatorApiMock.generateVideo).toHaveBeenCalledWith(
       'user-1',
-      'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       'data:image/png;base64,QQ==',
       expect.objectContaining({
         duration: 11.43,
@@ -411,7 +411,7 @@ describe('worker utils video generation resume', () => {
 
     const result = await resolveVideoSourceFromGeneration(buildJob(), {
       userId: 'user-1',
-      modelId: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      modelId: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       imageUrl: 'data:image/png;base64,QQ==',
       options: {
         prompt: 'doctor speaks with matched voice timing',
@@ -423,7 +423,7 @@ describe('worker utils video generation resume', () => {
     expect(storageMock.toFetchableUrl).toHaveBeenCalledWith('/api/storage/sign?key=voice%2Fline-1.flac&expires=7200')
     expect(generatorApiMock.generateVideo).toHaveBeenCalledWith(
       'user-1',
-      'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+      'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       'data:image/png;base64,QQ==',
       expect.objectContaining({
         referenceAudioUrls: ['http://internal.test/api/storage/sign?key=voice%2Fline-1.flac&expires=7200'],

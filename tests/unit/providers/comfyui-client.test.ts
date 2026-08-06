@@ -669,6 +669,18 @@ describe('comfyui client media refs', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('rejects removed video workflows before any upload side effect', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+
+    await expect(runComfyUiVideoWorkflow({
+      baseUrl: 'http://127.0.0.1:8878',
+      workflowKey: 'basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+      firstFrameImageUrl: 'https://assets.test/first.png',
+    })).rejects.toThrow('COMFYUI_VIDEO_MODEL_REMOVED')
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('injects a neutral audio upload into video workflows that contain LoadAudio placeholders', async () => {
     vi.useFakeTimers()
     workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
@@ -1460,7 +1472,7 @@ describe('comfyui client media refs', () => {
     process.env.COMFYUI_VIDEO_PROMPT_DUMP = '1'
     workflowRoot = mkdtempSync(join(tmpdir(), 'opendrama-comfyui-client-'))
     process.env.COMFYUI_WORKFLOW_ROOT = workflowRoot
-    writeWorkflow(workflowRoot, COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise, {
+    writeWorkflow(workflowRoot, COMFYUI_LTX23_WORKFLOW_KEYS.microDetail, {
       '1': { class_type: 'LoadImage', inputs: { image: 'old-first.png', upload: 'image' } },
       '2': { class_type: 'PrimitiveString', inputs: { prompt: 'old global prompt' } },
       '3': { class_type: 'PrimitiveString', inputs: { prompt: 'old smart prompt' } },
@@ -1530,7 +1542,7 @@ describe('comfyui client media refs', () => {
 
     const resultPromise = runComfyUiVideoWorkflow({
       baseUrl: 'http://127.0.0.1:8878',
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
+      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.microDetail,
       prompt: 'GLOBAL: qshan office\nLOCAL: doctor pushes glasses, static camera',
       firstFrameImageUrl: 'https://assets.test/first.png',
       fps: 25,
@@ -1543,7 +1555,7 @@ describe('comfyui client media refs', () => {
     expect(result.mimeType).toBe('video/mp4')
     const output = stdoutWrite.mock.calls.map((call) => String(call[0])).join('')
     expect(output).toContain('[COMFYUI_VIDEO_PROMPT_DUMP]')
-    expect(output).toContain(`workflowKey: ${COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise}`)
+    expect(output).toContain(`workflowKey: ${COMFYUI_LTX23_WORKFLOW_KEYS.microDetail}`)
     expect(output).toContain('input_prompt:')
     expect(output).toContain('GLOBAL: qshan office')
     expect(output).toContain('promptrelay_smart:')

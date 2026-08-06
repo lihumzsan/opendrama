@@ -32,6 +32,8 @@ type CapabilityGenerationOptionsInput = {
 
 type CapabilityGenerationOptions = Record<string, string | number | boolean>
 
+const CURRENT_LTX_VIDEO_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+
 const authState = vi.hoisted<AuthState>(() => ({
   authenticated: true,
 }))
@@ -468,7 +470,7 @@ const DIRECT_CASES: ReadonlyArray<DirectRouteCase> = [
     routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
     body: {
       episodeId: 'stale-episode',
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+      videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
       storyboardId: 'storyboard-1',
       panelIndex: 0,
       generationOptions: {
@@ -476,7 +478,7 @@ const DIRECT_CASES: ReadonlyArray<DirectRouteCase> = [
         duration: 5,
       },
       firstLastFrame: {
-        flModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+        flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
         customPrompt: 'visible persisted transition prompt',
         customPromptEditedByUser: true,
       },
@@ -707,6 +709,31 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(submitTaskMock).not.toHaveBeenCalled()
   })
 
+  it.each([
+    'comfyui::basevideo/h3/fl2va-first-frame',
+    'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+    'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+  ])('blocks removed ComfyUI video model %s before task submission', async (videoModel) => {
+    const res = await invokePostRoute({
+      routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
+      body: {
+        locale: 'zh',
+        storyboardId: 'storyboard-1',
+        panelIndex: 0,
+        videoModel,
+      },
+      params: { projectId: 'project-1' },
+      expectedTaskType: TASK_TYPE.VIDEO_PANEL,
+      expectedTargetType: 'NovelPromotionPanel',
+      expectedProjectId: 'project-1',
+    })
+
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error?.details?.code || json.error?.code || json.code).toBe('COMFYUI_VIDEO_MODEL_REMOVED')
+    expect(submitTaskMock).not.toHaveBeenCalled()
+  })
+
   it('ignores stale nested relation voice lines and queries relation lines from the panel episode', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
@@ -743,7 +770,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -847,7 +874,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       body: {
         all: true,
         episodeId: 'episode-1',
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         videoDurationBinding: {
           mode: 'match_audio',
           voiceLineIds: ['explicit-line-1'],
@@ -889,65 +916,6 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(submitTaskMock).toHaveBeenCalledTimes(2)
   })
 
-  it('single generate-video auto-routes current Smart VBVR large-motion prompts before submit', async () => {
-    prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
-      id: 'panel-1',
-      storyboardId: 'storyboard-1',
-      panelIndex: 0,
-      imageUrl: 'cos/panel.png',
-      videoUrl: 'cos/video.mp4',
-      videoPrompt: '男子突然转身奔跑，镜头跟拍并逐渐推近',
-      videoPromptEditedByUser: false,
-      description: '男子突然转身奔跑，镜头跟拍并逐渐推近',
-      srtSegment: '',
-      videoDurationBinding: null,
-      shotType: 'medium',
-      cameraMove: '跟拍推近',
-      sceneType: 'action',
-      storyboard: {
-        episodeId: 'episode-1',
-        clip: {
-          content: 'office conversation',
-        },
-      },
-      matchedVoiceLines: [],
-    })
-    prismaMock.novelPromotionVoiceLine.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-
-    const res = await invokePostRoute({
-      routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
-      body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-        storyboardId: 'storyboard-1',
-        panelIndex: 0,
-        generationOptions: {
-          duration: 6,
-          resolution: '720p',
-        },
-      },
-      params: { projectId: 'project-1' },
-      expectedTaskType: TASK_TYPE.VIDEO_PANEL,
-      expectedTargetType: 'NovelPromotionPanel',
-      expectedProjectId: 'project-1',
-    })
-
-    expect(res.status).toBe(200)
-    const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
-    expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-single-image-large-motion-4stage',
-      generationOptions: expect.objectContaining({
-        duration: 12,
-        resolution: '720p',
-      }),
-      ltx23WorkflowRouting: expect.objectContaining({
-        selectedWorkflowKey: 'basevideo/ltx23-profiles/t8-single-image-large-motion-4stage',
-        reasons: expect.arrayContaining(['large_motion_or_camera_movement']),
-      }),
-    }))
-  })
-
   it('single generate-video uses smart first-last duration binding above stale dropdown duration', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
@@ -978,7 +946,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+        videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -993,7 +961,7 @@ describe('api contract - direct submit routes (behavior)', () => {
           recommendationFingerprint: 'smart-fp',
         },
         firstLastFrame: {
-          flModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+          flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 1,
           customPrompt: 'visible first-last transition prompt',
@@ -1053,7 +1021,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+        videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -1069,7 +1037,7 @@ describe('api contract - direct submit routes (behavior)', () => {
           recommendationReason: 'smart suggested longer motion',
         },
         firstLastFrame: {
-          flModel: 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame',
+          flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 1,
           customPrompt: 'visible first-last transition prompt',
@@ -1219,6 +1187,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         videoModel: 'comfyui::basevideo/seedance2/bernini-480p-i2v',
+        ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 5,
         generationOptions: {
@@ -1302,6 +1271,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+        ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 5,
         generationOptions: {
@@ -1342,93 +1312,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     }))
   })
 
-  it('single generate-video keeps slow locked camera prompts on current Smart VBVR', async () => {
-    prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
-      id: 'panel-1',
-      storyboardId: 'storyboard-1',
-      panelIndex: 0,
-      imageUrl: 'cos/panel.png',
-      videoUrl: 'cos/video.mp4',
-      videoPrompt: '\u60e8\u767d\u767d\u70bd\u706f\u5782\u5728\u591c\u95f4\u529e\u516c\u5ba4\u4e2d\u592e\uff0c\u4e2d\u5e74\u7537\u5b50\u5750\u5728\u4e66\u684c\u540e\u4fa7\u9760\u5899\u7684\u6905\u5b50\u4e0a\u5fae\u5fae\u524d\u503e\uff0c\u5e74\u8f7b\u7537\u5b50\u5750\u5728\u4e66\u684c\u524d\u4fa7\u9762\u5411\u4e66\u684c\u7684\u6905\u5b50\u4e0a\u62ac\u773c\u5bf9\u89c6\uff0c\u56db\u5468\u7a7a\u5899\u548c\u6697\u89d2\u538b\u4f4f\u7a7a\u95f4\uff0c\u955c\u5934\u7f13\u6162\u63a8\u8fdb\u4fef\u62cd',
-      videoPromptEditedByUser: false,
-      description: '\u8fdc\u666f\uff1a\u4e24\u4eba\u9694\u7740\u4e66\u684c\u5bf9\u89c6\uff0c\u7a7a\u5899\u548c\u6697\u89d2\u538b\u4f4f\u7a7a\u95f4',
-      srtSegment: '',
-      videoDurationBinding: null,
-      shotType: '\u4fef\u62cd\u8fdc\u666f',
-      cameraMove: '\u7f13\u6162\u63a8\u8fdb',
-      sceneType: 'dialogue',
-      storyboard: {
-        episodeId: 'episode-1',
-        clip: {
-          content: 'office conversation',
-        },
-      },
-      matchedVoiceLines: [],
-    })
-    prismaMock.novelPromotionVoiceLine.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-
-    const res = await invokePostRoute({
-      routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
-      body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-        storyboardId: 'storyboard-1',
-        panelIndex: 0,
-        generationOptions: {
-          duration: 4,
-          resolution: '720p',
-        },
-      },
-      params: { projectId: 'project-1' },
-      expectedTaskType: TASK_TYPE.VIDEO_PANEL,
-      expectedTargetType: 'NovelPromotionPanel',
-      expectedProjectId: 'project-1',
-    })
-
-    expect(res.status).toBe(200)
-    const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
-    expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-      generationOptions: expect.objectContaining({
-        duration: 12,
-        resolution: '720p',
-      }),
-      ltx23WorkflowRouting: expect.objectContaining({
-        selectedWorkflowKey: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-        reasons: expect.arrayContaining(['slow_stable_camera_movement']),
-      }),
-    }))
-    expect(submitArg?.payload).not.toHaveProperty('firstLastFrame')
-  })
-
-  it('single generate-video normalizes stale first-last-frame-only LTX2.3 model in normal mode', async () => {
-    prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
-      id: 'panel-1',
-      storyboardId: 'storyboard-1',
-      panelIndex: 0,
-      imageUrl: 'cos/panel.png',
-      videoUrl: 'cos/video.mp4',
-      videoPrompt: 'two people sit still in an office',
-      videoPromptEditedByUser: false,
-      description: 'two people sit still in an office',
-      srtSegment: '',
-      videoDurationBinding: null,
-      shotType: 'medium',
-      cameraMove: 'static',
-      sceneType: 'dialogue',
-      storyboard: {
-        episodeId: 'episode-1',
-        clip: {
-          content: 'office conversation',
-        },
-      },
-      matchedVoiceLines: [],
-    })
-    prismaMock.novelPromotionVoiceLine.findMany
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-
+  it('single generate-video rejects an old first-last model before normalizing it', async () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
@@ -1446,23 +1330,14 @@ describe('api contract - direct submit routes (behavior)', () => {
       expectedProjectId: 'project-1',
     })
 
-    expect(res.status).toBe(200)
-    const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
-    expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-      generationOptions: expect.objectContaining({
-        duration: 6,
-        resolution: '720p',
-      }),
-      ltx23WorkflowRouting: expect.objectContaining({
-        selectedModelKey: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-        reasons: expect.arrayContaining(['first_last_frame_model_in_normal_mode']),
-      }),
-    }))
-    expect(submitArg?.payload).not.toHaveProperty('firstLastFrame')
+    expect(res.status).toBe(400)
+    expect((await res.json()).code).toBe('COMFYUI_VIDEO_MODEL_REMOVED')
+    expect(submitTaskMock).not.toHaveBeenCalled()
+    expect(prismaMock.novelPromotionPanel.findFirst).not.toHaveBeenCalled()
+    expect(prismaMock.novelPromotionVoiceLine.findMany).not.toHaveBeenCalled()
   })
 
-  it('single generate-video blocks Smart VBVR long-audio requests instead of routing away', async () => {
+  it('single generate-video blocks long-audio requests for a current LTX workflow', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1497,7 +1372,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -1569,7 +1444,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       body: {
         all: true,
         episodeId: 'episode-1',
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         generationOptions: {
           duration: 5,
           resolution: '720p',
@@ -1623,7 +1498,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
@@ -1707,7 +1582,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         episodeId: 'stale-episode',
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
@@ -1793,7 +1668,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         episodeId: 'stale-episode',
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,

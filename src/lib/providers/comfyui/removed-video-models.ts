@@ -1,5 +1,6 @@
 const REMOVED_COMFYUI_VIDEO_MODEL_IDS = new Set([
   'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
+  'basevideo/ltx23-profiles/t8-smooth-first-last-frame',
   'basevideo/demo/Wan2.2Remix',
 ])
 

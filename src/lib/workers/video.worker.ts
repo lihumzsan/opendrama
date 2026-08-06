@@ -56,6 +56,7 @@ import {
   normalizeLtx23GoonDurationSeconds,
 } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
+import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
 import {
   getMiniMaxH3ModeForWorkflow,
   normalizeMiniMaxH3Request,
@@ -85,6 +86,9 @@ function readNonEmptyString(value: unknown): string | null {
 function normalizeWorkerVideoModelKey(raw: string | null | undefined): string {
   const trimmed = typeof raw === 'string' ? raw.trim().replace(/\\/g, '/') : ''
   if (!trimmed) return ''
+  if (isRemovedComfyUiVideoModel(trimmed)) {
+    throw new Error(`COMFYUI_VIDEO_MODEL_REMOVED: ${trimmed}`)
+  }
   const normalized = normalizeVideoModelKey(trimmed)
   if (
     normalized === COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY

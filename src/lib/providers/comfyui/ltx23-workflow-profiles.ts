@@ -9,7 +9,6 @@ export const COMFYUI_LTX23_GOON_DEFAULT_DURATION_SECONDS = 10
 export const COMFYUI_LTX23_GOON_FPS = 24
 
 export const COMFYUI_LTX23_WORKFLOW_KEYS = {
-  singleImagePrecise: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
   microDetail: 'basevideo/ltx23-profiles/t8-sulphur2-promptrelay-micro',
   singleImageLargeMotion: 'basevideo/ltx23-profiles/t8-single-image-large-motion-4stage',
   goonFirstLastFrame: COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
@@ -19,7 +18,7 @@ export const COMFYUI_LTX23_WORKFLOW_KEYS = {
   multiShotPromptRelayKj: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
 } as const
 
-export const COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID = COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise
+export const COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID = COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj
 const COMFYUI_LTX23_KJ_DEFAULT_MOTION_STRENGTH = 1
 const COMFYUI_LTX23_KJ_MOTION_STRENGTH_OPTIONS = [1, 2, 3] as const
 
@@ -62,18 +61,6 @@ export type Ltx23WorkflowProfile = {
 }
 
 const LTX23_WORKFLOW_PROFILES: Record<string, Ltx23WorkflowProfile> = {
-  [COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise]: {
-    workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImagePrecise,
-    label: 'ComfyUI · LTX2.3 单图精准 Smart VBVR',
-    category: 'single_image_precise',
-    promptPolicy: 'stable_single_image',
-    imageSlotPolicy: 'single',
-    maxDurationSeconds: 20,
-    defaultDurationSeconds: 19.56,
-    durationOptions: [4, 5, 6, 8, 10, 12, 16, 20],
-    fps: 25,
-    selectableInPanel: true,
-  },
   [COMFYUI_LTX23_WORKFLOW_KEYS.microDetail]: {
     workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.microDetail,
     label: 'ComfyUI · LTX2.3 微表情 Sulphur2',
