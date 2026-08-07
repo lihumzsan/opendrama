@@ -11,6 +11,7 @@ import { logAIAnalysis } from '@/lib/logging/semantic'
 import { buildCharactersIntroduction } from '@/lib/constants'
 import type { Locale } from '@/i18n/routing'
 import { getPromptTemplate, PROMPT_IDS } from '@/lib/prompt-i18n'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import {
     buildPromptAssetContext,
     compileAssetPromptFragments,
@@ -518,6 +519,7 @@ export async function executePhase2Acting(
         .replace('{panel_count}', planPanels.length.toString())
         .replace(/\{panel_count\}/g, planPanels.length.toString())
         .replace('{characters_info}', filteredFullDescription)
+        .replace('{knowledge_context}', getKnowledgePromptContext('acting_direction'))
 
     let actingDirections: ActingDirection[] = []
 
@@ -617,6 +619,7 @@ export async function executePhase3(
         .replace('{characters_age_gender}', filteredFullDescription)  // 改用完整描述
         .replace('{locations_description}', filteredLocationsDescription)
         .replace('{props_description}', filteredPropsDescription)
+        .replace('{knowledge_context}', getKnowledgePromptContext('storyboard_detail'))
 
     // 记录发送给 AI 的完整 prompt
     logAIAnalysis(session.user.id, session.user.name, projectId, projectName, {

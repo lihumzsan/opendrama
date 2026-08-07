@@ -3,6 +3,7 @@ import { buildCharactersIntroduction } from '@/lib/constants'
 import { normalizeAnyError } from '@/lib/errors/normalize'
 import { createScopedLogger } from '@/lib/logging/core'
 import { mapWithConcurrency } from '@/lib/async/map-with-concurrency'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import {
   type ActingDirection,
   type CharacterAsset,
@@ -503,12 +504,14 @@ Storyboard dialogue hard rules:
         .replace('{panels_json}', JSON.stringify(planPanels, null, 2))
         .replace(/\{panel_count\}/g, String(planPanels.length))
         .replace('{characters_info}', filteredFullDescription)
+        .replace('{knowledge_context}', getKnowledgePromptContext('acting_direction'))
 
       const phase3Prompt = `${promptTemplates.phase3DetailTemplate
         .replace('{panels_json}', JSON.stringify(planPanels, null, 2))
         .replace('{characters_age_gender}', filteredFullDescription)
         .replace('{locations_description}', filteredLocationsDescription)
-        .replace('{props_description}', filteredPropsDescription)}
+        .replace('{props_description}', filteredPropsDescription)
+        .replace('{knowledge_context}', getKnowledgePromptContext('storyboard_detail'))}
 
 ${dialogueBeatPromptBlock}
 

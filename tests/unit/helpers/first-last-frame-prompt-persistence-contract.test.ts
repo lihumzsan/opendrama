@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
 
 const variables = {
@@ -8,7 +9,8 @@ const variables = {
   last_panel_context: '{"description":"end"}',
   duration_seconds: '8',
   fps: '24',
-  goon_key: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+  workflow_key: 'comfyui::basevideo/minimax-h3/h3-fl2va',
+  knowledge_context: getKnowledgePromptContext('h3_prompt'),
 }
 
 describe('first-last-frame prompt persistence contract', () => {

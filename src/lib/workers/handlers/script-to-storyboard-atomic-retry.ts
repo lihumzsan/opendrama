@@ -1,6 +1,7 @@
 import { safeParseJsonArray } from '@/lib/json-repair'
 import { buildCharactersIntroduction } from '@/lib/constants'
 import { normalizeAnyError } from '@/lib/errors/normalize'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import type {
   ScriptToStoryboardPromptTemplates,
   ScriptToStoryboardStepMeta,
@@ -542,6 +543,7 @@ Storyboard dialogue hard rules:
       .replace('{panels_json}', JSON.stringify(planPanels, null, 2))
       .replace(/\{panel_count\}/g, String(planPanels.length))
       .replace('{characters_info}', filteredFullDescription)
+      .replace('{knowledge_context}', getKnowledgePromptContext('acting_direction'))
     phase2Acting = await runStepWithRetry({
       runStep: params.runStep,
       baseMeta,
@@ -558,7 +560,8 @@ Storyboard dialogue hard rules:
       .replace('{panels_json}', JSON.stringify(planPanels, null, 2))
       .replace('{characters_age_gender}', filteredFullDescription)
       .replace('{locations_description}', filteredLocationsDescription)
-      .replace('{props_description}', filteredPropsDescription)}
+      .replace('{props_description}', filteredPropsDescription)
+      .replace('{knowledge_context}', getKnowledgePromptContext('storyboard_detail'))}
 
 ${dialogueBeatPromptBlock}
 

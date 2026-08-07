@@ -18,6 +18,7 @@ import {
 } from '@/lib/novel-promotion/first-last-frame-smart-duration'
 import { buildDefaultFirstLastFramePrompt } from '@/lib/novel-promotion/panel-continuity'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import { prisma } from '@/lib/prisma'
 import { extractStorageKey, getSignedObjectUrl } from '@/lib/storage'
 import type { TaskJobData } from '@/lib/task/types'
@@ -223,6 +224,7 @@ export async function handleFirstLastFramePromptTask(
       duration_seconds: String(COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS),
       fps: String(timing.fps),
       workflow_key: timing.workflowKey,
+      knowledge_context: getKnowledgePromptContext('h3_prompt'),
     },
   })
   const sourceContext = [

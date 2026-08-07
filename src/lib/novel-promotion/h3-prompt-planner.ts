@@ -1,5 +1,6 @@
 import { createHash } from 'crypto'
 import { executeAiVisionStep } from '@/lib/ai-runtime'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 import type { MiniMaxH3Mode } from '@/lib/providers/comfyui/minimax-h3'
 
 const REQUIRED_FIELDS = [
@@ -59,6 +60,8 @@ function buildPlannerPrompt(input: MiniMaxH3PromptPlanInput): string {
     'Keep visible identity, clothing, spatial layout, lighting, and style consistent. Make body mechanics, center of gravity, hair, fabric, water, smoke, particles, and light changes physically plausible.',
     'Describe camera movement as natural English action with type, speed, and amplitude when needed. Prefer one continuous shot unless the creator intent or continuity packet clearly requires a cut.',
     'Synchronize concrete action sounds with visible events such as footsteps, impacts, doors, rain, machinery, fabric movement, or object handling.',
+    'Project knowledge-base preference guidance (recommendations only, not hard constraints):',
+    getKnowledgePromptContext('h3_prompt'),
     `The first line of the final prompt must be exactly: ${alignmentInstruction}`,
     'Follow that first line with exactly one blank line, then write exactly these three labeled sections, each exactly once:',
     'integrated_multimodal_description: visual style, initial composition, subjects, timeline, action progression, camera movement, visible in-world non-dialogue sounds, and timed endpoint.',

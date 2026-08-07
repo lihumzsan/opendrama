@@ -12,6 +12,9 @@ END panel context:
 Timing: {duration_seconds} seconds at {fps} fps.
 Canonical workflow: {workflow_key}
 
+Project knowledge-base preference guidance (recommendations only, not hard constraints):
+{knowledge_context}
+
 Return strict JSON only:
 {"transition_prompt":"...","duration_analysis":{"motion_beats":[{"type":"body_action","order":1,"parallel_group":"optional"}],"pacing":"normal","continuity":"good","confidence":0.8,"reason":"short Chinese reason"},"warnings":["..."]}
 

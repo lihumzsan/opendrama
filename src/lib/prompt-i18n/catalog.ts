@@ -43,7 +43,7 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
   },
   [PROMPT_IDS.NP_AGENT_ACTING_DIRECTION]: {
     pathStem: 'novel-promotion/agent_acting_direction',
-    variableKeys: ['panels_json', 'panel_count', 'characters_info'],
+    variableKeys: ['panels_json', 'panel_count', 'characters_info', 'knowledge_context'],
   },
   [PROMPT_IDS.NP_AGENT_CHARACTER_PROFILE]: {
     pathStem: 'novel-promotion/agent_character_profile',
@@ -51,7 +51,7 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
   },
   [PROMPT_IDS.NP_AGENT_CHARACTER_VISUAL]: {
     pathStem: 'novel-promotion/agent_character_visual',
-    variableKeys: ['character_profiles'],
+    variableKeys: ['character_profiles', 'knowledge_context'],
   },
   [PROMPT_IDS.NP_AGENT_CINEMATOGRAPHER]: {
     pathStem: 'novel-promotion/agent_cinematographer',
@@ -94,7 +94,7 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
   },
   [PROMPT_IDS.NP_AGENT_STORYBOARD_DETAIL]: {
     pathStem: 'novel-promotion/agent_storyboard_detail',
-    variableKeys: ['panels_json', 'characters_age_gender', 'locations_description', 'props_description'],
+    variableKeys: ['panels_json', 'characters_age_gender', 'locations_description', 'props_description', 'knowledge_context'],
   },
   [PROMPT_IDS.NP_AGENT_STORYBOARD_INSERT]: {
     pathStem: 'novel-promotion/agent_storyboard_insert',
@@ -218,6 +218,7 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
       'duration_seconds',
       'fps',
       'workflow_key',
+      'knowledge_context',
     ],
   },
 }

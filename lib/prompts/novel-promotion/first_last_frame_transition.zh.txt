@@ -12,6 +12,9 @@ END 画面上下文：
 时长：{duration_seconds} 秒，{fps} fps。
 规范工作流：{workflow_key}
 
+项目知识库参考（仅作为推荐，不作为硬约束）：
+{knowledge_context}
+
 只返回严格 JSON：
 {"transition_prompt":"...","duration_analysis":{"motion_beats":[{"type":"body_action","order":1,"parallel_group":"optional"}],"pacing":"normal","continuity":"good","confidence":0.8,"reason":"简短中文依据"},"warnings":["..."]}
 

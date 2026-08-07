@@ -4,6 +4,9 @@ Generate image-ready appearance descriptions from character profiles.
 Character profiles JSON:
 {character_profiles}
 
+Project knowledge-base preference guidance (recommendations only, not hard constraints):
+{knowledge_context}
+
 Rules:
 1. Keep identity consistency with profile fields.
 2. Convert personality/social identity into visual details (face, hair, outfit, accessories).

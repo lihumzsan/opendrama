@@ -21,6 +21,7 @@ import {
 } from './character-profile-helpers'
 import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from './llm-stream'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
+import { getKnowledgePromptContext } from '@/lib/knowledge-base/prompt-context'
 
 type ConfirmProfileOptions = {
   suppressProgress?: boolean
@@ -168,6 +169,7 @@ async function handleConfirmProfile(
         null,
         2,
       ),
+      knowledge_context: getKnowledgePromptContext('character_visual'),
     },
   })
 

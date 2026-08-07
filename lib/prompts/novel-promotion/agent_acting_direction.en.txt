@@ -8,6 +8,9 @@ Core input:
 - Character info:
 {characters_info}
 
+Project knowledge-base preference guidance (recommendations only, not hard constraints):
+{knowledge_context}
+
 Requirements:
 1. Treat each panel independently. The same character can have different emotional states across panels.
 2. Adapt performance style to panel.scene_type (daily / emotion / action / epic / suspense).
