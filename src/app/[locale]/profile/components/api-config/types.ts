@@ -17,6 +17,8 @@ import {
     CODEX_PROVIDER_KEY,
 } from '@/lib/providers/codex/constants'
 
+const DEFAULT_COMFYUI_BASE_URL = 'http://192.168.0.112:8878'
+
 // 统一提供商接口
 export interface Provider {
     id: string
@@ -152,7 +154,7 @@ export const PRESET_PROVIDERS: Omit<Provider, 'apiKey' | 'hasApiKey'>[] = [
     { id: 'vidu', name: 'Vidu' },
     { id: 'fal', name: 'FAL' },
     { id: CODEX_PROVIDER_KEY, name: 'Codex (Local)' },
-    { id: 'comfyui', name: 'ComfyUI (Local)', baseUrl: 'http://127.0.0.1:8188' },
+    { id: 'comfyui', name: 'ComfyUI (Local)', baseUrl: DEFAULT_COMFYUI_BASE_URL },
 ]
 
 const ZH_PROVIDER_NAME_MAP: Record<string, string> = {

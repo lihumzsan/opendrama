@@ -96,6 +96,8 @@ export interface ModelSelection {
 
 type GatewayRouteType = 'official' | 'openai-compat'
 
+export const DEFAULT_COMFYUI_BASE_URL = 'http://192.168.0.112:8878'
+
 interface CustomProvider {
   id: string
   name: string
@@ -125,8 +127,7 @@ function normalizeProviderBaseUrl(providerId: string, rawBaseUrl?: string): stri
     return 'https://api.minimaxi.com/v1'
   }
   if (providerKey === 'comfyui') {
-    const baseUrl = readTrimmedString(rawBaseUrl)
-    return baseUrl || 'http://127.0.0.1:8188'
+    return resolveComfyUiBaseUrl(rawBaseUrl)
   }
   if (providerKey === CODEX_PROVIDER_KEY) {
     return undefined
@@ -149,6 +150,12 @@ function normalizeProviderBaseUrl(providerId: string, rawBaseUrl?: string): stri
     // Keep original value to avoid hiding invalid-config errors.
     return baseUrl
   }
+}
+
+export function resolveComfyUiBaseUrl(rawBaseUrl?: string): string {
+  return readTrimmedString(process.env.COMFYUI_BASE_URL)
+    || readTrimmedString(rawBaseUrl)
+    || DEFAULT_COMFYUI_BASE_URL
 }
 
 function normalizeCodexExecutablePath(rawPath: unknown): string | undefined {
@@ -537,7 +544,12 @@ export interface ProviderConfig {
 
 export async function getProviderConfig(userId: string, providerId: string): Promise<ProviderConfig> {
   const { providers } = await readUserConfig(userId)
-  const provider = pickProviderStrict(providers, providerId)
+  const provider = getProviderKey(providerId) === 'comfyui'
+    ? providers.find((item) => item.id === providerId) || {
+        id: 'comfyui',
+        name: 'ComfyUI (Local)',
+      }
+    : pickProviderStrict(providers, providerId)
 
   const providerKey = getProviderKey(provider.id)
   if (!provider.apiKey && providerKey !== 'comfyui' && providerKey !== CODEX_PROVIDER_KEY) {
