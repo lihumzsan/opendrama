@@ -104,6 +104,8 @@ agent/
 # internal docs (not for public)
 docs/*
 !docs/project-structure.md
+!docs/knowledge-base/
+!docs/knowledge-base/**
 
 # GitHub CI workflows (internal)
 # .github/ — 只保留 workflows，忽略其他
