@@ -5,12 +5,15 @@ import { logError as _ulogError, logInfo as _ulogInfo } from '@/lib/logging/core
 import { detectEpisodeMarkers, type EpisodeMarkerResult } from '@/lib/episode-marker-detector'
 import { countWords } from '@/lib/word-count'
 import {
+  useAnalyzeChapterBatch,
+  useConfirmChapterBatch,
+  useCreateChapterBatch,
   useListProjectEpisodes,
   useSaveProjectEpisodesBatch,
-  useSplitProjectEpisodes,
   useSplitProjectEpisodesByMarkers,
 } from '@/lib/query/hooks'
 import type { DeleteConfirmState, SplitEpisode, WizardStage } from '../types'
+import { mapChapterBatchPlanToSplitEpisodes } from '../chapter-batch-mapping'
 import {
   mergeEpisodeWithNext,
   moveFirstSceneToPreviousEpisode,
@@ -64,9 +67,13 @@ export function useWizardState({
   const [saving, setSaving] = useState(false)
   const [splitProfile, setSplitProfile] = useState<'horizontal_motion_comic' | 'regular_episode' | null>(null)
   const [aiRecommendation, setAiRecommendation] = useState<SplitEpisode[] | null>(null)
+  const [chapterBatchId, setChapterBatchId] = useState<string | null>(null)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   const listProjectEpisodesMutation = useListProjectEpisodes(projectId)
-  const splitProjectEpisodesMutation = useSplitProjectEpisodes(projectId)
+  const createChapterBatchMutation = useCreateChapterBatch(projectId)
+  const analyzeChapterBatchMutation = useAnalyzeChapterBatch(projectId)
+  const confirmChapterBatchMutation = useConfirmChapterBatch(projectId)
   const splitProjectEpisodesByMarkersMutation = useSplitProjectEpisodesByMarkers(projectId)
   const saveProjectEpisodesBatchMutation = useSaveProjectEpisodesBatch(projectId)
 
@@ -111,20 +118,34 @@ export function useWizardState({
     setError(null)
 
     try {
-      _ulogInfo('[SmartImport] starting AI episode split')
-      const data = await splitProjectEpisodesMutation.mutateAsync({ content: rawContent, async: true })
-      const splitEpisodes: SplitEpisode[] = data.episodes || []
+      _ulogInfo('[SmartImport] starting chapter batch analysis')
+      const title = rawContent.split(/\r?\n/, 1)[0]?.trim().slice(0, 80) || t('smartImport.title')
+      const created = await createChapterBatchMutation.mutateAsync({
+        title,
+        sourceText: rawContent,
+      })
+      const analyzed = await analyzeChapterBatchMutation.mutateAsync({ batchId: created.batch.id })
+      const plan = analyzed.candidatePlans[0]
+      if (!plan) {
+        throw new Error(t('errors.analyzeFailed'))
+      }
+      const splitEpisodes = mapChapterBatchPlanToSplitEpisodes(plan)
       setEpisodes(splitEpisodes)
       setAiRecommendation(cloneEpisodes(splitEpisodes))
-      setSplitProfile(data.profile || 'horizontal_motion_comic')
-      _ulogInfo('[SmartImport] AI split ready for preview; database will update only after confirmation')
+      setSplitProfile(null)
+      setChapterBatchId(created.batch.id)
+      setSelectedPlanId(plan.planId)
+      _ulogInfo('[SmartImport] chapter batch analysis ready for preview; database will update only after confirmation', {
+        batchId: created.batch.id,
+        planId: plan.planId,
+      })
       setStage('preview')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('errors.analyzeFailed')
       setError(message || t('errors.analyzeFailed'))
       setStage('select')
     }
-  }, [rawContent, splitProjectEpisodesMutation, t])
+  }, [analyzeChapterBatchMutation, createChapterBatchMutation, rawContent, t])
 
   const handleAnalyze = useCallback(async () => {
     _ulogInfo('[SmartImport] handleAnalyze called')
@@ -176,6 +197,8 @@ export function useWizardState({
       setEpisodes(splitEpisodes)
       setAiRecommendation(null)
       setSplitProfile(null)
+      setChapterBatchId(null)
+      setSelectedPlanId(null)
       _ulogInfo('[SmartImport] marker split ready for preview; database will update only after confirmation')
       setStage('preview')
     } catch (err: unknown) {
@@ -272,16 +295,29 @@ export function useWizardState({
       setError(null)
 
       try {
-        await saveProjectEpisodesBatchMutation.mutateAsync({
-          episodes: episodes.map((ep) => ({
-            name: ep.title,
-            description: ep.summary,
-            novelText: ep.content,
-          })),
-          mode: 'append',
-          importStatus: 'completed',
-          triggerGlobalAnalysis,
-        })
+        if (chapterBatchId && selectedPlanId) {
+          await confirmChapterBatchMutation.mutateAsync({
+            batchId: chapterBatchId,
+            planId: selectedPlanId,
+            mode: 'append',
+            episodes: episodes.map((ep) => ({
+              name: ep.title,
+              description: ep.summary,
+              novelText: ep.content,
+            })),
+          })
+        } else {
+          await saveProjectEpisodesBatchMutation.mutateAsync({
+            episodes: episodes.map((ep) => ({
+              name: ep.title,
+              description: ep.summary,
+              novelText: ep.content,
+            })),
+            mode: 'append',
+            importStatus: 'completed',
+            triggerGlobalAnalysis,
+          })
+        }
 
         _ulogInfo('[SmartImport] episodes saved after confirmation', { triggerGlobalAnalysis })
         onImportComplete(episodes, triggerGlobalAnalysis)
@@ -293,7 +329,15 @@ export function useWizardState({
         setSaving(false)
       }
     },
-    [episodes, onImportComplete, saveProjectEpisodesBatchMutation, t],
+    [
+      chapterBatchId,
+      confirmChapterBatchMutation,
+      episodes,
+      onImportComplete,
+      saveProjectEpisodesBatchMutation,
+      selectedPlanId,
+      t,
+    ],
   )
 
   return {

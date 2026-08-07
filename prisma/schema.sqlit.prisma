@@ -266,12 +266,37 @@ model NovelPromotionProject {
   lastEpisodeId   String?
   imageResolution String                    @default("2K")
   importStatus    String?
+  chapterBatches  NovelPromotionChapterBatch[]
   characters      NovelPromotionCharacter[]
   episodes        NovelPromotionEpisode[]
   locations       NovelPromotionLocation[]
   project         Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("novel_promotion_projects")
+}
+
+model NovelPromotionChapterBatch {
+  id                      String                @id @default(uuid())
+  novelPromotionProjectId String
+  title                   String
+  sourceText              String
+  sourceFingerprint       String
+  chapterStartLabel       String?
+  chapterEndLabel         String?
+  status                  String                @default("draft")
+  analysisJson            String?
+  candidateEpisodesJson   String?
+  selectedPlanJson        String?
+  createdEpisodeIdsJson   String?
+  errorJson               String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @default(now()) @updatedAt
+  novelPromotionProject   NovelPromotionProject @relation(fields: [novelPromotionProjectId], references: [id], onDelete: Cascade)
+
+  @@index([novelPromotionProjectId])
+  @@index([sourceFingerprint])
+  @@index([status])
+  @@map("novel_promotion_chapter_batches")
 }
 
 model NovelPromotionShot {

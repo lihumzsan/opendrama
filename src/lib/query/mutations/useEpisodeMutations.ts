@@ -4,6 +4,7 @@ import { resolveTaskResponse } from '@/lib/task/client'
 import { queryKeys } from '../keys'
 import { clearTaskTargetOverlay, upsertTaskTargetOverlay } from '../task-target-overlay'
 import { TASK_TYPE } from '@/lib/task/types'
+import type { CandidateEpisodePlan, ChapterBatchAnalysis } from '@/lib/novel-promotion/chapter-batch/types'
 import {
   cancelEpisodeQueries,
   getEpisodeQueriesSnapshot,
@@ -19,6 +20,47 @@ import {
 } from './mutation-shared'
 
 export const EPISODE_SPLIT_TASK_TIMEOUT_MS = 21 * 60 * 1000
+
+export const CHAPTER_BATCH_ANALYZE_TASK_TIMEOUT_MS = 21 * 60 * 1000
+
+export type ChapterBatchResponse = {
+  batch: {
+    id: string
+    title: string
+    sourceText: string
+    sourceFingerprint: string
+    chapterStartLabel?: string | null
+    chapterEndLabel?: string | null
+    status: string
+    analysisJson?: string | null
+    candidateEpisodesJson?: string | null
+    selectedPlanJson?: string | null
+    createdEpisodeIdsJson?: string | null
+    errorJson?: string | null
+  }
+}
+
+export type ChapterBatchAnalyzeResult = ChapterBatchResponse & {
+  analysis: ChapterBatchAnalysis | null
+  candidatePlans: CandidateEpisodePlan[]
+}
+
+function parseJsonField<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+async function fetchChapterBatch(projectId: string, batchId: string) {
+  return await requestJsonWithError<ChapterBatchResponse>(
+    `/api/novel-promotion/${projectId}/chapter-batches/${batchId}`,
+    { method: 'GET' },
+    '获取章节批次失败',
+  )
+}
 
 /**
  * 获取项目剧集列表
@@ -82,6 +124,92 @@ export function useSplitProjectEpisodes(projectId: string) {
         timeoutMs: EPISODE_SPLIT_TASK_TIMEOUT_MS,
       })
     },
+  })
+}
+
+export function useCreateChapterBatch(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: {
+      title: string
+      sourceText: string
+      chapterStartLabel?: string | null
+      chapterEndLabel?: string | null
+    }) =>
+      await requestJsonWithError<ChapterBatchResponse>(
+        `/api/novel-promotion/${projectId}/chapter-batches`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        '保存章节批次失败',
+      ),
+  })
+}
+
+export function useAnalyzeChapterBatch(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: { batchId: string }) => {
+      const response = await requestTaskResponseWithError(
+        `/api/novel-promotion/${projectId}/chapter-batches/${payload.batchId}/analyze`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+        '章节分析失败',
+      )
+      await resolveTaskResponse<{
+        batchId: string
+        planCount: number
+        episodeCount: number
+      }>(response, {
+        timeoutMs: CHAPTER_BATCH_ANALYZE_TASK_TIMEOUT_MS,
+      })
+      const batchResponse = await fetchChapterBatch(projectId, payload.batchId)
+      return {
+        ...batchResponse,
+        analysis: parseJsonField<ChapterBatchAnalysis | null>(batchResponse.batch.analysisJson, null),
+        candidatePlans: parseJsonField<CandidateEpisodePlan[]>(batchResponse.batch.candidateEpisodesJson, []),
+      }
+    },
+  })
+}
+
+export function useConfirmChapterBatch(projectId: string) {
+  return useMutation({
+    mutationFn: async (payload: {
+      batchId: string
+      planId: string
+      mode?: 'append' | 'update_current'
+      episodeId?: string
+      confirmOverwrite?: boolean
+      episodes?: Array<{
+        name: string
+        description?: string
+        novelText?: string
+      }>
+    }) =>
+      await requestJsonWithError<{
+        success: boolean
+        idempotent?: boolean
+        mode?: 'append' | 'update_current'
+        episodes: Array<{ id: string; episodeNumber: number; name: string }>
+      }>(
+        `/api/novel-promotion/${projectId}/chapter-batches/${payload.batchId}/confirm`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            planId: payload.planId,
+            mode: payload.mode || 'append',
+            episodeId: payload.episodeId,
+            confirmOverwrite: payload.confirmOverwrite,
+            episodes: payload.episodes,
+          }),
+        },
+        '确认章节批次失败',
+      ),
   })
 }
 

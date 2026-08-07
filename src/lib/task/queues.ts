@@ -89,6 +89,7 @@ const TASK_TYPE_ATTEMPTS = new Map<TaskType, number>([
   [TASK_TYPE.IMAGE_EPISODE_COVER, 2],
   [TASK_TYPE.IMAGE_CHARACTER, 2],
   [TASK_TYPE.EPISODE_SPLIT_LLM, 1],
+  [TASK_TYPE.CHAPTER_BATCH_ANALYZE, 1],
 ])
 
 export function resolveTaskQueueAttempts(type: TaskType, explicitAttempts?: number) {

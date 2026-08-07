@@ -83,6 +83,7 @@
     "characterProfileConfirm": "角色档案确认",
     "characterProfileBatchConfirm": "批量角色档案确认",
     "episodeSplitLlm": "智能分集",
+    "chapterBatchAnalyze": "章节改编分析",
     "assetHubAiDesignCharacter": "资产库角色设计",
     "assetHubAiDesignLocation": "资产库场景设计",
     "assetHubAiModifyCharacter": "资产库角色修改",
@@ -135,7 +136,12 @@
     "environmentSoundPlanReady": "环境音方案已就绪",
     "environmentSoundGenerate": "生成环境音片段",
     "environmentSoundCompose": "合成独立 MP3",
-    "environmentSoundPersist": "保存环境音结果"
+    "environmentSoundPersist": "保存环境音结果",
+    "chapterBatchSourceParse": "识别章节素材",
+    "chapterBatchSceneAnalysis": "分析章节场景",
+    "chapterBatchGlobalPlan": "规划候选剧集",
+    "chapterBatchPlanRepair": "修复候选剧集",
+    "chapterBatchDone": "章节改编方案完成"
   },
   "runConsole": {
     "storyToScript": "内容到剧本",

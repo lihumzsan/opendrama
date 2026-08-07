@@ -41,6 +41,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   [TASK_TYPE.CHARACTER_PROFILE_CONFIRM]: 'progress.taskType.characterProfileConfirm',
   [TASK_TYPE.CHARACTER_PROFILE_BATCH_CONFIRM]: 'progress.taskType.characterProfileBatchConfirm',
   [TASK_TYPE.EPISODE_SPLIT_LLM]: 'progress.taskType.episodeSplitLlm',
+  [TASK_TYPE.CHAPTER_BATCH_ANALYZE]: 'progress.taskType.chapterBatchAnalyze',
   [TASK_TYPE.ASSET_HUB_AI_DESIGN_CHARACTER]: 'progress.taskType.assetHubAiDesignCharacter',
   [TASK_TYPE.ASSET_HUB_AI_DESIGN_LOCATION]: 'progress.taskType.assetHubAiDesignLocation',
   [TASK_TYPE.ASSET_HUB_AI_MODIFY_CHARACTER]: 'progress.taskType.assetHubAiModifyCharacter',
@@ -98,6 +99,11 @@ const STAGE_LABELS: Record<string, string> = {
   first_last_frame_prompt_prepare: 'progress.stage.firstLastFramePromptPrepare',
   first_last_frame_prompt_generate: 'progress.stage.firstLastFramePromptGenerate',
   first_last_frame_prompt_persist: 'progress.stage.firstLastFramePromptPersist',
+  chapter_batch_source_parse: 'progress.stage.chapterBatchSourceParse',
+  chapter_batch_scene_analysis: 'progress.stage.chapterBatchSceneAnalysis',
+  chapter_batch_global_plan: 'progress.stage.chapterBatchGlobalPlan',
+  chapter_batch_plan_repair: 'progress.stage.chapterBatchPlanRepair',
+  chapter_batch_done: 'progress.stage.chapterBatchDone',
 }
 
 function asString(value: unknown): string | null {

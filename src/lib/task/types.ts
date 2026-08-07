@@ -78,6 +78,7 @@ export const TASK_TYPE = {
   CHARACTER_PROFILE_CONFIRM: 'character_profile_confirm',
   CHARACTER_PROFILE_BATCH_CONFIRM: 'character_profile_batch_confirm',
   EPISODE_SPLIT_LLM: 'episode_split_llm',
+  CHAPTER_BATCH_ANALYZE: 'chapter_batch_analyze',
   ASSET_HUB_AI_DESIGN_CHARACTER: 'asset_hub_ai_design_character',
   ASSET_HUB_AI_DESIGN_LOCATION: 'asset_hub_ai_design_location',
   ASSET_HUB_AI_MODIFY_CHARACTER: 'asset_hub_ai_modify_character',

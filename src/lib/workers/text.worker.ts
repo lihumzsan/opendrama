@@ -31,6 +31,7 @@ import { handleClipsBuildTask } from './handlers/clips-build'
 import { handleAnalyzeNovelTask } from './handlers/analyze-novel'
 import { handleScreenplayConvertTask } from './handlers/screenplay-convert'
 import { handleEpisodeSplitTask } from './handlers/episode-split'
+import { handleChapterBatchAnalyzeTask } from './handlers/chapter-batch-analyze'
 import { handleAnalyzeGlobalTask } from './handlers/analyze-global'
 import { handleAssetHubAIModifyTask } from './handlers/asset-hub-ai-modify'
 import { handleReferenceToCharacterTask } from './handlers/reference-to-character'
@@ -671,6 +672,8 @@ async function processTextTask(job: Job<TaskJobData>) {
       return await handleScreenplayConvertTask(job)
     case TASK_TYPE.EPISODE_SPLIT_LLM:
       return await handleEpisodeSplitTask(job)
+    case TASK_TYPE.CHAPTER_BATCH_ANALYZE:
+      return await handleChapterBatchAnalyzeTask(job)
     case TASK_TYPE.ANALYZE_GLOBAL:
       return await handleAnalyzeGlobalTask(job)
     case TASK_TYPE.AI_CREATE_CHARACTER:

@@ -65,8 +65,19 @@ const prismaMock = vi.hoisted(() => ({
     })),
   },
   novelPromotionProject: {
+    findFirst: vi.fn(async () => ({
+      id: 'novel-project-1',
+    })),
     findUnique: vi.fn(async () => ({
       id: 'novel-project-1',
+    })),
+  },
+  novelPromotionChapterBatch: {
+    findUnique: vi.fn(async () => ({
+      id: 'batch-1',
+      novelPromotionProjectId: 'novel-project-1',
+      sourceFingerprint: 'fingerprint-1',
+      status: 'draft',
     })),
   },
   novelPromotionLocation: {
@@ -314,6 +325,15 @@ const ROUTE_CASES: ReadonlyArray<LLMRouteCase> = [
     expectedMaxAttempts: 1,
   },
   {
+    routeFile: 'src/app/api/novel-promotion/[projectId]/chapter-batches/[batchId]/analyze/route.ts',
+    body: {},
+    params: { projectId: 'project-1', batchId: 'batch-1' },
+    expectedTaskType: TASK_TYPE.CHAPTER_BATCH_ANALYZE,
+    expectedTargetType: 'NovelPromotionChapterBatch',
+    expectedProjectId: 'project-1',
+    expectedMaxAttempts: 1,
+  },
+  {
     routeFile: 'src/app/api/novel-promotion/[projectId]/reference-to-character/route.ts',
     body: { referenceImageUrl: 'https://example.com/ref.png' },
     params: { projectId: 'project-1' },
@@ -384,7 +404,7 @@ describe('api contract - llm observe routes (behavior)', () => {
   })
 
   it('keeps expected coverage size', () => {
-    expect(ROUTE_CASES.length).toBe(25)
+    expect(ROUTE_CASES.length).toBe(26)
   })
 
   for (const routeCase of ROUTE_CASES) {

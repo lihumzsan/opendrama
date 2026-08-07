@@ -51,6 +51,16 @@ const FLOW_DEFINITIONS: ReadonlyArray<LLMTaskFlowDefinition> = [
     ],
   },
   {
+    id: 'novel_promotion_chapter_batch_analyze',
+    stages: [
+      {
+        id: TASK_TYPE.CHAPTER_BATCH_ANALYZE,
+        taskType: TASK_TYPE.CHAPTER_BATCH_ANALYZE,
+        title: getTaskTypeLabel(TASK_TYPE.CHAPTER_BATCH_ANALYZE),
+      },
+    ],
+  },
+  {
     id: 'novel_promotion_ai_create_location',
     stages: [
       {

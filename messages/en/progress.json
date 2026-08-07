@@ -83,6 +83,7 @@
     "characterProfileConfirm": "Character profile confirm",
     "characterProfileBatchConfirm": "Character profile batch confirm",
     "episodeSplitLlm": "Smart episode split",
+    "chapterBatchAnalyze": "Chapter adaptation analysis",
     "assetHubAiDesignCharacter": "Asset hub character design",
     "assetHubAiDesignLocation": "Asset hub location design",
     "assetHubAiModifyCharacter": "Asset hub character modify",
@@ -135,7 +136,12 @@
     "environmentSoundPlanReady": "Environment sound plan ready",
     "environmentSoundGenerate": "Generate ambience pieces",
     "environmentSoundCompose": "Compose standalone MP3",
-    "environmentSoundPersist": "Save environment sound result"
+    "environmentSoundPersist": "Save environment sound result",
+    "chapterBatchSourceParse": "Parse chapter source",
+    "chapterBatchSceneAnalysis": "Analyze chapter scenes",
+    "chapterBatchGlobalPlan": "Plan candidate episodes",
+    "chapterBatchPlanRepair": "Repair candidate episodes",
+    "chapterBatchDone": "Chapter adaptation plan ready"
   },
   "runConsole": {
     "storyToScript": "Story to Script",
