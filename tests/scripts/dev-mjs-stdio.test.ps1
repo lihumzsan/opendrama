@@ -63,11 +63,14 @@ exit /b 0
     }
 
     $trace = Get-Content -LiteralPath $tracePath
-    if ($trace[0] -notmatch '^npm "?run"? "?storage:init"?$') {
-        throw "Expected storage initialization first, got: $($trace[0])"
+    if ($trace[0] -notmatch '^npm "?run"? "?dev:prepare"?$') {
+        throw "Expected development preparation first, got: $($trace[0])"
     }
-    if ($trace[1] -notmatch '^concurrently "?npm run dev:next"? "?npm run dev:worker"? "?npm run dev:watchdog"? "?npm run dev:board"?$') {
-        throw "Expected concurrently dev services, got: $($trace[1])"
+    if ($trace[1] -notmatch '^npm "?run"? "?storage:init"?$') {
+        throw "Expected storage initialization second, got: $($trace[1])"
+    }
+    if ($trace[2] -notmatch '^concurrently "?npm run dev:next"? "?npm run dev:worker"? "?npm run dev:watchdog"? "?npm run dev:board"?$') {
+        throw "Expected concurrently dev services, got: $($trace[2])"
     }
 
     Write-Output 'scripts/dev.mjs redirected stdio check passed'

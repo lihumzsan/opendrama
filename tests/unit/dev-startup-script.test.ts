@@ -9,6 +9,9 @@ test('the default development command leaves warmup opt-in', () => {
   ) as { scripts: Record<string, string> }
 
   expect(packageJson.scripts.dev).not.toContain('dev:warmup')
+  expect(packageJson.scripts['dev:prepare']).toBe(
+    'prisma generate && prisma migrate deploy --schema prisma/schema.prisma',
+  )
   expect(packageJson.scripts['dev:warmup']).toBeDefined()
   expect(packageJson.scripts['dev:full']).toBe(
     'concurrently "npm run dev" "npm run dev:warmup"',

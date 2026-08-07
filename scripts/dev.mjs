@@ -112,6 +112,7 @@ process.on('SIGTERM', () => {
 })
 
 try {
+  await run(npmCommand, ['run', 'dev:prepare'])
   await run(npmCommand, ['run', 'storage:init'])
   await run(concurrentlyBin, [
     'npm run dev:next',
