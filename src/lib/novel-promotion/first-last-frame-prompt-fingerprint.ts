@@ -1,7 +1,7 @@
 import {
-  COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
-  COMFYUI_LTX23_GOON_FPS,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+  COMFYUI_MINIMAX_H3_FL2VA_MODEL_KEY,
+  COMFYUI_MINIMAX_H3_FPS,
+} from '@/lib/providers/comfyui/minimax-h3'
 
 export const FIRST_LAST_FRAME_PROMPT_TEMPLATE_VERSION = 'v1'
 
@@ -60,8 +60,8 @@ export function buildFirstLastFramePromptFingerprintInput(params: {
 }) {
   return {
     promptTemplateVersion: FIRST_LAST_FRAME_PROMPT_TEMPLATE_VERSION,
-    workflowKey: COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
-    fps: COMFYUI_LTX23_GOON_FPS,
+    workflowKey: COMFYUI_MINIMAX_H3_FL2VA_MODEL_KEY,
+    fps: COMFYUI_MINIMAX_H3_FPS,
     first: {
       panelId: params.firstPanel.id,
       image: stableImageIdentity(params.firstPanel),
@@ -78,7 +78,7 @@ export function buildFirstLastFramePromptFingerprintInput(params: {
 export function getFirstLastFramePromptTimingInput(firstPanel: FirstLastFrameFingerprintPanel) {
   void firstPanel
   return {
-    fps: COMFYUI_LTX23_GOON_FPS,
-    workflowKey: COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
+    fps: COMFYUI_MINIMAX_H3_FPS,
+    workflowKey: COMFYUI_MINIMAX_H3_FL2VA_MODEL_KEY,
   }
 }

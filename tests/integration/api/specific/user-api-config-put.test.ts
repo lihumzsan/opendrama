@@ -782,9 +782,9 @@ describe('api specific - user api-config PUT provider uniqueness', () => {
           {
             type: 'video',
             provider: 'comfyui',
-            modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-            modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-            name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
+            modelId: 'basevideo/minimax-h3/h3-i2va',
+            modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
+            name: 'ComfyUI · MiniMax H3 Image to Video with Audio',
             customPricing: {
               video: {
                 basePrice: 0.5,

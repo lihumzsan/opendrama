@@ -27,7 +27,6 @@ import {
   CODEX_PROVIDER_KEY,
 } from './providers/codex/constants'
 import { isCodexAutoPath } from './providers/codex/executable-resolver'
-import { isRemovedComfyUiVideoModel } from './providers/comfyui/removed-video-models'
 
 const ALLOWED_LLM_PROVIDER_KEYS = new Set([CODEX_PROVIDER_KEY])
 
@@ -47,22 +46,6 @@ export interface CustomModel {
 }
 
 const COMFYUI_AUTO_ENABLED_HELPER_MODELS: ReadonlyArray<CustomModel> = [
-  {
-    modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-    modelKey: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-    name: 'ComfyUI · LTX2.3 Goon First/Last Frame',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
-  {
-    modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-    modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-    name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
-    type: 'video',
-    provider: 'comfyui',
-    price: 0,
-  },
   {
     modelId: 'basevideo/minimax-h3/h3-i2va',
     modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
@@ -180,13 +163,6 @@ function filterRuntimeSupportedModels(models: CustomModel[]): CustomModel[] {
       return ALLOWED_LLM_PROVIDER_KEYS.has(getProviderKey(model.provider))
     }
     if (model.type === 'image' && getProviderKey(model.provider) === 'comfyui') {
-      return false
-    }
-    if (
-      model.type === 'video'
-      && getProviderKey(model.provider) === 'comfyui'
-      && isRemovedComfyUiVideoModel(model.modelId)
-    ) {
       return false
     }
     return true

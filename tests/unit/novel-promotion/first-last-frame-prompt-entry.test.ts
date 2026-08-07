@@ -147,7 +147,7 @@ describe('first/last-frame prompt entry', () => {
       '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
     )
 
-    for (const duration of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+    for (const duration of [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
       expect(resolveFirstLastFrameDurationSelection('duration', String(duration), { fps: 24 })).toEqual({
         binding: {
           mode: 'manual',
@@ -165,9 +165,9 @@ describe('first/last-frame prompt entry', () => {
       '@/lib/novel-promotion/stages/video-stage-runtime/first-last-frame-prompt-entry'
     )
     const defaults = { duration: 10, fps: 24 }
-    const overrides = new Map([['panel-a', { duration: 4, fps: 24 }]])
+    const overrides = new Map([['panel-a', { duration: 5, fps: 24 }]])
 
-    expect(resolvePanelFirstLastFrameGenerationOptions('panel-a', defaults, overrides).duration).toBe(4)
+    expect(resolvePanelFirstLastFrameGenerationOptions('panel-a', defaults, overrides).duration).toBe(5)
     expect(resolvePanelFirstLastFrameGenerationOptions('panel-b', defaults, overrides).duration).toBe(10)
   })
 
@@ -178,8 +178,8 @@ describe('first/last-frame prompt entry', () => {
     const defaults = { duration: 10, fps: 24 }
     const emptyOverrides = new Map<string, typeof defaults>()
 
-    expect(resolvePanelFirstLastFrameGenerationOptions('panel-a', defaults, emptyOverrides, 4)).toEqual({
-      duration: 4,
+    expect(resolvePanelFirstLastFrameGenerationOptions('panel-a', defaults, emptyOverrides, 5)).toEqual({
+      duration: 5,
       fps: 24,
     })
     expect(resolvePanelFirstLastFrameGenerationOptions('panel-b', defaults, emptyOverrides)).toEqual(defaults)

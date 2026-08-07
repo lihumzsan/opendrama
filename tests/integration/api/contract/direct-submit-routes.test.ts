@@ -32,7 +32,8 @@ type CapabilityGenerationOptionsInput = {
 
 type CapabilityGenerationOptions = Record<string, string | number | boolean>
 
-const CURRENT_LTX_VIDEO_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+const CURRENT_H3_VIDEO_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-i2va'
+const CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-fl2va'
 
 const authState = vi.hoisted<AuthState>(() => ({
   authenticated: true,
@@ -61,6 +62,7 @@ const configServiceMock = vi.hoisted(() => ({
     ...input.basePayload,
     generationOptions: { resolution: '1024x1024' },
   })),
+  normalizeRetiredComfyUiImageModelKey: vi.fn((modelKey: string) => modelKey),
   resolveProjectModelCapabilityGenerationOptions: vi.fn(async (
     input?: CapabilityGenerationOptionsInput,
   ): Promise<CapabilityGenerationOptions> => {
@@ -470,7 +472,7 @@ const DIRECT_CASES: ReadonlyArray<DirectRouteCase> = [
     routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
     body: {
       episodeId: 'stale-episode',
-      videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+      videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
       storyboardId: 'storyboard-1',
       panelIndex: 0,
       generationOptions: {
@@ -478,7 +480,7 @@ const DIRECT_CASES: ReadonlyArray<DirectRouteCase> = [
         duration: 5,
       },
       firstLastFrame: {
-        flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        flModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
         customPrompt: 'visible persisted transition prompt',
         customPromptEditedByUser: true,
       },
@@ -489,13 +491,13 @@ const DIRECT_CASES: ReadonlyArray<DirectRouteCase> = [
     expectedProjectId: 'project-1',
     expectedSubmitEpisodeId: 'episode-1',
     expectedPayloadSubset: {
-      videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+      videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
       generationOptions: {
         resolution: '720p',
         duration: 5,
       },
       firstLastFrame: {
-        flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        flModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
         customPrompt: 'visible persisted transition prompt',
         customPromptEditedByUser: true,
       },
@@ -770,7 +772,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -874,7 +876,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       body: {
         all: true,
         episodeId: 'episode-1',
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         videoDurationBinding: {
           mode: 'match_audio',
           voiceLineIds: ['explicit-line-1'],
@@ -946,7 +948,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -961,7 +963,7 @@ describe('api contract - direct submit routes (behavior)', () => {
           recommendationFingerprint: 'smart-fp',
         },
         firstLastFrame: {
-          flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+          flModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 1,
           customPrompt: 'visible first-last transition prompt',
@@ -976,7 +978,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(res.status).toBe(200)
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+      videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
       generationOptions: expect.objectContaining({
         duration: 8,
         resolution: '720p',
@@ -986,7 +988,7 @@ describe('api contract - direct submit routes (behavior)', () => {
         durationSource: 'smart',
       }),
       firstLastFrame: expect.objectContaining({
-        flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        flModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
       }),
     }))
   })
@@ -1021,7 +1023,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -1037,7 +1039,7 @@ describe('api contract - direct submit routes (behavior)', () => {
           recommendationReason: 'smart suggested longer motion',
         },
         firstLastFrame: {
-          flModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+          flModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
           lastFrameStoryboardId: 'storyboard-1',
           lastFramePanelIndex: 1,
           customPrompt: 'visible first-last transition prompt',
@@ -1052,7 +1054,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(res.status).toBe(200)
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+      videoModel: CURRENT_H3_FIRST_LAST_FRAME_MODEL_KEY,
       generationOptions: expect.objectContaining({
         duration: 6,
         resolution: '720p',
@@ -1065,7 +1067,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     }))
   })
 
-  it('single generate-video migrates retired Bernini audio lipsync options to T8 before submit', async () => {
+  it('single generate-video migrates retired Bernini audio lipsync options to H3 before submit', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1094,18 +1096,18 @@ describe('api contract - direct submit routes (behavior)', () => {
     configServiceMock.resolveProjectModelCapabilityGenerationOptions.mockImplementationOnce(async (
       input?: CapabilityGenerationOptionsInput & { modelKey?: string },
     ): Promise<CapabilityGenerationOptions> => {
-      expect(input?.modelKey).toBe('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
+      expect(input?.modelKey).toBe(CURRENT_H3_VIDEO_MODEL_KEY)
       expect(input?.runtimeSelections).toEqual(expect.objectContaining({
         duration: 5,
-        fps: 25,
-        resolution: '720p',
+        fps: 24,
+        resolution: '768P',
         generationMode: 'normal',
         motionStrength: 2,
       }))
       return {
         duration: 5,
-        fps: 25,
-        resolution: '720p',
+        fps: 24,
+        resolution: '768P',
         generationMode: 'normal',
         motionStrength: 2,
       }
@@ -1133,17 +1135,17 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(res.status).toBe(200)
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+      videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
       generationOptions: expect.objectContaining({
         duration: 5,
-        fps: 25,
-        resolution: '720p',
+        fps: 24,
+        resolution: '768P',
         motionStrength: 2,
       }),
     }))
   })
 
-  it('single generate-video migrates retired Bernini options to T8 before capability validation', async () => {
+  it('single generate-video migrates retired Bernini options to H3 before capability validation', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1209,27 +1211,27 @@ describe('api contract - direct submit routes (behavior)', () => {
     })
 
     expect(res.status).toBe(200)
-    expect(capabilityInput?.modelKey).toBe('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
+    expect(capabilityInput?.modelKey).toBe(CURRENT_H3_VIDEO_MODEL_KEY)
     expect(capabilityInput?.runtimeSelections).toEqual(expect.objectContaining({
       duration: 6,
-      fps: 25,
-      resolution: '720p',
+      fps: 24,
+      resolution: '768P',
       generationMode: 'normal',
       motionStrength: 1,
     }))
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+      videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
       generationOptions: expect.objectContaining({
         duration: 6,
-        fps: 25,
-        resolution: '720p',
+        fps: 24,
+        resolution: '768P',
         motionStrength: 1,
       }),
     }))
   })
 
-  it('single generate-video accepts an exact KJ recommended duration above the catalog presets', async () => {
+  it('single generate-video accepts an H3 duration at the capability boundary', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1259,27 +1261,24 @@ describe('api contract - direct submit routes (behavior)', () => {
     ): Promise<CapabilityGenerationOptions> => {
       capabilityInput = input
       return {
-        duration: 20,
-        fps: 25,
-        resolution: '720p',
+        duration: 15,
+        fps: 24,
+        resolution: '768P',
         generationMode: 'normal',
-        motionStrength: 1,
       }
     })
 
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-        ltx23WorkflowSelection: 'manual',
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 5,
         generationOptions: {
-          duration: 21,
+          duration: 15,
           generationMode: 'normal',
-          fps: 25,
-          resolution: '720p',
-          motionStrength: 1,
+          fps: 24,
+          resolution: '768P',
         },
         videoDurationBinding: {
           mode: 'manual',
@@ -1294,20 +1293,18 @@ describe('api contract - direct submit routes (behavior)', () => {
 
     expect(res.status).toBe(200)
     expect(capabilityInput?.runtimeSelections).toEqual(expect.objectContaining({
-      duration: 20,
-      fps: 25,
-      resolution: '720p',
+      duration: 15,
+      fps: 24,
+      resolution: '768P',
       generationMode: 'normal',
-      motionStrength: 1,
     }))
     const submitArg = submitTaskMock.mock.calls.at(-1)?.[0] as { payload?: Record<string, unknown> } | undefined
     expect(submitArg?.payload).toEqual(expect.objectContaining({
-      videoModel: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
+      videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
       generationOptions: expect.objectContaining({
-        duration: 21,
-        fps: 25,
-        resolution: '720p',
-        motionStrength: 1,
+        duration: 15,
+        fps: 24,
+        resolution: '768P',
       }),
     }))
   })
@@ -1337,7 +1334,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     expect(prismaMock.novelPromotionVoiceLine.findMany).not.toHaveBeenCalled()
   })
 
-  it('single generate-video blocks long-audio requests for a current LTX workflow', async () => {
+  it('single generate-video blocks long-audio requests for the current H3 workflow', async () => {
     prismaMock.novelPromotionPanel.findFirst.mockResolvedValueOnce({
       id: 'panel-1',
       storyboardId: 'storyboard-1',
@@ -1372,7 +1369,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         storyboardId: 'storyboard-1',
         panelIndex: 0,
         generationOptions: {
@@ -1444,7 +1441,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       body: {
         all: true,
         episodeId: 'episode-1',
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         generationOptions: {
           duration: 5,
           resolution: '720p',
@@ -1498,7 +1495,7 @@ describe('api contract - direct submit routes (behavior)', () => {
     const res = await invokePostRoute({
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
@@ -1582,7 +1579,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         episodeId: 'stale-episode',
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,
@@ -1668,7 +1665,7 @@ describe('api contract - direct submit routes (behavior)', () => {
       routeFile: 'src/app/api/novel-promotion/[projectId]/generate-video/route.ts',
       body: {
         episodeId: 'stale-episode',
-        videoModel: CURRENT_LTX_VIDEO_MODEL_KEY,
+        videoModel: CURRENT_H3_VIDEO_MODEL_KEY,
         ltx23WorkflowSelection: 'manual',
         storyboardId: 'storyboard-1',
         panelIndex: 0,

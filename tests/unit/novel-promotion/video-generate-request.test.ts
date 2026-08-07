@@ -5,7 +5,8 @@ describe('video generate request body', () => {
   const SMART_VBVR_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
   const REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame'
   const LEGACY_LTX23_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-sulphur2-promptrelay-micro'
-  const T8_PROMPTRELAY_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
+  const H3_I2VA_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-i2va'
+  const H3_FL2VA_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-fl2va'
 
   it('includes the visible panel prompt as a root custom prompt when provided', () => {
     expect(buildGenerateVideoRequestBody({
@@ -21,15 +22,15 @@ describe('video generate request body', () => {
     })
   })
 
-  it('normalizes removed LTX2.3 video model keys to T8 before submit', () => {
+  it('normalizes removed LTX2.3 video model keys to H3 I2VA before submit', () => {
     expect(buildGenerateVideoRequestBody({
       storyboardId: 'storyboard-1',
       panelIndex: 2,
       videoModel: LEGACY_LTX23_MODEL_KEY,
-    }).videoModel).toBe(T8_PROMPTRELAY_MODEL_KEY)
+    }).videoModel).toBe(H3_I2VA_MODEL_KEY)
   })
 
-  it('preserves removed first-last-frame models for the API rejection contract', () => {
+  it('normalizes removed first-last-frame models to H3 FL2VA before submit', () => {
     expect(buildGenerateVideoRequestBody({
       storyboardId: 'storyboard-1',
       panelIndex: 2,
@@ -40,14 +41,14 @@ describe('video generate request body', () => {
         lastFramePanelIndex: 3,
       },
     })).toMatchObject({
-      videoModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+      videoModel: H3_FL2VA_MODEL_KEY,
       firstLastFrame: {
-        flModel: REMOVED_SMOOTH_FIRST_LAST_MODEL_KEY,
+        flModel: H3_FL2VA_MODEL_KEY,
       },
     })
   })
 
-  it('migrates retired Bernini audio options to T8 before submit', () => {
+  it('migrates retired Bernini audio options to H3 I2VA before submit', () => {
     expect(buildGenerateVideoRequestBody({
       storyboardId: 'storyboard-1',
       panelIndex: 2,
@@ -59,11 +60,11 @@ describe('video generate request body', () => {
         motionStrength: 2,
       },
     })).toMatchObject({
-      videoModel: T8_PROMPTRELAY_MODEL_KEY,
+      videoModel: H3_I2VA_MODEL_KEY,
       generationOptions: {
         duration: 5,
-        fps: 25,
-        resolution: '720p',
+        fps: 24,
+        resolution: '768P',
         motionStrength: 2,
       },
     })

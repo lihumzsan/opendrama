@@ -47,14 +47,14 @@ vi.mock('@/lib/model-pricing/catalog', () => ({
   findBuiltinPricingCatalogEntry: vi.fn(() => undefined),
 }))
 
-describe('api specific - user models ComfyUI LTX2.3 filter', () => {
+describe('api specific - user models ComfyUI video filter', () => {
   const routeContext = { params: Promise.resolve({}) }
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('hides removed LTX2.3 models and keeps Goon as the only first-last-frame helper', async () => {
+  it('hides non-H3 ComfyUI video models and keeps only H3 helpers', async () => {
     const mod = await import('@/app/api/user/models/route')
     const req = buildMockRequest({
       path: '/api/user/models',
@@ -70,11 +70,17 @@ describe('api specific - user models ComfyUI LTX2.3 filter', () => {
 
     expect(values).not.toContain('comfyui::basevideo/demo/LTX2.3-fast')
     expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/t8-smooth-first-last-frame')
-    expect(values).toContain('comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage')
+    expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage')
     expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2')
-    expect(values).toContain('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
+    expect(values).not.toContain('comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p')
     expect(values).not.toContain('comfyui::basevideo/seedance2/bernini-480p-i2v')
-    expect(body.video.find((item) => item.value.endsWith('t8-multishot-precise-promptrelay-kj-720p'))?.label)
-      .toBe('ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p')
+    expect(values).toEqual([
+      'comfyui::basevideo/minimax-h3/h3-i2va',
+      'comfyui::basevideo/minimax-h3/h3-fl2va',
+    ])
+    expect(body.video.find((item) => item.value.endsWith('h3-i2va'))?.label)
+      .toBe('ComfyUI · MiniMax H3 Image to Video with Audio')
+    expect(body.video.find((item) => item.value.endsWith('h3-fl2va'))?.label)
+      .toBe('ComfyUI · MiniMax H3 First/Last Frame with Audio')
   })
 })

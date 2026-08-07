@@ -102,14 +102,14 @@ describe('api specific - restore video route', () => {
     expect(res.status).toBe(200)
     expect(json.success).toBe(true)
     expect(json.videoUrl).toBe('images/previous.mp4')
-    expect(json.videoModel).toBe('comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage')
+    expect(json.videoModel).toBe('comfyui::basevideo/minimax-h3/h3-fl2va')
     expect(json.videoGenerationMode).toBe('firstlastframe')
     expect(json.restoredFromTaskId).toBe('task-previous')
     expect(panelUpdateMock).toHaveBeenCalledWith({
       where: { id: 'panel-1' },
       data: {
         videoUrl: 'images/previous.mp4',
-        videoModel: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
+        videoModel: 'comfyui::basevideo/minimax-h3/h3-fl2va',
         videoGenerationMode: 'firstlastframe',
         videoMediaId: null,
         lipSyncTaskId: null,

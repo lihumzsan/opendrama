@@ -25,7 +25,7 @@ describe('first/last-frame smart duration', () => {
 
     expect(result).toMatchObject({
       durationSeconds: 8,
-      frameCount: 193,
+      frameCount: 192,
       fps: 24,
       source: 'smart',
       confidence: 0.9,
@@ -71,7 +71,7 @@ describe('first/last-frame smart duration', () => {
   })
 
   it.each([
-    ['empty motion clamps to min', [], 4],
+    ['empty motion clamps to min', [], 5],
     ['long serial motion clamps to max', Array.from({ length: 8 }, (_, index) => ({ type: 'transformation' as const, order: index + 1 })), 15],
   ])('%s', (_label, motionBeats, expectedDuration) => {
     const result = computeFirstLastFrameSmartDuration({

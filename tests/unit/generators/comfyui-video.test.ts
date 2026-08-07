@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ComfyUIVideoGenerator, selectComfyUiVideoWorkflowKey } from '@/lib/generators/comfyui-video'
+import { ComfyUIVideoGenerator } from '@/lib/generators/comfyui-video'
 import {
-  COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-  COMFYUI_LTX23_WORKFLOW_KEYS,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
-import { COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID } from '@/lib/providers/comfyui/minimax-h3'
+  COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+  COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
+} from '@/lib/providers/comfyui/minimax-h3'
 import { getProviderConfig } from '@/lib/api-config'
 import { isComfyUiWorkflowLlmApiRequired, runComfyUiVideoWorkflow } from '@/lib/providers/comfyui/client'
 
@@ -24,48 +23,6 @@ vi.mock('@/lib/providers/comfyui/llm-api-config', () => ({
 const getProviderConfigMock = vi.mocked(getProviderConfig)
 const isComfyUiWorkflowLlmApiRequiredMock = vi.mocked(isComfyUiWorkflowLlmApiRequired)
 const runComfyUiVideoWorkflowMock = vi.mocked(runComfyUiVideoWorkflow)
-const BERNINI_WORKFLOW_ID = 'basevideo/seedance2/bernini-480p-i2v'
-const BERNINI_AUDIO_WORKFLOW_ID = 'basevideo/seedance2/bernini-480p-i2v-audio-lipsync'
-const T8_PROMPTRELAY_WORKFLOW_ID = 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p'
-
-describe('ComfyUI video workflow selection', () => {
-  it('auto-routes the default ltx23 workflow from prompt and duration context', () => {
-    expect(selectComfyUiVideoWorkflowKey(
-      COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-      '男子突然转身奔跑，镜头跟拍并逐渐推近',
-      { generationMode: 'normal', duration: 6, ltx23WorkflowSelection: 'auto' },
-    )).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion)
-
-    expect(selectComfyUiVideoWorkflowKey(
-      COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-      'GLOBAL: hospital room. LOCAL: Scene 1：女子抬头 | Scene 2：镜头缓慢推近',
-      { generationMode: 'normal', duration: 16, ltx23WorkflowSelection: 'auto' },
-    )).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.damaichaLongPromptRelay)
-  })
-
-  it('preserves the default ltx23 workflow when manual selection is explicit', () => {
-    expect(selectComfyUiVideoWorkflowKey(
-      COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-      '男子突然转身奔跑，镜头跟拍并逐渐推近',
-      { generationMode: 'normal', duration: 6, ltx23WorkflowSelection: 'manual' },
-    )).toBe(COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID)
-  })
-
-  it('keeps the Goon first-last-frame profile workflow request unchanged', () => {
-    expect(selectComfyUiVideoWorkflowKey(COMFYUI_LTX23_WORKFLOW_KEYS.goonFirstLastFrame, 'bridge the two frames', {
-      generationMode: 'firstlastframe',
-    })).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.goonFirstLastFrame)
-  })
-
-  it('keeps latest ltx23 profile workflow ids unchanged', () => {
-    expect(selectComfyUiVideoWorkflowKey(
-      COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
-      'GLOBAL: rain alley\nLOCAL: [0-16] character runs forward',
-      { generationMode: 'normal' },
-    )).toBe(COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion)
-  })
-
-})
 
 describe('ComfyUI video generator', () => {
   beforeEach(() => {
@@ -84,134 +41,34 @@ describe('ComfyUI video generator', () => {
     })
   })
 
-  it('rejects the removed smooth first-last-frame key before generation', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'bridge the two frames',
-      options: {
-        modelId: 'basevideo/ltx23-profiles/t8-smooth-first-last-frame',
-        generationMode: 'firstlastframe',
-        lastFrameImageUrl: 'https://example.com/last.png',
-      },
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toContain('COMFYUI_VIDEO_MODEL_REMOVED')
-    expect(getProviderConfigMock).not.toHaveBeenCalled()
-    expect(runComfyUiVideoWorkflowMock).not.toHaveBeenCalled()
-  })
-
-  it('forwards the requested H3 seed into the ComfyUI submission contract', async () => {
+  it('defaults ComfyUI video generation to H3 I2VA', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
       userId: 'user-1',
       imageUrl: 'https://example.com/first.png',
       prompt: 'integrated_multimodal_description: Picture 1 begins the motion.',
-      options: {
-        modelId: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
-        duration: 5,
-        fps: 24,
-        seed: 42,
-      },
+      options: { duration: 5, fps: 24 },
     })
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
       workflowKey: COMFYUI_MINIMAX_H3_I2VA_WORKFLOW_ID,
-      seed: 42,
+      durationSeconds: 5,
+      fps: 24,
     }))
   })
 
-  it('auto-routes large-motion LTX2.3 requests and forwards non-empty reference images', async () => {
+  it('forwards explicit H3 FL2VA first-last-frame inputs', async () => {
     const generator = new ComfyUIVideoGenerator()
 
     const result = await generator.generate({
       userId: 'user-1',
       imageUrl: 'https://example.com/first.png',
-      prompt: 'GLOBAL: rain alley\nLOCAL: [0-16] character runs forward',
+      prompt: 'integrated_multimodal_description: Picture 1 transitions to Picture 2.',
       options: {
-        modelId: COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
-        referenceImageUrls: [
-          'https://example.com/ref-a.png',
-          123,
-          ' ',
-          'https://example.com/ref-b.png',
-          '',
-          null,
-        ] as unknown as string[],
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
-      referenceImageUrls: [
-        'https://example.com/ref-a.png',
-        'https://example.com/ref-b.png',
-      ],
-    }))
-  })
-
-  it('preserves KJ PromptRelay requests and forwards reference image and audio URLs', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'GLOBAL: quiet office\nLOCAL: person speaks calmly to camera',
-      options: {
-        modelId: COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-        duration: 6,
-        fps: 25,
-        referenceImageUrls: [
-          'https://example.com/ref-a.png',
-          123,
-          ' ',
-          'https://example.com/ref-b.png',
-          null,
-        ] as unknown as string[],
-        referenceAudioUrls: [
-          'https://example.com/line-1.wav',
-          123,
-          ' ',
-          'https://example.com/line-2.mp3',
-          null,
-        ] as unknown as string[],
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj,
-      durationSeconds: 6,
-      fps: 25,
-      referenceImageUrls: [
-        'https://example.com/ref-a.png',
-        'https://example.com/ref-b.png',
-      ],
-      referenceAudioUrls: [
-        'https://example.com/line-1.wav',
-        'https://example.com/line-2.mp3',
-      ],
-    }))
-  })
-
-  it('uses the official 768P canvas for the remote MiniMax H3 first-last-frame workflow', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'The actor walks from the doorway to the desk.',
-      options: {
-        modelId: 'basevideo/minimax-h3/h3-fl2va',
-        generationMode: 'firstlastframe',
-        aspectRatio: '16:9',
-        duration: 5,
+        modelId: COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
+        duration: 10,
         fps: 24,
         lastFrameImageUrl: 'https://example.com/last.png',
       },
@@ -219,200 +76,8 @@ describe('ComfyUI video generator', () => {
 
     expect(result.success).toBe(true)
     expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: 'basevideo/minimax-h3/h3-fl2va',
-      firstFrameImageUrl: 'https://example.com/first.png',
+      workflowKey: COMFYUI_MINIMAX_H3_FL2VA_WORKFLOW_ID,
       lastFrameImageUrl: 'https://example.com/last.png',
-      width: 1344,
-      height: 768,
-      durationSeconds: 5,
-      fps: 24,
-    }))
-  })
-
-  it('uses the official 768P H3 canvas for the MiniMax H3 I2VA workflow', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'The actor turns toward the window.',
-      options: {
-        modelId: 'basevideo/minimax-h3/h3-i2va',
-        generationMode: 'normal',
-        aspectRatio: '16:9',
-        duration: 5,
-        fps: 24,
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: 'basevideo/minimax-h3/h3-i2va',
-      firstFrameImageUrl: 'https://example.com/first.png',
-      width: 1344,
-      height: 768,
-      durationSeconds: 5,
-      fps: 24,
-    }))
-  })
-
-  it('preserves KJ PromptRelay reference-audio requests even when prompt and duration look like long PromptRelay', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'GLOBAL: rainy street. LOCAL: Scene 1: subject walks | Scene 2: camera moves up | Scene 3: subject turns | Scene 4: camera pulls back',
-      options: {
-        modelId: COMFYUI_LTX23_DEFAULT_VIDEO_WORKFLOW_ID,
-        duration: 19.56,
-        fps: 25,
-        referenceAudioUrls: ['https://example.com/line-1.wav'],
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj,
-      durationSeconds: 19.56,
-      fps: 25,
-      referenceAudioUrls: ['https://example.com/line-1.wav'],
-    }))
-  })
-
-  it('rejects removed ComfyUI video models before loading provider configuration', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'The actor turns toward the window.',
-      options: {
-        modelId: 'basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2',
-      },
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toContain('COMFYUI_VIDEO_MODEL_REMOVED')
-    expect(getProviderConfigMock).not.toHaveBeenCalled()
-    expect(runComfyUiVideoWorkflowMock).not.toHaveBeenCalled()
-  })
-
-  it('migrates retired Bernini audio requests to T8 while forwarding reference audio', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'doctor speaks to the selected line',
-      options: {
-        modelId: BERNINI_WORKFLOW_ID,
-        referenceAudioUrls: [
-          'https://example.com/line-1.wav',
-          123,
-          ' ',
-          'https://example.com/line-2.mp3',
-          null,
-        ] as unknown as string[],
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: T8_PROMPTRELAY_WORKFLOW_ID,
-      referenceAudioUrls: [
-        'https://example.com/line-1.wav',
-        'https://example.com/line-2.mp3',
-      ],
-    }))
-  })
-
-  it('rejects removed legacy LTX2.3 workflow keys instead of routing them', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'legacy qshan prompt',
-      options: {
-        modelId: 'basevideo/demo/LTX2.3-fast',
-      },
-    })
-
-    expect(result.success).toBe(false)
-    expect(result.error).toContain('LEGACY_LTX23_WORKFLOW_REMOVED')
-    expect(getProviderConfigMock).not.toHaveBeenCalled()
-    expect(runComfyUiVideoWorkflowMock).not.toHaveBeenCalled()
-  })
-
-  it('migrates retired Bernini timing controls to the T8 workflow client', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'woman sits quietly by the window',
-      options: {
-        modelId: BERNINI_WORKFLOW_ID,
-        duration: 5,
-        fps: 24,
-        motionStrength: 1,
-        size: '480x848',
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: T8_PROMPTRELAY_WORKFLOW_ID,
-      durationSeconds: 5,
-      fps: 25,
-      motionStrength: 1,
-      width: 480,
-      height: 864,
-    }))
-  })
-
-  it('auto-routes retired Bernini project requests with a large-motion prompt', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'hero turns toward the camera',
-      options: {
-        modelId: BERNINI_WORKFLOW_ID,
-        aspectRatio: '16:9',
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.singleImageLargeMotion,
-      width: 1280,
-      height: 736,
-    }))
-  })
-
-  it('keeps the LTX Goon landscape request size unchanged', async () => {
-    const generator = new ComfyUIVideoGenerator()
-
-    const result = await generator.generate({
-      userId: 'user-1',
-      imageUrl: 'https://example.com/first.png',
-      prompt: 'bridge the two frames',
-      options: {
-        modelId: COMFYUI_LTX23_WORKFLOW_KEYS.goonFirstLastFrame,
-        generationMode: 'firstlastframe',
-        lastFrameImageUrl: 'https://example.com/last.png',
-        aspectRatio: '16:9',
-      },
-    })
-
-    expect(result.success).toBe(true)
-    expect(runComfyUiVideoWorkflowMock).toHaveBeenCalledWith(expect.objectContaining({
-      workflowKey: COMFYUI_LTX23_WORKFLOW_KEYS.goonFirstLastFrame,
-      width: 1280,
-      height: 736,
     }))
   })
 })

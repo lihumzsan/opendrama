@@ -1,4 +1,4 @@
-请为 Goon 首尾帧视频工作流编写一个连续镜头的转场提示词。
+请为 MiniMax H3 首尾帧视频工作流编写一个连续镜头的转场提示词。
 
 Image 1 是 START，必须作为精确起始画面。
 Image 2 是 END，必须作为精确结束画面。
@@ -10,7 +10,7 @@ END 画面上下文：
 {last_panel_context}
 
 时长：{duration_seconds} 秒，{fps} fps。
-规范工作流：{goon_key}
+规范工作流：{workflow_key}
 
 只返回严格 JSON：
 {"transition_prompt":"...","duration_analysis":{"motion_beats":[{"type":"body_action","order":1,"parallel_group":"optional"}],"pacing":"normal","continuity":"good","confidence":0.8,"reason":"简短中文依据"},"warnings":["..."]}

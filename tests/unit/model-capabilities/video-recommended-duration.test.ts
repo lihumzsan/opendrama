@@ -13,17 +13,17 @@ const h3I2va = 'comfyui::basevideo/minimax-h3/h3-i2va'
 describe('video recommended duration', () => {
   it('prepends a valid card duration and removes duplicates', () => {
     expect(withRecommendedVideoDuration(definitions, {
-      modelKey: kjPromptRelay,
+      modelKey: h3I2va,
       recommendedDuration: 9,
     })[0].options).toEqual([9, 5, 10])
 
     expect(withRecommendedVideoDuration(definitions, {
-      modelKey: kjPromptRelay,
+      modelKey: h3I2va,
       recommendedDuration: 10,
     })[0].options).toEqual([10, 5])
 
     expect(withRecommendedVideoDuration(definitions, {
-      modelKey: kjPromptRelay,
+      modelKey: h3I2va,
       recommendedDuration: 9,
     })[0].options).toEqual([9, 5, 10])
   })
@@ -32,7 +32,7 @@ describe('video recommended duration', () => {
     'preserves current options for invalid recommendation %s',
     (value) => {
       expect(withRecommendedVideoDuration(definitions, {
-        modelKey: kjPromptRelay,
+        modelKey: h3I2va,
         recommendedDuration: value,
       })).toEqual(definitions)
     },
@@ -66,11 +66,12 @@ describe('video recommended duration', () => {
     expect(normalizeRecommendedVideoDuration(0)).toBeNull()
   })
 
-  it('replaces only the default duration selection for PromptRelay', () => {
+  it('does not apply recommended durations to retired PromptRelay', () => {
+    expect(supportsRecommendedVideoDuration(kjPromptRelay)).toBe(false)
     expect(applyRecommendedVideoDurationSelection(
       { duration: 5, motionStrength: 2 },
       { modelKey: kjPromptRelay, recommendedDuration: 9 },
-    )).toEqual({ duration: 9, motionStrength: 2 })
+    )).toEqual({ duration: 5, motionStrength: 2 })
     expect(applyRecommendedVideoDurationSelection(
       { duration: 5, motionStrength: 2 },
       { modelKey: kjPromptRelay, recommendedDuration: undefined },
@@ -78,7 +79,7 @@ describe('video recommended duration', () => {
     expect(applyRecommendedVideoDurationSelection(
       { duration: 4, motionStrength: 1 },
       { modelKey: kjPromptRelay, recommendedDuration: 9 },
-    )).toEqual({ duration: 9, motionStrength: 1 })
+    )).toEqual({ duration: 4, motionStrength: 1 })
   })
 
 })

@@ -78,8 +78,6 @@ describe('api specific - user models audio filter', () => {
       'comfyui::baseaudio/单人/LongCat-one',
     ])
     expect(body.video.map((item) => item.value)).toEqual([
-      'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-      'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
       'comfyui::basevideo/minimax-h3/h3-i2va',
       'comfyui::basevideo/minimax-h3/h3-fl2va',
     ])

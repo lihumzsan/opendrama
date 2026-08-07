@@ -24,7 +24,7 @@ import type { TaskJobData } from '@/lib/task/types'
 import { parseVideoDurationBinding } from '@/lib/video-duration/audio-binding'
 import { reportTaskProgress } from '@/lib/workers/shared'
 import { assertTaskActive } from '@/lib/workers/utils'
-import { COMFYUI_LTX23_GOON_DEFAULT_DURATION_SECONDS } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import { COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS } from '@/lib/providers/comfyui/minimax-h3'
 
 export type GenerateFirstLastFramePromptResult = {
   prompt: string
@@ -220,9 +220,9 @@ export async function handleFirstLastFramePromptTask(
     variables: {
       first_panel_context: panelContext(start.firstPanel as unknown as Record<string, unknown>),
       last_panel_context: panelContext(start.lastPanel as unknown as Record<string, unknown>),
-      duration_seconds: String(COMFYUI_LTX23_GOON_DEFAULT_DURATION_SECONDS),
+      duration_seconds: String(COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS),
       fps: String(timing.fps),
-      goon_key: timing.workflowKey,
+      workflow_key: timing.workflowKey,
     },
   })
   const sourceContext = [

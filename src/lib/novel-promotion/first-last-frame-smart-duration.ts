@@ -1,20 +1,22 @@
 import { sha256Hex } from '@/lib/media/hash'
 import {
-  COMFYUI_LTX23_GOON_DEFAULT_DURATION_SECONDS,
-  COMFYUI_LTX23_GOON_FPS,
-  normalizeLtx23GoonDurationSeconds,
-  resolveLtx23GoonFrameCount,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+  COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS,
+  COMFYUI_MINIMAX_H3_FPS,
+  COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS,
+  COMFYUI_MINIMAX_H3_MIN_DURATION_SECONDS,
+  normalizeMiniMaxH3Request,
+  resolveMiniMaxH3FrameCount,
+} from '@/lib/providers/comfyui/minimax-h3'
 import type { VideoDurationBinding } from '@/lib/video-duration/audio-binding'
 import { FIRST_LAST_FRAME_SMART_DURATION_ALGORITHM_VERSION } from './first-last-frame-smart-duration-constants'
 
 export { FIRST_LAST_FRAME_SMART_DURATION_ALGORITHM_VERSION }
 export const FIRST_LAST_FRAME_SMART_DURATION_CONFIDENCE_THRESHOLD = 0.6
-export const FIRST_LAST_FRAME_SMART_DURATION_MIN_SECONDS = 4
-export const FIRST_LAST_FRAME_SMART_DURATION_MAX_SECONDS = 15
+export const FIRST_LAST_FRAME_SMART_DURATION_MIN_SECONDS = COMFYUI_MINIMAX_H3_MIN_DURATION_SECONDS
+export const FIRST_LAST_FRAME_SMART_DURATION_MAX_SECONDS = COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS
 export const FIRST_LAST_FRAME_SMART_DURATION_DEFAULT_SECONDS =
-  COMFYUI_LTX23_GOON_DEFAULT_DURATION_SECONDS
-export const FIRST_LAST_FRAME_SMART_DURATION_FPS = COMFYUI_LTX23_GOON_FPS
+  COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS
+export const FIRST_LAST_FRAME_SMART_DURATION_FPS = COMFYUI_MINIMAX_H3_FPS
 
 const MAX_MOTION_BEATS = 12
 const MAX_REASON_LENGTH = 80
@@ -171,7 +173,7 @@ function fallbackRecommendation(params: {
   const durationSeconds = FIRST_LAST_FRAME_SMART_DURATION_DEFAULT_SECONDS
   return {
     durationSeconds,
-    frameCount: resolveLtx23GoonFrameCount(durationSeconds),
+    frameCount: resolveMiniMaxH3FrameCount(durationSeconds),
     fps: FIRST_LAST_FRAME_SMART_DURATION_FPS,
     confidence: params.confidence ?? 0,
     reason: params.reason,
@@ -242,11 +244,11 @@ export function computeFirstLastFrameSmartDuration(params: {
     FIRST_LAST_FRAME_SMART_DURATION_MAX_SECONDS,
     Math.max(FIRST_LAST_FRAME_SMART_DURATION_MIN_SECONDS, rounded),
   )
-  const durationSeconds = normalizeLtx23GoonDurationSeconds(clamped)
+  const durationSeconds = normalizeMiniMaxH3Request({ durationSeconds: clamped }).durationSeconds
 
   return {
     durationSeconds,
-    frameCount: resolveLtx23GoonFrameCount(durationSeconds),
+    frameCount: resolveMiniMaxH3FrameCount(durationSeconds),
     fps: FIRST_LAST_FRAME_SMART_DURATION_FPS,
     confidence: analysis.confidence,
     reason: analysis.reason,

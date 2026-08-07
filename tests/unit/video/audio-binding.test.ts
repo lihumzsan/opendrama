@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  COMFYUI_LTX23_DEFAULT_FPS,
-  COMFYUI_LTX23_MAX_DURATION_SECONDS,
+  COMFYUI_VIDEO_DEFAULT_FPS,
+  PRODUCT_VIDEO_MAX_DURATION_SECONDS,
   getVideoTimingProfile,
   normalizeVideoDurationBinding,
   parseVideoDurationBinding,
@@ -74,7 +74,7 @@ describe('video audio duration binding', () => {
         { id: 'line-1', audioDuration: 1200 },
         { id: 'line-2', audioDuration: 2800 },
       ],
-      modelKey: 'comfyui::basevideo/demo/Wan2.2Remix',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
       context: {
         shotType: 'close-up',
         cameraMove: 'slow push-in',
@@ -86,7 +86,7 @@ describe('video audio duration binding', () => {
     expect(timing?.sourceDurationMs).toBe(4000)
     expect(timing?.audioDurationSeconds).toBe(4)
     expect(timing?.targetDurationSeconds).toBe(4)
-    expect(timing?.targetFrameCount).toBe(100)
+    expect(timing?.targetFrameCount).toBe(96)
     expect(timing?.preRollSeconds).toBe(0)
     expect(timing?.postRollSeconds).toBe(0)
     expect(timing?.dialogueStartSeconds).toBe(timing?.preRollSeconds)
@@ -106,7 +106,7 @@ describe('video audio duration binding', () => {
       candidates: [
         { id: 'line-1', audioDuration: 4000 },
       ],
-      modelKey: 'comfyui::basevideo/demo/LTX2.3-fast',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
       context: {
         shotType: 'close-up',
         cameraMove: 'slow push-in',
@@ -117,36 +117,37 @@ describe('video audio duration binding', () => {
     expect(timing).not.toBeNull()
     expect(timing?.audioDurationSeconds).toBe(4)
     expect(timing?.targetDurationSeconds).toBe(6)
-    expect(timing?.targetFrameCount).toBe(150)
+    expect(timing?.targetFrameCount).toBe(144)
     expect(timing?.preRollSeconds).toBeGreaterThan(0)
     expect(timing?.postRollSeconds).toBeGreaterThan(0)
     expect(timing?.canGenerate).toBe(true)
   })
 
-  it('blocks ltx2.3 timing when linked audio exceeds the product max duration', () => {
+  it('blocks timing when linked audio exceeds the product max duration', () => {
     const timing = resolveAudioDrivenVideoTiming({
       binding: {
         mode: 'match_audio',
         voiceLineIds: ['line-1', 'line-2'],
       },
       candidates: [
-        { id: 'line-1', audioDuration: 9000 },
-        { id: 'line-2', audioDuration: 3500 },
+        { id: 'line-1', audioDuration: 12_000 },
+        { id: 'line-2', audioDuration: 4_000 },
       ],
-      modelKey: 'comfyui::basevideo/demo/LTX2.3-fast',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
+      durationOptions: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     })
 
     expect(timing).not.toBeNull()
-    expect(timing?.fps).toBe(COMFYUI_LTX23_DEFAULT_FPS)
-    expect(timing?.maxDurationSeconds).toBe(12)
-    expect(timing?.targetDurationSeconds).toBe(12)
-    expect(timing?.targetFrameCount).toBe(COMFYUI_LTX23_DEFAULT_FPS * COMFYUI_LTX23_MAX_DURATION_SECONDS)
+    expect(timing?.fps).toBe(COMFYUI_VIDEO_DEFAULT_FPS)
+    expect(timing?.maxDurationSeconds).toBe(PRODUCT_VIDEO_MAX_DURATION_SECONDS)
+    expect(timing?.targetDurationSeconds).toBe(PRODUCT_VIDEO_MAX_DURATION_SECONDS)
+    expect(timing?.targetFrameCount).toBe(COMFYUI_VIDEO_DEFAULT_FPS * PRODUCT_VIDEO_MAX_DURATION_SECONDS)
     expect(timing?.capped).toBe(true)
     expect(timing?.canGenerate).toBe(false)
     expect(timing?.blockedReason).toBe('audio_exceeds_max_duration')
   })
 
-  it('uses model duration options before the ltx2.3 fallback max duration', () => {
+  it('uses model duration options before the default max duration', () => {
     const timing = resolveAudioDrivenVideoTiming({
       binding: {
         mode: 'match_audio',
@@ -155,19 +156,19 @@ describe('video audio duration binding', () => {
       candidates: [
         { id: 'line-1', audioDuration: 11_000 },
       ],
-      modelKey: 'comfyui::basevideo/firstlast/ltx2.3-firstlast',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
       durationOptions: [4, 5, 6],
     })
 
     expect(timing?.maxDurationSeconds).toBe(6)
     expect(timing?.targetDurationSeconds).toBe(6)
-    expect(timing?.targetFrameCount).toBe(COMFYUI_LTX23_DEFAULT_FPS * 6)
+    expect(timing?.targetFrameCount).toBe(COMFYUI_VIDEO_DEFAULT_FPS * 6)
     expect(timing?.capped).toBe(true)
     expect(timing?.canGenerate).toBe(false)
     expect(timing?.blockedReason).toBe('audio_exceeds_max_duration')
   })
 
-  it('allows configured 12 second LTX duration options for 11.4 second linked audio', () => {
+  it('allows configured 12 second duration options for 11.4 second linked audio', () => {
     const timing = resolveAudioDrivenVideoTiming({
       binding: {
         mode: 'match_audio',
@@ -176,21 +177,15 @@ describe('video audio duration binding', () => {
       candidates: [
         { id: 'line-1', audioDuration: 11_400 },
       ],
-      modelKey: 'comfyui::basevideo/demo/LTX2.3-fast',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
       durationOptions: [2, 4, 6, 8, 12],
     })
 
     expect(timing?.maxDurationSeconds).toBe(12)
     expect(timing?.targetDurationSeconds).toBe(11.4)
-    expect(timing?.targetFrameCount).toBe(285)
+    expect(timing?.targetFrameCount).toBe(274)
     expect(timing?.canGenerate).toBe(true)
     expect(timing?.blockedReason).toBeUndefined()
-  })
-
-  it('uses ltx23 profile max duration instead of the product 12 second cap', () => {
-    const timing = getVideoTimingProfile('comfyui::basevideo/ltx23-profiles/damaicha-image-to-30s-long-video')
-
-    expect(timing).toEqual({ fps: 25, maxDurationSeconds: 30 })
   })
 
   it('blocks overlong linked audio without advertising an unimplemented split flow', () => {
@@ -207,7 +202,7 @@ describe('video audio duration binding', () => {
           audioDuration: 23_700,
         },
       ],
-      modelKey: 'comfyui::basevideo/demo/LTX2.3-fast',
+      modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
       durationOptions: [4, 5, 6, 8, 10, 12],
     })
 

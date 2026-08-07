@@ -13,7 +13,6 @@ import {
   processRemoteMediaStream,
 } from '@/lib/media-process'
 import { renderStaticCameraMotionVideo } from '@/lib/video/static-camera-motion'
-import { getLtx23WorkflowProfile } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import {
   getProjectModelConfig,
   getUserModelConfig,
@@ -426,7 +425,6 @@ export async function resolveImageSourcesFromGeneration(
 
 function resolveCapabilityValidationDuration(modelId: string, requestedDuration: number): number {
   const durationOptions = resolveBuiltinCapabilitiesByModelKey('video', modelId)?.video?.durationOptions
-    ?? getLtx23WorkflowProfile(modelId)?.durationOptions
   const sortedOptions = Array.isArray(durationOptions)
     ? durationOptions
       .filter((option): option is number => typeof option === 'number' && Number.isFinite(option) && option > 0)

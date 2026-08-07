@@ -1,8 +1,5 @@
 import type { VideoDurationBinding } from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/video'
-import {
-  normalizeRetiredBerniniVideoGenerationOptions,
-  normalizeVideoModelKey,
-} from '@/lib/novel-promotion/video-model-defaults'
+import { normalizeVideoModelKey } from '@/lib/novel-promotion/video-model-defaults'
 
 type VideoGenerationOptionValue = string | number | boolean
 type VideoGenerationOptions = Record<string, VideoGenerationOptionValue>
@@ -66,10 +63,7 @@ export function buildGenerateVideoRequestBody(params: GenerateVideoRequestParams
     requestBody.continuityRelay = params.continuityRelay
   }
   if (params.generationOptions && typeof params.generationOptions === 'object') {
-    requestBody.generationOptions = normalizeRetiredBerniniVideoGenerationOptions(
-      params.videoModel,
-      params.generationOptions,
-    )
+    requestBody.generationOptions = params.generationOptions
   }
   if (params.videoDurationBinding && typeof params.videoDurationBinding === 'object') {
     requestBody.videoDurationBinding = params.videoDurationBinding

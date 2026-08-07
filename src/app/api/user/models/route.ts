@@ -18,12 +18,6 @@ import {
 } from '@/lib/model-config-contract'
 import { findBuiltinCapabilities } from '@/lib/model-capabilities/catalog'
 import { findBuiltinPricingCatalogEntry } from '@/lib/model-pricing/catalog'
-import {
-  isLegacyLtx23SmoothFirstLastFrameModelKey,
-  isLegacyLtx23VideoModelKey,
-} from '@/lib/novel-promotion/video-model-defaults'
-import { isRemovedLegacyLtx23WorkflowKey } from '@/lib/providers/comfyui/ltx23-legacy'
-import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
 import { CODEX_PROVIDER_KEY } from '@/lib/providers/codex/constants'
 import type { VideoPricingTier } from '@/lib/model-pricing/video-tier'
 
@@ -63,20 +57,6 @@ interface UserModelsPayload {
 }
 
 const COMFYUI_AUTO_ENABLED_HELPER_MODELS: StoredModel[] = [
-  {
-    modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-    modelKey: 'comfyui::basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-    name: 'ComfyUI · LTX2.3 Goon First/Last Frame',
-    type: 'video',
-    provider: 'comfyui',
-  },
-  {
-    modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-    modelKey: 'comfyui::basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-    name: 'ComfyUI · LTX2.3 多镜头精准 PromptRelay 720p',
-    type: 'video',
-    provider: 'comfyui',
-  },
   {
     modelId: 'basevideo/minimax-h3/h3-i2va',
     modelKey: 'comfyui::basevideo/minimax-h3/h3-i2va',
@@ -215,17 +195,6 @@ function hasStoredProviderConnection(provider: StoredProvider): boolean {
 function isUserSelectableModel(model: StoredModel): boolean {
   const modelKey = toModelKey(model)
   if (model.type === 'image' && getProviderKey(toProvider(model)) === 'comfyui') {
-    return false
-  }
-  if (
-    model.type === 'video'
-    && (
-      isRemovedLegacyLtx23WorkflowKey(modelKey)
-      || isLegacyLtx23VideoModelKey(modelKey)
-      || isLegacyLtx23SmoothFirstLastFrameModelKey(modelKey)
-      || isRemovedComfyUiVideoModel(modelKey)
-    )
-  ) {
     return false
   }
   if (model.type === 'llm') {

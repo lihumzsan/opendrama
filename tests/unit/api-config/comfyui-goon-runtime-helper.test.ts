@@ -20,7 +20,7 @@ const REMOTE_H3_FIRST_LAST_FRAME_MODEL_KEY = 'comfyui::basevideo/minimax-h3/h3-f
 const SMART_VBVR_MODEL_KEY = 'comfyui::basevideo/ltx23-profiles/t8-smart-vbvr-390k-v2'
 const WAN_REMIX_MODEL_KEY = 'comfyui::basevideo/demo/Wan2.2Remix'
 
-describe('ComfyUI Goon runtime helper model', () => {
+describe('ComfyUI H3 runtime helper models', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     prismaMock.userPreference.findUnique.mockResolvedValue({
@@ -32,28 +32,6 @@ describe('ComfyUI Goon runtime helper model', () => {
           baseUrl: 'http://192.168.1.112:8188',
         },
       ]),
-    })
-  })
-
-  it('resolves the auto-enabled Goon workflow for video execution', async () => {
-    await expect(
-      resolveModelSelection('user-1', GOON_MODEL_KEY, 'video'),
-    ).resolves.toMatchObject({
-      provider: 'comfyui',
-      modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage',
-      modelKey: GOON_MODEL_KEY,
-      mediaType: 'video',
-    })
-  })
-
-  it('resolves the auto-enabled KJ multi-shot workflow for video execution', async () => {
-    await expect(
-      resolveModelSelection('user-1', KJ_MULTISHOT_MODEL_KEY, 'video'),
-    ).resolves.toMatchObject({
-      provider: 'comfyui',
-      modelId: 'basevideo/ltx23-profiles/t8-multishot-precise-promptrelay-kj-720p',
-      modelKey: KJ_MULTISHOT_MODEL_KEY,
-      mediaType: 'video',
     })
   })
 
@@ -69,6 +47,8 @@ describe('ComfyUI Goon runtime helper model', () => {
   })
 
   it.each([
+    GOON_MODEL_KEY,
+    KJ_MULTISHOT_MODEL_KEY,
     H3_FIRST_FRAME_MODEL_KEY,
     H3_FIRST_LAST_FRAME_MODEL_KEY,
     SMART_VBVR_MODEL_KEY,

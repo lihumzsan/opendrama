@@ -26,16 +26,6 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
     pathStem: 'voice-design/fish_audio_s2_voice_design',
     variableKeys: ['speaker_name', 'character_context', 'user_voice_prompt', 'preview_text'],
   },
-  [PROMPT_IDS.LTX23_VIDEO_PROMPT_ENHANCE]: {
-    pathStem: 'video/ltx23_video_prompt_enhance',
-    variableKeys: [
-      'original_prompt',
-      'panel_context',
-      'character_context',
-      'audio_context',
-      'generation_context',
-    ],
-  },
   [PROMPT_IDS.VIDEO_TOOLS_ENVIRONMENT_SOUND_ANALYSIS]: {
     pathStem: 'video-tools/environment_sound_analysis',
     variableKeys: [
@@ -227,7 +217,7 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
       'last_panel_context',
       'duration_seconds',
       'fps',
-      'goon_key',
+      'workflow_key',
     ],
   },
 }

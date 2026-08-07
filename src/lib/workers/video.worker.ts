@@ -31,11 +31,6 @@ import {
   type VideoDurationBinding,
 } from '@/lib/video-duration/audio-binding'
 import {
-  enhanceLtx23VideoPrompt,
-  isLtx23VideoModel,
-  type Ltx23PromptEnhancementVoiceLine,
-} from '@/lib/video-duration/ltx23-prompt-enhance'
-import {
   buildDefaultFirstLastFramePrompt,
   buildPanelContinuityPacket,
   isStructuredMultiShotPrompt,
@@ -43,20 +38,7 @@ import {
   renderPanelContinuityPrompt,
   type PanelContinuityPacket,
 } from '@/lib/novel-promotion/panel-continuity'
-import {
-  isRetiredBerniniVideoModelKey,
-  normalizeRetiredBerniniVideoGenerationOptions,
-  normalizeVideoModelKey,
-} from '@/lib/novel-promotion/video-model-defaults'
-import {
-  COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
-  COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
-  COMFYUI_LTX23_WORKFLOW_KEYS,
-  getLtx23WorkflowProfile,
-  normalizeLtx23GoonDurationSeconds,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
-import { resolveLtx23WorkflowRoute } from '@/lib/providers/comfyui/ltx23-workflow-router'
-import { isRemovedComfyUiVideoModel } from '@/lib/providers/comfyui/removed-video-models'
+import { normalizeVideoModelKey } from '@/lib/novel-promotion/video-model-defaults'
 import {
   getMiniMaxH3ModeForWorkflow,
   normalizeMiniMaxH3Request,
@@ -73,9 +55,13 @@ type VideoOptionMap = Record<string, VideoOptionValue>
 type VideoGenerationMode = 'normal' | 'firstlastframe'
 type WorkflowVideoGenerationMode = 'normal' | 'firstlastframe'
 
-const DEFAULT_LEGACY_LTX23_SINGLE_SHOT_DURATION_SECONDS = 2
-const DEFAULT_LEGACY_LTX23_SINGLE_SHOT_FPS = 24
-const RETIRED_BERNINI_MIGRATION_MODEL_KEY = `comfyui::${COMFYUI_LTX23_WORKFLOW_KEYS.multiShotPromptRelayKj}`
+type VideoPromptVoiceLine = {
+  id: string
+  speaker: string
+  content: string
+  audioDuration?: number | null
+  audioUrl?: string | null
+}
 
 function readNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null
@@ -86,17 +72,7 @@ function readNonEmptyString(value: unknown): string | null {
 function normalizeWorkerVideoModelKey(raw: string | null | undefined): string {
   const trimmed = typeof raw === 'string' ? raw.trim().replace(/\\/g, '/') : ''
   if (!trimmed) return ''
-  if (isRemovedComfyUiVideoModel(trimmed)) {
-    throw new Error(`COMFYUI_VIDEO_MODEL_REMOVED: ${trimmed}`)
-  }
-  const normalized = normalizeVideoModelKey(trimmed)
-  if (
-    normalized === COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY
-    || normalized === COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID
-  ) {
-    return normalized
-  }
-  return isRetiredBerniniVideoModelKey(trimmed) ? RETIRED_BERNINI_MIGRATION_MODEL_KEY : trimmed
+  return normalizeVideoModelKey(trimmed)
 }
 
 function readPositiveFiniteNumber(value: unknown): number | null {
@@ -126,17 +102,6 @@ async function persistMiniMaxH3PromptOnJob(
 
 function readBooleanFlag(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null
-}
-
-function readSerializedLtx23RoutingDurationSeconds(payload: AnyObj, modelId: string): number | null {
-  const routing = payload.ltx23WorkflowRouting
-  if (!routing || typeof routing !== 'object' || Array.isArray(routing)) return null
-
-  const routeRecord = routing as AnyObj
-  const selectedModelKey = readNonEmptyString(routeRecord.selectedModelKey)
-  if (selectedModelKey && selectedModelKey !== modelId) return null
-
-  return readPositiveFiniteNumber(routeRecord.durationSeconds)
 }
 
 async function fetchPanelById(panelId: string) {
@@ -178,42 +143,6 @@ function extractGenerationOptions(payload: AnyObj): VideoOptionMap {
     }
   }
   return next
-}
-
-function withLtx23ProfileTiming(
-  options: VideoOptionMap,
-  params: {
-    modelId: string
-    generationMode: WorkflowVideoGenerationMode
-  },
-): VideoOptionMap {
-  const profile = getLtx23WorkflowProfile(params.modelId)
-  if (!profile && (params.generationMode !== 'normal' || !isLtx23VideoModel(params.modelId))) {
-    return options
-  }
-
-  const next: VideoOptionMap = { ...options }
-  if (typeof next.duration !== 'number' || !Number.isFinite(next.duration) || next.duration <= 0) {
-    next.duration = profile?.defaultDurationSeconds ?? DEFAULT_LEGACY_LTX23_SINGLE_SHOT_DURATION_SECONDS
-  }
-  if (typeof next.fps !== 'number' || !Number.isFinite(next.fps) || next.fps <= 0) {
-    next.fps = profile?.fps ?? DEFAULT_LEGACY_LTX23_SINGLE_SHOT_FPS
-  }
-  return next
-}
-
-function withVideoWorkflowTimingDefaults(
-  options: VideoOptionMap,
-  params: {
-    modelId: string
-    generationMode: WorkflowVideoGenerationMode
-  },
-): VideoOptionMap {
-  return withLtx23ProfileTiming(options, params)
-}
-
-function allowsCustomVideoWorkflowDuration(modelId: string, hasExactTimingOverride: boolean): boolean {
-  return hasExactTimingOverride && isLtx23VideoModel(modelId)
 }
 
 function throwBlockedAudioTiming(timing: ResolvedAudioDrivenVideoTiming): never {
@@ -345,7 +274,7 @@ function resolveFirstLastFrameTargetDurationBinding(
   if (payloadBinding && payloadTargetDurationSeconds !== null) {
     return {
       ...payloadBinding,
-      targetDurationSeconds: normalizeLtx23GoonDurationSeconds(payloadTargetDurationSeconds),
+      targetDurationSeconds: Number(payloadTargetDurationSeconds.toFixed(2)),
     }
   }
 
@@ -354,7 +283,7 @@ function resolveFirstLastFrameTargetDurationBinding(
   if (savedTargetDurationSeconds !== null) {
     return {
       ...savedBinding,
-      targetDurationSeconds: normalizeLtx23GoonDurationSeconds(savedTargetDurationSeconds),
+      targetDurationSeconds: Number(savedTargetDurationSeconds.toFixed(2)),
     }
   }
 
@@ -364,7 +293,7 @@ function resolveFirstLastFrameTargetDurationBinding(
 async function loadAudioDrivenVoiceLines(
   panel: PanelRecord,
   binding: VideoDurationBinding,
-): Promise<Ltx23PromptEnhancementVoiceLine[]> {
+): Promise<VideoPromptVoiceLine[]> {
   if (binding.mode !== 'match_audio') return []
 
   const selectedVoiceLineIds = Array.isArray(binding.voiceLineIds) ? binding.voiceLineIds : []
@@ -388,7 +317,7 @@ async function loadAudioDrivenVoiceLines(
   return voiceLines.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0))
 }
 
-function resolveReferenceAudioUrls(voiceLines: Ltx23PromptEnhancementVoiceLine[]): string[] {
+function resolveReferenceAudioUrls(voiceLines: VideoPromptVoiceLine[]): string[] {
   const urls: string[] = []
   const seen = new Set<string>()
   for (const line of voiceLines) {
@@ -408,7 +337,7 @@ async function resolveAudioDrivenDurationOverride(
   panel: PanelRecord,
   binding: VideoDurationBinding,
   modelId: string,
-  voiceLines?: Ltx23PromptEnhancementVoiceLine[],
+  voiceLines?: VideoPromptVoiceLine[],
 ): Promise<ResolvedAudioDrivenVideoTiming | null> {
   if (binding.mode !== 'match_audio') return null
 
@@ -440,43 +369,10 @@ async function resolveAudioDrivenDurationOverride(
   return timing
 }
 
-function sumVoiceLineDurationSeconds(voiceLines: Ltx23PromptEnhancementVoiceLine[]): number | null {
-  const totalMs = voiceLines.reduce((sum, line) => {
-    const duration = line.audioDuration
-    return typeof duration === 'number' && Number.isFinite(duration) && duration > 0
-      ? sum + duration
-      : sum
-  }, 0)
-  return totalMs > 0 ? Number((totalMs / 1000).toFixed(2)) : null
-}
-
-function promoteRequestedDurationToAudioTarget(
-  binding: VideoDurationBinding,
-  requestedDurationSeconds: number | null,
-  audioDurationSeconds: number | null,
-  modelKey: string,
-): VideoDurationBinding {
-  if (!isLtx23VideoModel(modelKey) || binding.mode !== 'match_audio' || requestedDurationSeconds === null) return binding
-
-  const currentTarget = readPositiveFiniteNumber(binding.targetDurationSeconds)
-  if (currentTarget !== null && (audioDurationSeconds === null || currentTarget + 0.001 >= audioDurationSeconds)) {
-    return binding
-  }
-
-  if (audioDurationSeconds !== null && requestedDurationSeconds + 0.001 < audioDurationSeconds) {
-    return binding
-  }
-
-  return {
-    ...binding,
-    targetDurationSeconds: Number(requestedDurationSeconds.toFixed(2)),
-  }
-}
-
 async function assembleVideoContinuityPacket(params: {
   panel: PanelRecord
   nextPanel?: Awaited<ReturnType<typeof fetchContinuityNeighborPanel>> | null
-  linkedVoiceLines: Ltx23PromptEnhancementVoiceLine[]
+  linkedVoiceLines: VideoPromptVoiceLine[]
   durationSeconds?: number | null
   includeDialogueText?: boolean
 }): Promise<PanelContinuityPacket> {
@@ -509,7 +405,6 @@ async function generateVideoForPanel(
   payload: AnyObj,
   modelId: string,
   projectVideoRatio: string | null | undefined,
-  projectArtStyle: string | null | undefined,
   projectAnalysisModel: string | null | undefined,
   generationOptions: VideoOptionMap,
 ): Promise<{
@@ -614,49 +509,7 @@ async function generateVideoForPanel(
   let durationBinding = firstLastTargetDurationBinding
     || await resolveEffectiveVideoDurationBinding(panel, payload)
   const linkedVoiceLines = await loadAudioDrivenVoiceLines(panel, durationBinding)
-  const linkedAudioDurationSeconds = sumVoiceLineDurationSeconds(linkedVoiceLines)
-  const requestedGenerationDurationSeconds = typeof generationOptions.duration === 'number'
-    ? readPositiveFiniteNumber(generationOptions.duration)
-    : null
-  durationBinding = promoteRequestedDurationToAudioTarget(
-    durationBinding,
-    requestedGenerationDurationSeconds,
-    linkedAudioDurationSeconds,
-    model,
-  )
   const referenceAudioUrls = resolveReferenceAudioUrls(linkedVoiceLines)
-  let routedGenerationOptions = generationOptions
-  const serializedRouteDurationSeconds = readSerializedLtx23RoutingDurationSeconds(payload, model)
-  const firstLastFrameTargetDurationSeconds = firstLastFramePayload
-    ? readPositiveFiniteNumber(durationBinding.targetDurationSeconds)
-    : null
-  const workflowRoute = resolveLtx23WorkflowRoute({
-    modelKey: model,
-    selectionMode: payload.ltx23WorkflowSelection,
-    generationMode,
-    requestedDurationSeconds: firstLastFrameTargetDurationSeconds
-      ?? serializedRouteDurationSeconds
-      ?? (typeof generationOptions.duration === 'number' ? generationOptions.duration : null),
-    targetDurationSeconds: firstLastFrameTargetDurationSeconds
-      ?? readPositiveFiniteNumber(durationBinding.targetDurationSeconds),
-    audioDurationSeconds: linkedAudioDurationSeconds,
-    panel: {
-      videoPrompt: basePrompt,
-      description: panel.description,
-      shotType: panel.shotType,
-      cameraMove: panel.cameraMove,
-      sceneType: panel.sceneType,
-      srtSegment: panel.srtSegment,
-      clipContent: panel.storyboard.clip?.content ?? null,
-    },
-  })
-  if (workflowRoute) {
-    model = workflowRoute.selectedModelKey
-    routedGenerationOptions = {
-      ...routedGenerationOptions,
-      duration: workflowRoute.durationSeconds,
-    }
-  }
 
   if (firstLastFramePayload) {
     const firstLastFrameCapabilities = resolveBuiltinCapabilitiesByModelKey('video', model)
@@ -673,18 +526,13 @@ async function generateVideoForPanel(
   if (h3Mode && ((h3Mode === 'i2va' && generationMode !== 'normal') || (h3Mode === 'fl2va' && generationMode !== 'firstlastframe'))) {
     throw new Error(`COMFYUI_MINIMAX_H3_GENERATION_MODE_INVALID: ${model} does not match ${generationMode}`)
   }
-  const shouldKeepDialogueAudioOnly = referenceAudioUrls.length > 0
-    && isLtx23VideoModel(model)
-  let effectiveGenerationOptions = withVideoWorkflowTimingDefaults({
-    ...routedGenerationOptions,
+  let effectiveGenerationOptions = {
+    ...generationOptions,
     ...(audioDrivenDuration ? {
       duration: audioDrivenDuration.targetDurationSeconds,
       fps: audioDrivenDuration.fps,
     } : {}),
-  }, {
-    modelId: model,
-    generationMode,
-  })
+  }
   const normalizedH3Request = h3Mode
     ? normalizeMiniMaxH3Request({
         durationSeconds: effectiveGenerationOptions.duration,
@@ -705,7 +553,7 @@ async function generateVideoForPanel(
     durationSeconds: typeof effectiveGenerationOptions.duration === 'number'
       ? effectiveGenerationOptions.duration
       : null,
-    includeDialogueText: !shouldKeepDialogueAudioOnly && !h3Mode,
+    includeDialogueText: !h3Mode,
   })
   const continuityPrompt = renderPanelContinuityPrompt({
     packet: continuityPacket,
@@ -713,9 +561,6 @@ async function generateVideoForPanel(
     generationMode,
     userEdited: promptEditedByUser,
   })
-  const isGoonFirstLastFrame = Boolean(
-    firstLastFramePayload && model === COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_MODEL_KEY,
-  )
   const effectivePrompt = h3Mode && normalizedH3Request
     ? await (async () => {
         const plannerInput: MiniMaxH3PromptPlanInput = {
@@ -738,48 +583,13 @@ async function generateVideoForPanel(
         await persistMiniMaxH3PromptOnJob(job, payload, plan)
         return plan.prompt
       })()
-    : isGoonFirstLastFrame
-    ? basePrompt
-    : isLtx23VideoModel(model)
-    ? (
-        await enhanceLtx23VideoPrompt({
-          userId: job.data.userId,
-          locale: job.data.locale,
-          projectId: job.data.projectId,
-          modelKey: model,
-          originalPrompt: continuityPrompt,
-          panel: {
-            panelIndex: panel.panelIndex,
-            shotType: panel.shotType,
-            cameraMove: panel.cameraMove,
-            description: panel.description,
-            location: panel.location,
-            characters: panel.characters,
-            props: panel.props,
-            srtSegment: shouldKeepDialogueAudioOnly ? null : panel.srtSegment,
-            sceneType: panel.sceneType,
-            clipContent: panel.storyboard.clip?.content ?? null,
-          },
-          linkedVoiceLines,
-          durationSeconds: typeof effectiveGenerationOptions.duration === 'number' ? effectiveGenerationOptions.duration : null,
-          fps: typeof effectiveGenerationOptions.fps === 'number' ? effectiveGenerationOptions.fps : null,
-          motionStrength: typeof effectiveGenerationOptions.motionStrength === 'number'
-            ? effectiveGenerationOptions.motionStrength
-            : null,
-          audioTiming: audioDrivenDuration,
-          generationMode,
-          artStyle: projectArtStyle,
-          userEdited: promptEditedByUser,
-          continuity: continuityPacket,
-        })
-      ).prompt
     : continuityPrompt
 
   const generatedVideo = await resolveVideoSourceFromGeneration(job, {
     userId: job.data.userId,
     modelId: model,
     imageUrl: sourceImageBase64,
-    allowCustomDuration: allowsCustomVideoWorkflowDuration(model, Boolean(audioDrivenDuration || workflowRoute)),
+    allowCustomDuration: false,
     options: {
       prompt: effectivePrompt,
       ...(projectVideoRatio ? { aspectRatio: projectVideoRatio } : {}),
@@ -840,10 +650,7 @@ async function handleVideoPanelTask(job: Job<TaskJobData>) {
 
   const panel = await getPanelForVideoTask(job)
 
-  const generationOptions = normalizeRetiredBerniniVideoGenerationOptions(
-    rawModelId,
-    extractGenerationOptions(payload),
-  )
+  const generationOptions = extractGenerationOptions(payload)
 
   await reportTaskProgress(job, 10, {
     stage: 'generate_panel_video',
@@ -862,7 +669,6 @@ async function handleVideoPanelTask(job: Job<TaskJobData>) {
     payload,
     modelId,
     projectModels.videoRatio,
-    projectModels.artStyle,
     projectModels.analysisModel,
     generationOptions,
   )

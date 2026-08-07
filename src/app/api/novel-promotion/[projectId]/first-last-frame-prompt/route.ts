@@ -9,9 +9,9 @@ import {
   type FirstLastFramePromptReason,
 } from '@/lib/novel-promotion/first-last-frame-prompt'
 import {
-  COMFYUI_LTX23_GOON_FPS,
-  resolveLtx23GoonFrameCount,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+  COMFYUI_MINIMAX_H3_FPS,
+  resolveMiniMaxH3FrameCount,
+} from '@/lib/providers/comfyui/minimax-h3'
 import { TASK_TYPE } from '@/lib/task/types'
 import { parseVideoDurationBinding } from '@/lib/video-duration/audio-binding'
 
@@ -25,8 +25,8 @@ function buildPersistedSmartDurationResponse(
   if (binding.durationSource !== 'smart' || typeof binding.targetDurationSeconds !== 'number') return undefined
   return {
     durationSeconds: binding.targetDurationSeconds,
-    frameCount: resolveLtx23GoonFrameCount(binding.targetDurationSeconds),
-    fps: COMFYUI_LTX23_GOON_FPS,
+    frameCount: resolveMiniMaxH3FrameCount(binding.targetDurationSeconds),
+    fps: COMFYUI_MINIMAX_H3_FPS,
     confidence: binding.recommendationConfidence ?? 0,
     reason: binding.recommendationReason || '智能推荐时长',
     fingerprint: binding.recommendationFingerprint || fallbackFingerprint,

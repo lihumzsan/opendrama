@@ -3,9 +3,10 @@ import {
   type FirstLastFrameFingerprintPanel,
 } from '@/lib/novel-promotion/first-last-frame-prompt-fingerprint'
 import {
-  COMFYUI_LTX23_GOON_DURATION_OPTIONS,
-  normalizeLtx23GoonDurationSeconds,
-} from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+  COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS,
+  COMFYUI_MINIMAX_H3_MIN_DURATION_SECONDS,
+  normalizeMiniMaxH3Request,
+} from '@/lib/providers/comfyui/minimax-h3'
 import { normalizeVideoDurationBinding, type VideoDurationBinding } from '@/lib/video-duration/audio-binding'
 
 export type FirstLastFramePromptEntry = {
@@ -131,14 +132,29 @@ export function canStartPromptOperation(entry?: Pick<FirstLastFramePromptEntry, 
   return !entry || entry.status === 'idle' || entry.status === 'error'
 }
 
-const GOON_DURATIONS = new Set<number>(COMFYUI_LTX23_GOON_DURATION_OPTIONS)
+const H3_FIRST_LAST_FRAME_DURATIONS = new Set<number>(
+  Array.from(
+    {
+      length: COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS - COMFYUI_MINIMAX_H3_MIN_DURATION_SECONDS + 1,
+    },
+    (_, index) => COMFYUI_MINIMAX_H3_MIN_DURATION_SECONDS + index,
+  ),
+)
+
+function normalizeH3FirstLastFrameDurationSeconds(value: number): number | null {
+  try {
+    return normalizeMiniMaxH3Request({ durationSeconds: value }).durationSeconds
+  } catch {
+    return null
+  }
+}
 
 function readSmartRecommendedDuration(binding: VideoDurationBinding): number | null {
   const candidate = binding.durationSource === 'smart'
     ? binding.targetDurationSeconds
     : binding.recommendedDurationSeconds
   if (typeof candidate !== 'number') return null
-  const normalized = normalizeLtx23GoonDurationSeconds(candidate)
+  const normalized = normalizeH3FirstLastFrameDurationSeconds(candidate)
   return normalized === candidate ? normalized : null
 }
 
@@ -171,7 +187,7 @@ export function resolveFirstLastFrameDurationSelection(
 ) {
   if (field !== 'duration') return null
   const duration = Number(rawValue)
-  if (!GOON_DURATIONS.has(duration)) return null
+  if (!H3_FIRST_LAST_FRAME_DURATIONS.has(duration)) return null
   return {
     binding: withPreservedSmartRecommendation({
       mode: 'manual' as const,
@@ -257,10 +273,10 @@ export function resolveFirstLastFrameDurationStatus(params: {
   const binding = normalizeVideoDurationBinding(params.binding)
   const selectedDuration = typeof params.durationSeconds === 'number'
     && Number.isFinite(params.durationSeconds)
-    ? normalizeLtx23GoonDurationSeconds(params.durationSeconds)
+    ? normalizeH3FirstLastFrameDurationSeconds(params.durationSeconds)
     : null
   const bindingDuration = typeof binding.targetDurationSeconds === 'number'
-    ? normalizeLtx23GoonDurationSeconds(binding.targetDurationSeconds)
+    ? normalizeH3FirstLastFrameDurationSeconds(binding.targetDurationSeconds)
     : null
   const durationSeconds = selectedDuration ?? bindingDuration
   if (durationSeconds === null) return null
@@ -294,13 +310,13 @@ export function resolveFirstLastFrameDurationStatus(params: {
 
 function readPersistedTargetDuration(value: VideoDurationBinding | number | null | undefined): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
-    const normalized = normalizeLtx23GoonDurationSeconds(value)
+    const normalized = normalizeH3FirstLastFrameDurationSeconds(value)
     return normalized === value ? normalized : null
   }
   if (!value || typeof value !== 'object') return null
   const binding = normalizeVideoDurationBinding(value)
   if (typeof binding.targetDurationSeconds !== 'number') return null
-  const normalized = normalizeLtx23GoonDurationSeconds(binding.targetDurationSeconds)
+  const normalized = normalizeH3FirstLastFrameDurationSeconds(binding.targetDurationSeconds)
   return normalized === binding.targetDurationSeconds ? normalized : null
 }
 

@@ -15,8 +15,6 @@ import {
   type ComfyUiWorkflowGraph,
   type ComfyUiWorkflowLlmApiInject,
 } from './workflow-registry'
-import { COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID } from './ltx23-workflow-profiles'
-import { isRemovedComfyUiVideoModel } from './removed-video-models'
 import {
   getMiniMaxH3ModeForWorkflow,
   normalizeMiniMaxH3Request,
@@ -1169,9 +1167,6 @@ export async function runComfyUiVideoWorkflow(params: {
 }): Promise<{ videoUrl: string; mimeType: string; contentLength?: number }> {
   const base = normalizeComfyBaseUrl(params.baseUrl)
   const workflowKey = params.workflowKey?.trim() || COMFYUI_DEFAULT_VIDEO_WORKFLOW_ID
-  if (isRemovedComfyUiVideoModel(workflowKey)) {
-    throw new Error(`COMFYUI_VIDEO_MODEL_REMOVED: ${workflowKey}`)
-  }
   const h3Mode = getMiniMaxH3ModeForWorkflow(workflowKey)
   const referenceImageUrls = (params.referenceImageUrls || [])
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
@@ -1276,49 +1271,8 @@ export async function runComfyUiVideoSeamMotionBridgeWorkflow(params: {
   fps: number
   durationSeconds: number
 }): Promise<{ videoUrl: string; mimeType: string; contentLength?: number }> {
-  const base = normalizeComfyBaseUrl(params.baseUrl)
-  const conditioningClassType = 'LTXVImgToVideoInplaceKJ'
-  const objectInfo = await fetchComfyUiObjectInfo(base, conditioningClassType)
-  if (!supportsComfyUiNumericInputValue(objectInfo, conditioningClassType, 'num_images', 4)) {
-    throw new Error('VIDEO_SEAM_FOUR_ANCHOR_UNSUPPORTED')
-  }
-
-  const imageFilenames = await uploadComfyUiImages(base, params.anchorImageUrls)
-  const workflow = resolveComfyUiWorkflow(
-    COMFYUI_LTX23_GOON_FIRST_LAST_FRAME_WORKFLOW_ID,
-    {
-      prompt: params.prompt,
-      imageFilenames,
-      width: params.width,
-      height: params.height,
-      fps: params.fps,
-      durationSeconds: params.durationSeconds,
-      videoSeamMotionAnchors: { frameIndices: params.generatedAnchorIndices },
-    },
-  )
-
-  for (const nodeId of ['265', '275']) {
-    const inputs = workflow[nodeId]?.inputs
-    const hasExpectedAnchors = inputs?.num_images === '4'
-      && params.generatedAnchorIndices.every(
-        (frameIndex, index) => inputs[`num_images.index_${index + 1}`] === frameIndex,
-      )
-    if (!hasExpectedAnchors) {
-      throw new Error('COMFYUI_VIDEO_SEAM_FOUR_ANCHOR_CONTRACT_INVALID')
-    }
-  }
-
-  const output = await runComfyUiWorkflow({
-    baseUrl: base,
-    workflow,
-    expect: 'video',
-    returnViewUrl: true,
-  })
-  return {
-    videoUrl: output.viewUrl,
-    mimeType: output.mimeType,
-    ...(output.contentLength === undefined ? {} : { contentLength: output.contentLength }),
-  }
+  void params
+  throw new Error('VIDEO_SEAM_AI_BRIDGE_REMOVED')
 }
 
 export async function runComfyUiVideoSeamConcatWorkflow(params: {

@@ -1,4 +1,8 @@
-import { getLtx23WorkflowProfile } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
+import {
+  COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS,
+  COMFYUI_MINIMAX_H3_FPS,
+  COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS,
+} from '@/lib/providers/comfyui/minimax-h3'
 
 export type VideoDurationMode = 'manual' | 'match_audio'
 export type VideoDurationSource = 'smart' | 'manual'
@@ -57,9 +61,8 @@ export type ResolvedAudioDrivenVideoTiming = {
   blockedReason?: 'audio_exceeds_max_duration' | 'target_exceeds_max_duration'
 }
 
-export const COMFYUI_LTX23_DEFAULT_FPS = 25
-export const PRODUCT_VIDEO_MAX_DURATION_SECONDS = 12
-export const COMFYUI_LTX23_MAX_DURATION_SECONDS = PRODUCT_VIDEO_MAX_DURATION_SECONDS
+export const COMFYUI_VIDEO_DEFAULT_FPS = COMFYUI_MINIMAX_H3_FPS
+export const PRODUCT_VIDEO_MAX_DURATION_SECONDS = COMFYUI_MINIMAX_H3_MAX_DURATION_SECONDS
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -157,31 +160,16 @@ export function getVideoTimingProfile(
   durationOptions?: readonly number[] | null,
   fpsOptions?: readonly number[] | null,
 ): VideoTimingProfile {
-  const workflowProfile = getLtx23WorkflowProfile(modelKey)
-  if (workflowProfile) {
-    return {
-      fps: workflowProfile.fps,
-      maxDurationSeconds: workflowProfile.maxDurationSeconds,
-    }
-  }
-
-  const normalized = typeof modelKey === 'string' ? modelKey.trim().toLowerCase() : ''
+  void modelKey
   const configuredDurations = normalizeDurationOptions(durationOptions)
   const configuredMaxDuration = configuredDurations.length > 0
     ? configuredDurations[configuredDurations.length - 1]
     : null
-  const configuredFps = normalizeFpsOptions(fpsOptions)[0] ?? COMFYUI_LTX23_DEFAULT_FPS
-
-  if (normalized.includes('ltx2.3') || normalized.includes('ltx-2.3') || normalized.includes('/ltx')) {
-    return {
-      fps: configuredFps,
-      maxDurationSeconds: clampToProductMaxDuration(configuredMaxDuration ?? COMFYUI_LTX23_MAX_DURATION_SECONDS),
-    }
-  }
+  const configuredFps = normalizeFpsOptions(fpsOptions)[0] ?? COMFYUI_VIDEO_DEFAULT_FPS
 
   return {
     fps: configuredFps,
-    maxDurationSeconds: clampToProductMaxDuration(configuredMaxDuration),
+    maxDurationSeconds: clampToProductMaxDuration(configuredMaxDuration ?? COMFYUI_MINIMAX_H3_DEFAULT_DURATION_SECONDS),
   }
 }
 

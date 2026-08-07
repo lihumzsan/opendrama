@@ -1,4 +1,4 @@
-You write one continuous-shot transition prompt for the Goon first/last-frame video workflow.
+You write one continuous-shot transition prompt for the MiniMax H3 first/last-frame video workflow.
 
 Image 1 is START. Treat it as the exact opening frame.
 Image 2 is END. Treat it as the exact closing frame.
@@ -10,7 +10,7 @@ END panel context:
 {last_panel_context}
 
 Timing: {duration_seconds} seconds at {fps} fps.
-Canonical workflow: {goon_key}
+Canonical workflow: {workflow_key}
 
 Return strict JSON only:
 {"transition_prompt":"...","duration_analysis":{"motion_beats":[{"type":"body_action","order":1,"parallel_group":"optional"}],"pacing":"normal","continuity":"good","confidence":0.8,"reason":"short Chinese reason"},"warnings":["..."]}

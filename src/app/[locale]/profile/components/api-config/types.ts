@@ -114,7 +114,6 @@ export const PRESET_MODELS: PresetModel[] = [
     { modelId: 'imagen-4.0-ultra-generate-001', name: 'Imagen 4 Ultra', type: 'image', provider: 'google' },
     { modelId: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', type: 'image', provider: 'google' },
     // 视频模型
-    { modelId: 'basevideo/ltx23-profiles/goon-first-last-frame-2stage', name: 'ComfyUI · LTX2.3 Goon First/Last Frame', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/minimax-h3/h3-i2va', name: 'ComfyUI · MiniMax H3 Image to Video with Audio', type: 'video', provider: 'comfyui' },
     { modelId: 'basevideo/minimax-h3/h3-fl2va', name: 'ComfyUI · MiniMax H3 First/Last Frame with Audio', type: 'video', provider: 'comfyui' },
     // 音频模型

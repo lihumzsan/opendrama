@@ -1,6 +1,5 @@
 import type { CapabilityValue } from '@/lib/model-config-contract'
 import type { EffectiveVideoCapabilityDefinition } from '@/lib/model-capabilities/video-effective'
-import { isComfyUiLtx23KjPromptRelayWorkflow } from '@/lib/providers/comfyui/ltx23-workflow-profiles'
 import {
   normalizeStoryboardPanelDuration,
   resolveStoryboardDurationPolicy,
@@ -18,8 +17,7 @@ export function normalizeRecommendedVideoDuration(value: unknown): number | null
 }
 
 export function supportsRecommendedVideoDuration(modelKey: string): boolean {
-  return isComfyUiLtx23KjPromptRelayWorkflow(modelKey)
-    || resolveStoryboardDurationPolicy(modelKey) !== null
+  return resolveStoryboardDurationPolicy(modelKey) !== null
 }
 
 function resolveModelRecommendedDuration(input: RecommendedVideoDurationInput): number | null {
