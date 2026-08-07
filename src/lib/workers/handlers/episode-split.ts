@@ -13,6 +13,7 @@ import {
   classifyEpisodeSource,
   estimateEpisodeRuntimeMinutes,
   normalizeNarrativeScenes,
+  repairSemanticEpisodePlanCoverage,
   type NarrativeScene,
 } from '@/lib/novel-promotion/semantic-episode-split'
 import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from './llm-stream'
@@ -45,7 +46,7 @@ function buildExistingEpisodeContext(episodes: ExistingEpisodeForContext[]) {
     const summary = compactText(episode.description || episode.novelText, 120)
     return `- #${episode.episodeNumber} ${title}${summary ? `: ${summary}` : ''}`
   })
-  return `已有 ${episodes.length} 集；本次输入是追加内容，应延续节奏和风格，不改写已有剧集。\n${lines.join('\n')}`
+  return `已有 ${episodes.length} 集；已有剧集仅用于延续节奏、角色和设定。本次场景卡是必须完整覆盖的素材，即使与已有剧集内容相似也不得跳过任何场景。\n${lines.join('\n')}`
 }
 
 function serializeUnits(units: ReturnType<typeof buildEpisodeSourceUnits>) {
@@ -246,8 +247,28 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
       const parsedPlan = safeParseJsonObject(completion.text)
       previousPlan = parsedPlan
 
+      let result: ReturnType<typeof assembleSemanticEpisodes>
       try {
-        const result = assembleSemanticEpisodes(content, scenes, parsedPlan)
+        result = assembleSemanticEpisodes(content, scenes, parsedPlan)
+      } catch (error) {
+        lastValidationError = error instanceof Error ? error : new Error(String(error))
+        if (attempt === 1) {
+          await reportTaskProgress(job, 84, {
+            stage: 'episode_split_plan_repair',
+            stageLabel: `修复分集边界：${lastValidationError.message}`,
+            displayMode: 'detail',
+          })
+          continue
+        }
+        if (!lastValidationError.message.startsWith('scene coverage gap')) throw lastValidationError
+        result = assembleSemanticEpisodes(
+          content,
+          scenes,
+          repairSemanticEpisodePlanCoverage(scenes, parsedPlan),
+        )
+      }
+
+      try {
         const nextEpisodeNumber = (existingEpisodes.at(-1)?.episodeNumber || 0) + 1
         const episodes = result.episodes.map((episode, index) => ({
           ...episode,

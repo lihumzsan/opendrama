@@ -212,7 +212,7 @@ describe('semantic episode split worker', () => {
     expect(repairCall.messages[0]?.content).toContain('错误方案')
   })
 
-  it('does not retry an invalid repaired plan indefinitely', async () => {
+  it('repairs a repeated plan that skips the opening scene', async () => {
     const invalidPlan = {
       profile: 'horizontal_motion_comic',
       episodes: [{
@@ -227,8 +227,10 @@ describe('semantic episode split worker', () => {
       .mockResolvedValueOnce({ text: JSON.stringify(invalidPlan) })
       .mockResolvedValueOnce({ text: JSON.stringify(invalidPlan) })
 
-    await expect(handleEpisodeSplitTask(buildJob(longSourceContent())))
-      .rejects.toThrow('scene coverage gap')
+    const result = await handleEpisodeSplitTask(buildJob(longSourceContent()))
+
+    expect(result.success).toBe(true)
+    expect(result.episodes[0]?.content).toBe(longSourceContent())
     expect(aiRuntimeMock.executeAiTextStep).toHaveBeenCalledTimes(3)
     expect(flushMock).toHaveBeenCalledTimes(1)
   })

@@ -7,6 +7,7 @@ import {
   classifyEpisodeSource,
   estimateEpisodeRuntimeMinutes,
   normalizeNarrativeScenes,
+  repairSemanticEpisodePlanCoverage,
 } from '@/lib/novel-promotion/semantic-episode-split'
 
 describe('semantic episode source parsing', () => {
@@ -189,6 +190,30 @@ describe('semantic episode plan assembly', () => {
         },
       ],
     })).toThrow('scene coverage gap')
+  })
+
+  it('repairs a plan that omits the opening scene without splitting scenes', () => {
+    const repairedPlan = repairSemanticEpisodePlanCoverage(scenes, {
+      profile: 'horizontal_motion_comic',
+      episodes: [
+        {
+          startSceneId: 'scene_002',
+          endSceneId: 'scene_003',
+          title: '军报与出征',
+          summary: '军报突至后决定出征',
+        },
+      ],
+    })
+
+    expect(repairedPlan).toMatchObject({
+      episodes: [{
+        startSceneId: 'scene_001',
+        endSceneId: 'scene_003',
+        title: '军报与出征',
+      }],
+    })
+    expect(assembleSemanticEpisodes(content, scenes, repairedPlan).episodes[0]?.sceneIds)
+      .toEqual(['scene_001', 'scene_002', 'scene_003'])
   })
 
   it('allows a semantic episode to exceed 400 words', () => {

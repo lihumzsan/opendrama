@@ -284,6 +284,52 @@ export function normalizeNarrativeScenes(
   return scenes
 }
 
+export function repairSemanticEpisodePlanCoverage(
+  scenes: NarrativeScene[],
+  rawPlan: unknown,
+): Record<string, unknown> {
+  const plan = asRecord(rawPlan)
+  const rawEpisodes = Array.isArray(plan.episodes) ? plan.episodes : []
+  if (scenes.length === 0 || rawEpisodes.length === 0) {
+    throw new Error('semantic episode plan is empty')
+  }
+
+  const sceneIndexById = new Map(scenes.map((scene, index) => [scene.id, index]))
+  const episodes: Record<string, unknown>[] = []
+  let expectedStartIndex = 0
+
+  for (const rawEpisode of rawEpisodes) {
+    if (expectedStartIndex >= scenes.length) break
+    const episode = asRecord(rawEpisode)
+    const startSceneId = readText(episode.startSceneId)
+    const endSceneId = readText(episode.endSceneId)
+    const startSceneIndex = sceneIndexById.get(startSceneId)
+    const endSceneIndex = sceneIndexById.get(endSceneId)
+    if (startSceneIndex === undefined || endSceneIndex === undefined || endSceneIndex < startSceneIndex) {
+      throw new Error('invalid scene range for coverage repair')
+    }
+    if (endSceneIndex < expectedStartIndex) continue
+
+    const repairedEndIndex = Math.max(endSceneIndex, expectedStartIndex)
+    episodes.push({
+      ...episode,
+      startSceneId: scenes[expectedStartIndex].id,
+      endSceneId: scenes[repairedEndIndex].id,
+    })
+    expectedStartIndex = repairedEndIndex + 1
+  }
+
+  if (episodes.length === 0) {
+    throw new Error('semantic episode plan does not contain a repairable scene range')
+  }
+  if (expectedStartIndex < scenes.length) {
+    const lastEpisode = episodes[episodes.length - 1]
+    lastEpisode.endSceneId = scenes[scenes.length - 1].id
+  }
+
+  return { ...plan, episodes }
+}
+
 function readProfile(value: unknown): SemanticEpisodeProfile {
   if (value === 'horizontal_motion_comic' || value === 'regular_episode') return value
   throw new Error('invalid semantic episode profile')

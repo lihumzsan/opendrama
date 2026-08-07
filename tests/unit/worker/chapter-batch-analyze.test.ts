@@ -170,14 +170,42 @@ describe('chapter batch analyze worker', () => {
     expect(episodeCreateMock).not.toHaveBeenCalled()
   })
 
-  it('persists failed status and validation details when planning cannot be repaired', async () => {
-    const invalidPlan = {
+  it('repairs a repeated plan that skips the opening scene', async () => {
+    const omittedOpeningPlan = {
       profile: 'horizontal_motion_comic',
       episodes: [{
         startSceneId: 'scene_002',
         endSceneId: 'scene_002',
+        title: '军报突至',
+        summary: '军报引出危机',
+        coreGoal: '应对军报带来的危机',
+        dramaticArc: '平静被打破，危机进入主线',
+        endingHook: '主人公将如何回应危机',
+        rationale: '军报推动下一阶段剧情',
+      }],
+    }
+    aiRuntimeMock.executeAiTextStep
+      .mockResolvedValueOnce({ text: JSON.stringify(sceneAnalysis) })
+      .mockResolvedValueOnce({ text: JSON.stringify(omittedOpeningPlan) })
+      .mockResolvedValueOnce({ text: JSON.stringify(omittedOpeningPlan) })
+
+    const { handleChapterBatchAnalyzeTask } = await import('@/lib/workers/handlers/chapter-batch-analyze')
+    const result = await handleChapterBatchAnalyzeTask(buildJob())
+
+    expect(result).toMatchObject({ episodeCount: 1 })
+    const analyzedUpdate = batchUpdateMock.mock.calls.find((call) => call[0]?.data?.status === 'analyzed')?.[0]
+    const candidatePlans = validateCandidateEpisodePlans(sourceText, JSON.parse(analyzedUpdate.data.candidateEpisodesJson))
+    expect(candidatePlans[0]?.episodes[0]?.sourceText).toBe(sourceText)
+  })
+
+  it('persists failed status when a plan references an unknown scene', async () => {
+    const invalidPlan = {
+      profile: 'horizontal_motion_comic',
+      episodes: [{
+        startSceneId: 'scene_999',
+        endSceneId: 'scene_999',
         title: '错误方案',
-        summary: '遗漏第一场',
+        summary: '引用不存在的场景',
       }],
     }
     aiRuntimeMock.executeAiTextStep
@@ -187,12 +215,12 @@ describe('chapter batch analyze worker', () => {
 
     const { handleChapterBatchAnalyzeTask } = await import('@/lib/workers/handlers/chapter-batch-analyze')
 
-    await expect(handleChapterBatchAnalyzeTask(buildJob())).rejects.toThrow('scene coverage gap')
+    await expect(handleChapterBatchAnalyzeTask(buildJob())).rejects.toThrow('invalid scene range')
     expect(batchUpdateMock).toHaveBeenLastCalledWith({
       where: { id: 'batch-1' },
       data: {
         status: 'failed',
-        errorJson: expect.stringContaining('scene coverage gap'),
+        errorJson: expect.stringContaining('invalid scene range'),
       },
     })
     expect(episodeCreateMock).not.toHaveBeenCalled()

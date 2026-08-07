@@ -12,6 +12,7 @@ import {
   classifyEpisodeSource,
   estimateEpisodeRuntimeMinutes,
   normalizeNarrativeScenes,
+  repairSemanticEpisodePlanCoverage,
   type NarrativeScene,
 } from '@/lib/novel-promotion/semantic-episode-split'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
@@ -43,7 +44,7 @@ function compactText(value: string | null | undefined, maxLength: number) {
 function buildExistingEpisodeContext(episodes: ExistingEpisodeForContext[]) {
   if (episodes.length === 0) return '无已有剧集，从第1集开始。'
   return [
-    `已有 ${episodes.length} 集；本次章节批次是追加素材，只能延续既有设定，不改写已确认剧集。`,
+    `已有 ${episodes.length} 集；已有剧集仅用于延续角色与设定。本次场景卡是必须完整覆盖的素材，即使与已有剧集内容相似也不得跳过任何场景。`,
     ...episodes.slice(-8).map((episode) => {
       const summary = compactText(episode.description || episode.novelText, 120)
       return `- #${episode.episodeNumber} ${compactText(episode.name, 40)}${summary ? `: ${summary}` : ''}`
@@ -133,6 +134,10 @@ function buildCandidatePlans(sourceText: string, splitResult: ReturnType<typeof 
     rationale: splitResult.episodes.map((episode) => episode.rationale).filter(Boolean).join('；'),
     episodes,
   }])
+}
+
+function isSceneCoverageGap(error: Error) {
+  return error.message.startsWith('scene coverage gap')
 }
 
 async function runTextStep(params: {
@@ -286,8 +291,21 @@ export async function handleChapterBatchAnalyzeTask(job: Job<TaskJobData>) {
         if (!completion.text) throw new Error('AI 候选剧集规划返回为空')
         previousPlan = safeParseJsonObject(completion.text)
 
+        let splitResult: ReturnType<typeof assembleSemanticEpisodes>
         try {
-          const splitResult = assembleSemanticEpisodes(content, scenes, previousPlan)
+          splitResult = assembleSemanticEpisodes(content, scenes, previousPlan)
+        } catch (error) {
+          lastValidationError = error instanceof Error ? error : new Error(String(error))
+          if (attempt === 1) continue
+          if (!isSceneCoverageGap(lastValidationError)) throw lastValidationError
+          splitResult = assembleSemanticEpisodes(
+            content,
+            scenes,
+            repairSemanticEpisodePlanCoverage(scenes, previousPlan),
+          )
+        }
+
+        try {
           const candidatePlans = buildCandidatePlans(content, splitResult)
           const analysis = buildChapterAnalysis(scenes)
           await prisma.novelPromotionChapterBatch.update({
