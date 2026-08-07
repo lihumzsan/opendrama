@@ -36,9 +36,10 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 const renderers: ReactTestRenderer[] = []
+let latestWizard: ReturnType<typeof useWizardState> | null = null
 
 function WizardHarness({ initialRawContent }: { initialRawContent: string }) {
-  useWizardState({
+  latestWizard = useWizardState({
     projectId: 'project-1',
     initialRawContent,
     onImportComplete: () => undefined,
@@ -61,6 +62,7 @@ afterEach(async () => {
   listProjectEpisodesMock.mockReset()
   saveProjectEpisodesBatchMock.mockReset()
   splitProjectEpisodesByMarkersMock.mockReset()
+  latestWizard = null
 })
 
 describe('chapter batch entry', () => {
@@ -102,5 +104,61 @@ describe('chapter batch entry', () => {
     })
     expect(analyzeChapterBatchMock).toHaveBeenCalledWith({ batchId: 'batch-1' })
     expect(splitProjectEpisodesByMarkersMock).not.toHaveBeenCalled()
+  })
+
+  it('asks before replacing a duplicate batch, then reruns AI analysis after confirmation', async () => {
+    const sourceText = `${'剧情'.repeat(120)}`
+    const duplicateError = Object.assign(new Error('chapter batch with the same source text already exists'), {
+      payload: {
+        error: {
+          code: 'CONFLICT',
+          details: { reason: 'duplicate_chapter_batch' },
+        },
+      },
+    })
+    createChapterBatchMock
+      .mockRejectedValueOnce(duplicateError)
+      .mockResolvedValueOnce({ batch: { id: 'batch-recreated' } })
+    analyzeChapterBatchMock.mockResolvedValue({
+      candidatePlans: [{
+        planId: 'plan-recreated',
+        title: 'AI 方案',
+        rationale: '按剧情转折拆分',
+        episodes: [{
+          provisionalNumber: 1,
+          name: '第 1 集',
+          description: '简介',
+          sourceStart: 0,
+          sourceEnd: sourceText.length,
+          sourceText,
+          coreGoal: '目标',
+          dramaticArc: '起承转合',
+          endingHook: '钩子',
+          adaptationNotes: { keep: [], merge: [], remove: [], externalize: [], inferred: [] },
+        }],
+      }],
+    })
+
+    let renderer: ReactTestRenderer
+    await act(async () => {
+      renderer = create(createElement(WizardHarness, { initialRawContent: sourceText }))
+      await flushAsyncUpdates()
+    })
+    renderers.push(renderer!)
+
+    expect(latestWizard?.replaceExistingConfirm.show).toBe(true)
+
+    await act(async () => {
+      await latestWizard?.confirmReplaceExisting()
+      await flushAsyncUpdates()
+    })
+
+    expect(createChapterBatchMock).toHaveBeenLastCalledWith({
+      title: sourceText.slice(0, 80),
+      sourceText,
+      replaceExisting: true,
+    })
+    expect(analyzeChapterBatchMock).toHaveBeenCalledWith({ batchId: 'batch-recreated' })
+    expect(latestWizard?.stage).toBe('preview')
   })
 })

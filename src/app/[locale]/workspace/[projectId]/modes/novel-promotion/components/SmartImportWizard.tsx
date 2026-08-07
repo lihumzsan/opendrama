@@ -46,6 +46,9 @@ export default function SmartImportWizard({
         rawContent={wizard.rawContent}
         onRawContentChange={wizard.setRawContent}
         onAnalyze={() => { void wizard.handleAnalyze() }}
+        replaceExistingConfirm={wizard.replaceExistingConfirm.show}
+        onCancelReplaceExisting={wizard.cancelReplaceExisting}
+        onConfirmReplaceExisting={() => { void wizard.confirmReplaceExisting() }}
         error={wizard.error}
       />
     )

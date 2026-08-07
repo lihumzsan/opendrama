@@ -10,6 +10,7 @@ import {
   mapChapterBatch,
   normalizeOptionalText,
   normalizeRequiredText,
+  parseCreatedEpisodeIds,
 } from './_shared'
 
 export const GET = apiHandler(async (
@@ -47,32 +48,71 @@ export const POST = apiHandler(async (
 
   const project = await findNovelProject(projectId)
   const sourceFingerprint = hashChapterBatchSource(sourceText)
-  const duplicate = await prisma.novelPromotionChapterBatch.findFirst({
-    where: {
-      novelPromotionProjectId: project.id,
-      sourceFingerprint,
-      status: { not: 'discarded' },
-    },
-    select: { id: true, status: true },
-  })
-  if (duplicate) {
-    throw new ApiError('INVALID_PARAMS', {
-      message: 'chapter batch with the same source text already exists',
-      batchId: duplicate.id,
-      status: duplicate.status,
+  const replaceExisting = body.replaceExisting === true
+  const batch = await prisma.$transaction(async (tx) => {
+    const duplicate = await tx.novelPromotionChapterBatch.findFirst({
+      where: {
+        novelPromotionProjectId: project.id,
+        sourceFingerprint,
+        status: { not: 'discarded' },
+      },
     })
-  }
+    if (duplicate) {
+      if (!replaceExisting) {
+        throw new ApiError('CONFLICT', {
+          message: 'chapter batch with the same source text already exists',
+          reason: 'duplicate_chapter_batch',
+          batchId: duplicate.id,
+          status: duplicate.status,
+        })
+      }
+      if (duplicate.status === 'analyzing') {
+        throw new ApiError('CONFLICT', {
+          message: 'existing chapter batch is still being analyzed',
+          reason: 'chapter_batch_analyzing',
+          batchId: duplicate.id,
+          status: duplicate.status,
+        })
+      }
 
-  const batch = await prisma.novelPromotionChapterBatch.create({
-    data: {
-      novelPromotionProjectId: project.id,
-      title,
-      sourceText,
-      sourceFingerprint,
-      chapterStartLabel: normalizeOptionalText(body.chapterStartLabel),
-      chapterEndLabel: normalizeOptionalText(body.chapterEndLabel),
-      status: 'draft',
-    },
+      const createdEpisodeIds = parseCreatedEpisodeIds(duplicate)
+      if (createdEpisodeIds.length > 0) {
+        const currentProject = await tx.novelPromotionProject.findUnique({
+          where: { id: project.id },
+          select: { lastEpisodeId: true },
+        })
+        await tx.novelPromotionEpisode.deleteMany({
+          where: {
+            id: { in: createdEpisodeIds },
+            novelPromotionProjectId: project.id,
+          },
+        })
+        if (currentProject?.lastEpisodeId && createdEpisodeIds.includes(currentProject.lastEpisodeId)) {
+          const replacementLastEpisode = await tx.novelPromotionEpisode.findFirst({
+            where: { novelPromotionProjectId: project.id },
+            orderBy: { episodeNumber: 'asc' },
+            select: { id: true },
+          })
+          await tx.novelPromotionProject.update({
+            where: { id: project.id },
+            data: { lastEpisodeId: replacementLastEpisode?.id || null },
+          })
+        }
+      }
+      await tx.novelPromotionChapterBatch.delete({ where: { id: duplicate.id } })
+    }
+
+    return await tx.novelPromotionChapterBatch.create({
+      data: {
+        novelPromotionProjectId: project.id,
+        title,
+        sourceText,
+        sourceFingerprint,
+        chapterStartLabel: normalizeOptionalText(body.chapterStartLabel),
+        chapterEndLabel: normalizeOptionalText(body.chapterEndLabel),
+        status: 'draft',
+      },
+    })
   })
 
   return NextResponse.json({ batch: mapChapterBatch(batch) }, { status: 201 })

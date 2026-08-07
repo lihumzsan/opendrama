@@ -14,6 +14,12 @@
     "button": "Import Now",
     "recommended": "Recommended"
   },
+  "duplicateBatch": {
+    "title": "Matching source found",
+    "description": "This source already has an episode plan. Regenerating removes the previous preview and, if it was confirmed, the episodes and related content created from that batch.",
+    "cancel": "Keep existing data",
+    "confirm": "Delete and regenerate"
+  },
   "markerDetection": {
     "enable": "Use Markers (Episode X / 第X集)",
     "tooltip": "Auto-detect [Episode X], [Chapter X], [第X集/章] markers, free & fast"

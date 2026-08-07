@@ -22,6 +22,23 @@ import {
 type TranslateValues = Record<string, string | number | Date>
 type Translate = (key: string, values?: TranslateValues) => string
 
+type ReplaceExistingConfirmState = {
+  show: boolean
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
+function isDuplicateChapterBatchError(error: unknown) {
+  const payload = asRecord(asRecord(error)?.payload)
+  const apiError = asRecord(payload?.error)
+  const details = asRecord(apiError?.details)
+  return apiError?.code === 'CONFLICT' && details?.reason === 'duplicate_chapter_batch'
+}
+
 interface UseWizardStateParams {
   projectId: string
   importStatus?: string | null
@@ -65,6 +82,7 @@ export function useWizardState({
   const [aiRecommendation, setAiRecommendation] = useState<SplitEpisode[] | null>(null)
   const [chapterBatchId, setChapterBatchId] = useState<string | null>(null)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
+  const [replaceExistingConfirm, setReplaceExistingConfirm] = useState<ReplaceExistingConfirmState>({ show: false })
 
   const listProjectEpisodesMutation = useListProjectEpisodes(projectId)
   const createChapterBatchMutation = useCreateChapterBatch(projectId)
@@ -107,7 +125,7 @@ export function useWizardState({
     }
   }, [episodes.length, importStatus, loadSavedEpisodes])
 
-  const performAISplit = useCallback(async () => {
+  const performAISplit = useCallback(async (replaceExisting = false) => {
     setStage('analyzing')
     setError(null)
 
@@ -117,6 +135,7 @@ export function useWizardState({
       const created = await createChapterBatchMutation.mutateAsync({
         title,
         sourceText: rawContent,
+        ...(replaceExisting ? { replaceExisting: true } : {}),
       })
       const analyzed = await analyzeChapterBatchMutation.mutateAsync({ batchId: created.batch.id })
       const plan = analyzed.candidatePlans[0]
@@ -135,11 +154,25 @@ export function useWizardState({
       })
       setStage('preview')
     } catch (err: unknown) {
+      if (!replaceExisting && isDuplicateChapterBatchError(err)) {
+        setReplaceExistingConfirm({ show: true })
+        setStage('select')
+        return
+      }
       const message = err instanceof Error ? err.message : t('errors.analyzeFailed')
       setError(message || t('errors.analyzeFailed'))
       setStage('select')
     }
   }, [analyzeChapterBatchMutation, createChapterBatchMutation, rawContent, t])
+
+  const cancelReplaceExisting = useCallback(() => {
+    setReplaceExistingConfirm({ show: false })
+  }, [])
+
+  const confirmReplaceExisting = useCallback(async () => {
+    setReplaceExistingConfirm({ show: false })
+    await performAISplit(true)
+  }, [performAISplit])
 
   const handleAnalyze = useCallback(async () => {
     _ulogInfo('[SmartImport] handleAnalyze called')
@@ -307,6 +340,9 @@ export function useWizardState({
     saving,
     splitProfile,
     canResetAIRecommendation: aiRecommendation !== null,
+    replaceExistingConfirm,
+    cancelReplaceExisting,
+    confirmReplaceExisting,
     deleteConfirm,
     handleAnalyze,
     performAISplit,

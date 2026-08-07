@@ -14,6 +14,12 @@
     "button": "立即导入",
     "recommended": "推荐"
   },
+  "duplicateBatch": {
+    "title": "检测到相同素材",
+    "description": "该素材已生成过分集方案。重新生成会删除此前的分集预览；如果此前已确认导入，也会删除该批次生成的剧集及其关联内容。",
+    "cancel": "保留原数据",
+    "confirm": "删除并重新生成"
+  },
   "markerDetection": {
     "enable": "优先使用章节标记（如第X集/Episode X）",
     "tooltip": "自动识别【第X集/章】【Episode/Chapter X】等标记，免费快速"

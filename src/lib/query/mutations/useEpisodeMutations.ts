@@ -134,6 +134,7 @@ export function useCreateChapterBatch(projectId: string) {
       sourceText: string
       chapterStartLabel?: string | null
       chapterEndLabel?: string | null
+      replaceExisting?: boolean
     }) =>
       await requestJsonWithError<ChapterBatchResponse>(
         `/api/novel-promotion/${projectId}/chapter-batches`,

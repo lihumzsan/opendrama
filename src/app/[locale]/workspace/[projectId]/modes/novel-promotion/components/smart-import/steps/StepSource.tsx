@@ -3,12 +3,16 @@
 import { useTranslations } from 'next-intl'
 import { countWords } from '@/lib/word-count'
 import { AppIcon } from '@/components/ui/icons'
+import { ConfigConfirmModal } from '@/components/ui/ConfigModals'
 
 interface StepSourceProps {
   onManualCreate: () => void
   rawContent: string
   onRawContentChange: (content: string) => void
   onAnalyze: () => void
+  replaceExistingConfirm: boolean
+  onCancelReplaceExisting: () => void
+  onConfirmReplaceExisting: () => void
   error: string | null
 }
 
@@ -17,6 +21,9 @@ export default function StepSource({
   rawContent,
   onRawContentChange,
   onAnalyze,
+  replaceExistingConfirm,
+  onCancelReplaceExisting,
+  onConfirmReplaceExisting,
   error,
 }: StepSourceProps) {
   const t = useTranslations('smartImport')
@@ -95,6 +102,16 @@ export default function StepSource({
             )}
           </div>
         </div>
+        <ConfigConfirmModal
+          isOpen={replaceExistingConfirm}
+          onClose={onCancelReplaceExisting}
+          onConfirm={onConfirmReplaceExisting}
+          title={t('duplicateBatch.title')}
+          description={t('duplicateBatch.description')}
+          cancelText={t('duplicateBatch.cancel')}
+          confirmText={t('duplicateBatch.confirm')}
+          danger
+        />
       </div>
     </div>
   )

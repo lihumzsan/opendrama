@@ -19,28 +19,34 @@ const batchFindFirstMock = vi.hoisted(() => vi.fn())
 const batchFindManyMock = vi.hoisted(() => vi.fn())
 const batchFindUniqueMock = vi.hoisted(() => vi.fn())
 const batchCreateMock = vi.hoisted(() => vi.fn())
+const batchDeleteMock = vi.hoisted(() => vi.fn())
 const batchUpdateMock = vi.hoisted(() => vi.fn())
 const episodeFindFirstMock = vi.hoisted(() => vi.fn())
 const episodeFindManyMock = vi.hoisted(() => vi.fn())
 const episodeCreateMock = vi.hoisted(() => vi.fn())
+const episodeDeleteManyMock = vi.hoisted(() => vi.fn())
 const episodeUpdateMock = vi.hoisted(() => vi.fn())
+const projectFindUniqueMock = vi.hoisted(() => vi.fn())
 const projectUpdateMock = vi.hoisted(() => vi.fn())
 
 const prismaMock = vi.hoisted(() => ({
   $transaction: transactionMock,
   novelPromotionProject: {
     findFirst: vi.fn(),
+    findUnique: projectFindUniqueMock,
   },
   novelPromotionChapterBatch: {
     findFirst: batchFindFirstMock,
     findMany: batchFindManyMock,
     findUnique: batchFindUniqueMock,
     create: batchCreateMock,
+    delete: batchDeleteMock,
     update: batchUpdateMock,
   },
   novelPromotionEpisode: {
     findFirst: episodeFindFirstMock,
     findMany: episodeFindManyMock,
+    deleteMany: episodeDeleteManyMock,
   },
   novelPromotionScreenplay: {
     count: vi.fn(),
@@ -140,6 +146,7 @@ describe('chapter batch routes', () => {
     batchFindManyMock.mockResolvedValue([batch()])
     batchFindUniqueMock.mockResolvedValue(batch())
     batchCreateMock.mockImplementation(async ({ data }) => ({ id: 'batch-created', ...data }))
+    batchDeleteMock.mockResolvedValue({ id: 'batch-1' })
     batchUpdateMock.mockImplementation(async ({ data }) => ({ id: 'batch-1', ...data }))
     episodeFindFirstMock.mockResolvedValue(null)
     episodeFindManyMock.mockResolvedValue([])
@@ -149,18 +156,25 @@ describe('chapter batch routes', () => {
     prismaMock.novelPromotionStoryboard.count.mockResolvedValue(0)
     prismaMock.novelPromotionVoiceLine.count.mockResolvedValue(0)
     episodeCreateMock.mockImplementation(async ({ data }) => ({ id: `episode-${data.episodeNumber}`, ...data }))
+    episodeDeleteManyMock.mockResolvedValue({ count: 0 })
     episodeUpdateMock.mockImplementation(async ({ data }) => ({ id: 'episode-1', episodeNumber: 1, name: data.name, ...data }))
+    projectFindUniqueMock.mockResolvedValue({ lastEpisodeId: null })
     projectUpdateMock.mockResolvedValue({ id: 'np-project-1' })
     transactionMock.mockImplementation(async (callback) => await callback({
       novelPromotionChapterBatch: {
+        create: batchCreateMock,
+        delete: batchDeleteMock,
+        findFirst: batchFindFirstMock,
         update: batchUpdateMock,
       },
       novelPromotionEpisode: {
+        deleteMany: episodeDeleteManyMock,
         findFirst: episodeFindFirstMock,
         create: episodeCreateMock,
         update: episodeUpdateMock,
       },
       novelPromotionProject: {
+        findUnique: projectFindUniqueMock,
         update: projectUpdateMock,
       },
       novelPromotionScreenplay: {
@@ -208,7 +222,7 @@ describe('chapter batch routes', () => {
     expect(maybeSubmitLLMTaskMock).not.toHaveBeenCalled()
   })
 
-  it('rejects duplicate non-discarded source text in the same project', async () => {
+  it('requires confirmation before replacing a duplicate chapter batch', async () => {
     batchFindFirstMock.mockResolvedValueOnce(batch({ status: 'draft' }))
 
     const { POST } = await import('@/app/api/novel-promotion/[projectId]/chapter-batches/route')
@@ -217,8 +231,56 @@ describe('chapter batch routes', () => {
       sourceText,
     }), { params: Promise.resolve({ projectId: 'project-1' }) })
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'CONFLICT',
+        details: {
+          reason: 'duplicate_chapter_batch',
+          batchId: 'batch-1',
+          status: 'draft',
+        },
+      },
+    })
     expect(batchCreateMock).not.toHaveBeenCalled()
+    expect(batchDeleteMock).not.toHaveBeenCalled()
+  })
+
+  it('replaces a confirmed duplicate batch and its created episodes after explicit confirmation', async () => {
+    batchFindFirstMock.mockResolvedValueOnce(batch({
+      status: 'confirmed',
+      createdEpisodeIdsJson: JSON.stringify(['episode-1']),
+    }))
+    projectFindUniqueMock.mockResolvedValueOnce({ lastEpisodeId: 'episode-1' })
+    episodeFindFirstMock.mockResolvedValueOnce({ id: 'episode-2' })
+    episodeDeleteManyMock.mockResolvedValueOnce({ count: 1 })
+
+    const { POST } = await import('@/app/api/novel-promotion/[projectId]/chapter-batches/route')
+    const response = await POST(request('/api/novel-promotion/project-1/chapter-batches', {
+      title: '重新生成章节',
+      sourceText,
+      replaceExisting: true,
+    }), { params: Promise.resolve({ projectId: 'project-1' }) })
+
+    expect(response.status).toBe(201)
+    await expect(response.json()).resolves.toMatchObject({
+      batch: {
+        id: 'batch-created',
+        status: 'draft',
+        title: '重新生成章节',
+      },
+    })
+    expect(episodeDeleteManyMock).toHaveBeenCalledWith({
+      where: {
+        id: { in: ['episode-1'] },
+        novelPromotionProjectId: 'np-project-1',
+      },
+    })
+    expect(batchDeleteMock).toHaveBeenCalledWith({ where: { id: 'batch-1' } })
+    expect(projectUpdateMock).toHaveBeenCalledWith({
+      where: { id: 'np-project-1' },
+      data: { lastEpisodeId: 'episode-2' },
+    })
   })
 
   it('submits an analyze task for an existing batch', async () => {
