@@ -18,6 +18,7 @@ import { useState, useCallback, useMemo } from 'react'
 // 移除了 useRouter 导入，因为不再需要在组件中操作 URL
 import { Character, CharacterAppearance, NovelPromotionClip } from '@/types/project'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
+import { getAssetDefinitionCounts } from '@/lib/novel-promotion/assets/counts'
 import {
   useAssetActions,
   useGenerateProjectCharacterImage,
@@ -119,7 +120,14 @@ export default function AssetsStage({
   const totalAppearances = characters.reduce((sum, character) => sum + character.variants.length, 0)
   const totalLocations = locations.length
   const totalProps = props.length
-  const totalAssets = totalAppearances + totalLocations + totalProps
+  const totalCharacters = characters.length
+  const assetCounts = getAssetDefinitionCounts({
+    characterCount: totalCharacters,
+    appearanceCount: totalAppearances,
+    locationCount: totalLocations,
+    propCount: totalProps,
+  })
+  const totalAssets = assetCounts.total
 
   // 本地 UI 状态
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -185,10 +193,8 @@ export default function AssetsStage({
   )
 
   // 筛选后的计数
-  const filteredAppearances = filteredCharacters.reduce((sum, character) => sum + character.variants.length, 0)
   const filteredLocCount = filteredLocations.length
   const filteredPropCount = filteredProps.length
-  const filteredTotal = filteredAppearances + filteredLocCount + filteredPropCount
 
   // 辅助：获取角色形象
   const getAppearances = (character: Character): CharacterAppearance[] => {
@@ -383,6 +389,7 @@ export default function AssetsStage({
       <AssetToolbar
         projectId={projectId}
         totalAssets={totalAssets}
+        totalCharacters={totalCharacters}
         totalAppearances={totalAppearances}
         totalLocations={totalLocations}
         totalProps={totalProps}
@@ -400,8 +407,8 @@ export default function AssetsStage({
         kindFilter={kindFilter}
         onKindFilterChange={setKindFilter}
         counts={{
-          all: filteredTotal,
-          character: filteredAppearances,
+          all: filteredCharacters.length + filteredLocCount + filteredPropCount,
+          character: filteredCharacters.length,
           location: filteredLocCount,
           prop: filteredPropCount,
         }}

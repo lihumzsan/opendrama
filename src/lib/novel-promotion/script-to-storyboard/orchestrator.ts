@@ -31,6 +31,11 @@ import {
   buildDialogueBeatsFromScreenplay,
   type DialogueBeat,
 } from '@/lib/novel-promotion/dialogue-beats'
+import {
+  buildStoryboardDurationPromptBlock,
+  normalizeStoryboardPanelDurations,
+  type StoryboardDurationPolicy,
+} from '@/lib/novel-promotion/storyboard-duration-policy'
 
 type JsonRecord = Record<string, unknown>
 const orchestratorLogger = createScopedLogger({ module: 'worker.orchestrator.script_to_storyboard' })
@@ -78,6 +83,7 @@ export type ClipStoryboardPanels = {
 export type ScriptToStoryboardOrchestratorInput = {
   concurrency?: number
   locale?: 'zh' | 'en'
+  storyboardDurationPolicy?: StoryboardDurationPolicy | null
   clips: ClipInput[]
   novelPromotionData: {
     characters: CharacterAsset[]
@@ -207,6 +213,38 @@ function mergePanelsWithRules(params: {
   })
 }
 
+class IncompleteStoryboardStepOutputError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'IncompleteStoryboardStepOutputError'
+  }
+}
+
+function assertPhase2PanelCoverage<T extends { panel_number?: number }>(params: {
+  label: string
+  planPanels: StoryboardPanel[]
+  output: T[]
+}) {
+  const expected = params.planPanels
+    .map((panel) => panel.panel_number)
+    .filter((panelNumber): panelNumber is number => typeof panelNumber === 'number')
+  const actual = new Set(params.output.map((item) => item.panel_number))
+  const missing = expected.filter((panelNumber) => !actual.has(panelNumber))
+  if (missing.length > 0) {
+    throw new IncompleteStoryboardStepOutputError(`${params.label} missing panel_number=${missing.join(',')}`)
+  }
+}
+
+function reconcileDetailPanels(planPanels: StoryboardPanel[], detailPanels: StoryboardPanel[]) {
+  const detailsByPanelNumber = new Map(detailPanels.map((panel) => [panel.panel_number, panel]))
+  return planPanels.map((planPanel) => {
+    const detailPanel = detailsByPanelNumber.get(planPanel.panel_number)
+    return detailPanel
+      ? { ...planPanel, ...detailPanel, panel_number: planPanel.panel_number }
+      : planPanel
+  })
+}
+
 const MAX_STEP_ATTEMPTS = 3
 const MAX_RETRY_DELAY_MS = 10_000
 
@@ -222,6 +260,7 @@ function computeRetryDelayMs(attempt: number) {
 
 function shouldRetryStepError(error: unknown, message: string, retryable: boolean) {
   if (error instanceof JsonParseError) return true
+  if (error instanceof IncompleteStoryboardStepOutputError) return true
   if (retryable) return true
   const lowerMessage = message.toLowerCase()
   if (lowerMessage.includes('ark responses 调用失败')) return false
@@ -293,7 +332,14 @@ async function runStepWithRetry<T>(
 export async function runScriptToStoryboardOrchestrator(
   input: ScriptToStoryboardOrchestratorInput,
 ): Promise<ScriptToStoryboardOrchestratorResult> {
-  const { clips, novelPromotionData, promptTemplates, runStep, concurrency: rawConcurrency } = input
+  const {
+    clips,
+    novelPromotionData,
+    promptTemplates,
+    runStep,
+    concurrency: rawConcurrency,
+    storyboardDurationPolicy,
+  } = input
   if (!Array.isArray(clips) || clips.length === 0) {
     throw new Error('No clips found')
   }
@@ -381,7 +427,7 @@ ${dialogueBeatPromptBlock}
 Storyboard dialogue hard rules:
 - A speaking panel must set dialogueBeatId to exactly one dialogue beat id.
 - source_text for that speaking panel must equal that beat exactText.
-- Do not merge multiple dialogue beats into one panel.`
+- Do not merge multiple dialogue beats into one panel.${buildStoryboardDurationPromptBlock(storyboardDurationPolicy)}`
 
       const phase1Meta = withStepMeta(
         `clip_${clip.id}_phase1`,
@@ -401,7 +447,7 @@ Storyboard dialogue hard rules:
           if (panels.length === 0) {
             throw new Error(`Phase 1 returned empty panels for clip ${formatClipId(clip)}`)
           }
-          return panels
+          return normalizeStoryboardPanelDurations(panels, storyboardDurationPolicy)
         },
       )
       phase1PanelsByClipId.set(clip.id, planPanels)
@@ -478,11 +524,19 @@ Storyboard dialogue hard rules:
       ] = await Promise.all([
         runStepWithRetry(
           runStep, phase2Meta, phase2Prompt, 'storyboard_phase2_cinematography', 2400,
-          (text) => parseJsonArray<PhotographyRule>(text, `phase2:${formatClipId(clip)}`),
+          (text) => {
+            const rules = parseJsonArray<PhotographyRule>(text, `phase2:${formatClipId(clip)}`)
+            assertPhase2PanelCoverage({ label: 'Photography rules', planPanels, output: rules })
+            return rules
+          },
         ),
         runStepWithRetry(
           runStep, phase2ActingMeta, phase2ActingPrompt, 'storyboard_phase2_acting', 2400,
-          (text) => parseJsonArray<ActingDirection>(text, `phase2-acting:${formatClipId(clip)}`),
+          (text) => {
+            const directions = parseJsonArray<ActingDirection>(text, `phase2-acting:${formatClipId(clip)}`)
+            assertPhase2PanelCoverage({ label: 'Acting directions', planPanels, output: directions })
+            return directions
+          },
         ),
       ])
       const { parsed: filteredPhase3Panels } = await runStepWithRetry(
@@ -499,12 +553,17 @@ Storyboard dialogue hard rules:
         },
       )
 
+      const reconciledPhase3Panels = normalizeStoryboardPanelDurations(
+        reconcileDetailPanels(planPanels, filteredPhase3Panels),
+        storyboardDurationPolicy,
+      )
+
       phase2CinematographyByClipId.set(clip.id, photographyRules)
       phase2ActingByClipId.set(clip.id, actingDirections)
-      phase3PanelsByClipId.set(clip.id, filteredPhase3Panels)
+      phase3PanelsByClipId.set(clip.id, reconciledPhase3Panels)
 
       const finalPanels = mergePanelsWithRules({
-        finalPanels: filteredPhase3Panels,
+        finalPanels: reconciledPhase3Panels,
         photographyRules,
         actingDirections,
       })

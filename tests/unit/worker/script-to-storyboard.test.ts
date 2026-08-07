@@ -256,6 +256,7 @@ describe('worker script-to-storyboard behavior', () => {
     prismaMock.novelPromotionProject.findUnique.mockResolvedValue({
       id: 'np-project-1',
       analysisModel: 'llm::analysis-model',
+      videoModel: 'comfyui::basevideo/minimax-h3/h3-i2va',
       characters: [{ id: 'char-1', name: 'Narrator' }],
       locations: [{ id: 'loc-1', name: 'Office' }],
     })
@@ -356,6 +357,16 @@ describe('worker script-to-storyboard behavior', () => {
       mode: 'auto',
       requestId: null,
     })
+  })
+
+  it('passes the H3 storyboard duration policy into the orchestrator', async () => {
+    await handleScriptToStoryboardTask(buildJob({ episodeId: 'episode-1' }))
+
+    expect(runScriptToStoryboardOrchestratorMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storyboardDurationPolicy: { minSeconds: 5, maxSeconds: 15 },
+      }),
+    )
   })
 
   it('submits automatic cover after storyboard persistence and before completing workflow lease', async () => {

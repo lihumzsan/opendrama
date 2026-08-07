@@ -87,6 +87,7 @@ const SINGLE_ATTEMPT_TASK_TYPES = new Set<TaskType>([
 
 const TASK_TYPE_ATTEMPTS = new Map<TaskType, number>([
   [TASK_TYPE.IMAGE_EPISODE_COVER, 2],
+  [TASK_TYPE.IMAGE_CHARACTER, 2],
   [TASK_TYPE.EPISODE_SPLIT_LLM, 1],
 ])
 

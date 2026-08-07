@@ -32,6 +32,11 @@ import {
   buildDialogueBeatsFromScreenplay,
   type DialogueBeat,
 } from '@/lib/novel-promotion/dialogue-beats'
+import {
+  buildStoryboardDurationPromptBlock,
+  normalizeStoryboardPanelDurations,
+  type StoryboardDurationPolicy,
+} from '@/lib/novel-promotion/storyboard-duration-policy'
 
 type StoryboardClipInput = {
   id: string
@@ -345,6 +350,16 @@ function mergePanelsWithRules(params: {
   })
 }
 
+function reconcileDetailPanels(planPanels: StoryboardPanel[], detailPanels: StoryboardPanel[]) {
+  const detailsByPanelNumber = new Map(detailPanels.map((panel) => [panel.panel_number, panel]))
+  return planPanels.map((planPanel) => {
+    const detailPanel = detailsByPanelNumber.get(planPanel.panel_number)
+    return detailPanel
+      ? { ...planPanel, ...detailPanel, panel_number: planPanel.panel_number }
+      : planPanel
+  })
+}
+
 function requireRows<T extends JsonRecord>(rows: T[], label: string) {
   if (rows.length === 0) {
     throw new Error(`missing dependency artifact: ${label}`)
@@ -381,6 +396,7 @@ export async function runScriptToStoryboardAtomicRetry(params: {
     props?: PropAsset[]
   }
   promptTemplates: ScriptToStoryboardPromptTemplates
+  storyboardDurationPolicy?: StoryboardDurationPolicy | null
   runStep: StepRunner
 }): Promise<ScriptToStoryboardAtomicRetryResult> {
   const clipCharacters = parseClipCharacters(params.clip.characters)
@@ -442,6 +458,7 @@ export async function runScriptToStoryboardAtomicRetry(params: {
     artifactType: 'storyboard.clip.phase3',
     key: 'panels',
   })
+  phase1Panels = normalizeStoryboardPanelDurations(phase1Panels, params.storyboardDurationPolicy)
 
   if (params.retryTarget.phase === 'phase1') {
     const clipContent = typeof params.clip.content === 'string' ? params.clip.content.trim() : ''
@@ -484,7 +501,7 @@ ${dialogueBeatPromptBlock}
 Storyboard dialogue hard rules:
 - A speaking panel must set dialogueBeatId to exactly one dialogue beat id.
 - source_text for that speaking panel must equal that beat exactText.
-- Do not merge multiple dialogue beats into one panel.`
+- Do not merge multiple dialogue beats into one panel.${buildStoryboardDurationPromptBlock(params.storyboardDurationPolicy)}`
     phase1Panels = await runStepWithRetry({
       runStep: params.runStep,
       baseMeta,
@@ -496,7 +513,7 @@ Storyboard dialogue hard rules:
         if (panels.length === 0) {
           throw new Error(`Phase 1 returned empty panels for clip ${formatClipId(params.clip)}`)
         }
-        return panels
+        return normalizeStoryboardPanelDurations(panels, params.storyboardDurationPolicy)
       },
       retryStepAttempt: params.retryStepAttempt,
     })
@@ -568,12 +585,20 @@ Storyboard dialogue hard rules:
       },
       retryStepAttempt: params.retryStepAttempt,
     })
+    phase3Panels = normalizeStoryboardPanelDurations(phase3Panels, params.storyboardDurationPolicy)
     phase3PanelsByClipId[params.clip.id] = phase3Panels
   }
 
   if (params.retryTarget.phase !== 'phase1') {
+    const planPanels = normalizeStoryboardPanelDurations(
+      requireRows(phase1Panels, 'storyboard.clip.phase1'),
+      params.storyboardDurationPolicy,
+    )
     const finalPanels = mergePanelsWithRules({
-      finalPanels: requireRows(phase3Panels, 'storyboard.clip.phase3'),
+      finalPanels: normalizeStoryboardPanelDurations(
+        reconcileDetailPanels(planPanels, requireRows(phase3Panels, 'storyboard.clip.phase3')),
+        params.storyboardDurationPolicy,
+      ),
       photographyRules: requireRows(phase2Cinematography, 'storyboard.clip.phase2.cine'),
       actingDirections: requireRows(phase2Acting, 'storyboard.clip.phase2.acting'),
     })

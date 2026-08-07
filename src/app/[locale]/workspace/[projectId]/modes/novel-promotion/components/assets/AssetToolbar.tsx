@@ -21,6 +21,7 @@ interface EpisodeOption {
 interface AssetToolbarProps {
     projectId: string
     totalAssets: number
+    totalCharacters: number
     totalAppearances: number
     totalLocations: number
     totalProps: number
@@ -155,6 +156,7 @@ function EpisodeChip({
 export default function AssetToolbar({
     projectId,
     totalAssets,
+    totalCharacters,
     totalAppearances,
     totalLocations,
     totalProps,
@@ -263,7 +265,7 @@ export default function AssetToolbar({
                         />
                     )}
                     <span className="text-sm text-[var(--glass-text-tertiary)]">
-                        {t("toolbar.assetCount", { total: totalAssets, appearances: totalAppearances, locations: totalLocations, props: totalProps })}
+                        {t("toolbar.assetCount", { total: totalAssets, characters: totalCharacters, appearances: totalAppearances, locations: totalLocations, props: totalProps })}
                     </span>
                     {/* 全局资产分析按钮 */}
                     {onGlobalAnalyze && (

@@ -327,3 +327,5 @@ Clip信息：
 14. 对话必须拆分：每段对话至少 2 个镜头（说话者 + 听者反应）
 15. ⚠️ 镜头合理性：只描述当前镜头**实际能拍摄到**的角色，特写/反打等拍不到的可省略
 16. ⚠️ JSON安全：原文中的所有引号（""''「」等）在 JSON 字符串值中必须统一替换为「」，严禁出现未转义的英文双引号 "
+17. When a storyboard duration contract is provided, every panel must include an integer duration within that contract's inclusive range.
+18. For short dialogue under that contract, preserve the exact dialogue beat and use natural pauses, reactions, or action transitions to fill the shot without changing the meaning.

@@ -201,7 +201,7 @@
         "showGenerated": "Generated",
         "showPending": "Pending",
         "assetManagement": "Asset Management",
-        "assetCount": "{total} assets ({appearances} character appearances + {locations} locations + {props} props)",
+        "assetCount": "{total} assets ({characters} characters + {locations} locations + {props} props; {appearances} character appearances generated)",
         "globalAnalyze": "Global Analysis",
         "globalAnalyzing": "Performing global asset analysis...",
         "globalAnalyzingHint": "Please don't refresh. Results will appear automatically when complete",

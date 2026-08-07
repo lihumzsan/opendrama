@@ -15,6 +15,7 @@ import {
   buildCodexExecArgs,
   buildCodexImageExecArgs,
   CodexExecError,
+  resolveCodexImageTimeoutMs,
   resolveCodexExecutablePath,
   runCodexImageGeneration,
   runCodexSelfCheck,
@@ -42,6 +43,14 @@ describe('codex cli client', () => {
 
   it('uses an existing explicit custom path', () => {
     expect(resolveCodexExecutablePath(process.execPath)).toBe(process.execPath)
+  })
+
+  it('uses a three-minute image timeout instead of inheriting the long text timeout', () => {
+    expect(resolveCodexImageTimeoutMs(undefined)).toBe(180_000)
+  })
+
+  it('honors an explicit image timeout above the minimum', () => {
+    expect(resolveCodexImageTimeoutMs('240000')).toBe(240_000)
   })
 
   it('surfaces a missing explicit custom path as a Codex error', () => {

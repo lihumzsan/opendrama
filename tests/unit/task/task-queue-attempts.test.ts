@@ -7,6 +7,10 @@ describe('task queue attempt policy', () => {
     expect(resolveTaskQueueAttempts(TASK_TYPE.EPISODE_SPLIT_LLM)).toBe(1)
   })
 
+  it('limits character image generation to two attempts', () => {
+    expect(resolveTaskQueueAttempts(TASK_TYPE.IMAGE_CHARACTER)).toBe(2)
+  })
+
   it('preserves an explicit attempt count for ordinary task types', () => {
     expect(resolveTaskQueueAttempts(TASK_TYPE.IMAGE_PANEL, 3)).toBe(3)
   })

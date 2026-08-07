@@ -58,6 +58,7 @@ describe('AssetToolbar', () => {
       createElement(AssetToolbar, {
         projectId: 'project-1',
         totalAssets: 24,
+        totalCharacters: 11,
         totalAppearances: 11,
         totalLocations: 13,
         totalProps: 0,

@@ -97,6 +97,7 @@ type SpawnResult = {
 }
 
 const DEFAULT_CODEX_EXEC_TIMEOUT_MS = 20 * 60 * 1000
+const DEFAULT_CODEX_IMAGE_TIMEOUT_MS = 3 * 60 * 1000
 const CODEX_FORCE_KILL_GRACE_MS = 5000
 const OUTPUT_TRUNCATE_LIMIT = 4000
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif'])
@@ -109,11 +110,15 @@ const CODEX_RUNTIME_CONFIG_ARGS = [
   `service_tier="${CODEX_DEFAULT_SERVICE_TIER}"`,
 ]
 
-function readTimeoutMs(raw: string | undefined): number {
-  if (!raw) return DEFAULT_CODEX_EXEC_TIMEOUT_MS
+function readTimeoutMs(raw: string | undefined, minimumMs = DEFAULT_CODEX_EXEC_TIMEOUT_MS): number {
+  if (!raw) return minimumMs
   const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_CODEX_EXEC_TIMEOUT_MS
-  return Math.max(parsed, DEFAULT_CODEX_EXEC_TIMEOUT_MS)
+  if (!Number.isFinite(parsed) || parsed <= 0) return minimumMs
+  return Math.max(parsed, minimumMs)
+}
+
+export function resolveCodexImageTimeoutMs(raw: string | undefined): number {
+  return readTimeoutMs(raw, DEFAULT_CODEX_IMAGE_TIMEOUT_MS)
 }
 
 function truncateForError(value: string): string {
@@ -724,7 +729,7 @@ export async function runCodexImageGeneration(
     outputPath,
     imagePaths: params.imagePaths,
   })
-  const timeoutMs = params.timeoutMs ?? readTimeoutMs(process.env.CODEX_IMAGE_TIMEOUT_MS || process.env.CODEX_LLM_TIMEOUT_MS)
+  const timeoutMs = params.timeoutMs ?? resolveCodexImageTimeoutMs(process.env.CODEX_IMAGE_TIMEOUT_MS)
 
   try {
     const result = await spawnCodex(executablePath, args, {

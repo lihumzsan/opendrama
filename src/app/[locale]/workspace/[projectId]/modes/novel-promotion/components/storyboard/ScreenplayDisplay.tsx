@@ -1,32 +1,8 @@
 'use client'
-import { logError as _ulogError } from '@/lib/logging/core'
+import { parseStoryboardScreenplay } from '@/lib/novel-promotion/screenplay/storyboard-screenplay'
 import { useTranslations } from 'next-intl'
 
 import { useState } from 'react'
-
-interface ScreenplayScene {
-    scene_number: number
-    heading: {
-        int_ext: string
-        location: string
-        time: string
-    } | string
-    description?: string
-    characters?: string[]
-    content: Array<{
-        type: 'action' | 'dialogue' | 'voiceover'
-        text?: string
-        character?: string
-        lines?: string
-        parenthetical?: string
-    }>
-}
-
-interface Screenplay {
-    clip_id: string
-    original_text?: string
-    scenes: ScreenplayScene[]
-}
 
 interface ScreenplayDisplayProps {
     screenplay: string | null
@@ -38,14 +14,7 @@ export default function ScreenplayDisplay({ screenplay, originalContent }: Scree
     const [activeTab, setActiveTab] = useState<'screenplay' | 'original'>('screenplay')
 
     // 解析剧本JSON
-    let parsedScreenplay: Screenplay | null = null
-    try {
-        if (screenplay) {
-            parsedScreenplay = JSON.parse(screenplay)
-        }
-    } catch (e) {
-        _ulogError('Failed to parse screenplay:', e)
-    }
+    const parsedScreenplay = parseStoryboardScreenplay(screenplay)
 
     return (
         <div className="space-y-3">

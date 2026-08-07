@@ -14,8 +14,15 @@ import {
   type EpisodeScreenplayStepMeta,
 } from '@/lib/novel-promotion/story-to-script/episode-orchestrator'
 import { toScreenplaySource } from '@/lib/novel-promotion/screenplay/source'
+import { buildStoryboardClipsFromEpisodeScreenplay } from '@/lib/novel-promotion/screenplay/to-storyboard-clips'
 
-import { parseEffort, parseTemperature } from './story-to-script-helpers'
+import {
+  parseEffort,
+  parseTemperature,
+  persistAnalyzedCharacters,
+  persistAnalyzedLocations,
+  persistAnalyzedProps,
+} from './story-to-script-helpers'
 import { resolveAnalysisModel } from './resolve-analysis-model'
 import { resolveWorkflowRunId } from './workflow-run-id'
 
@@ -116,7 +123,47 @@ export async function handleEpisodeScreenplayTask(job: Job<TaskJobData>) {
       await assertActive('episode_screenplay_persist')
       const screenplayJson = JSON.stringify(result.screenplay)
       const sourceFingerprint = createHash('sha256').update(content).digest('hex')
+      const storyboardClips = buildStoryboardClipsFromEpisodeScreenplay(result.screenplay)
+      const existingCharacterNames = new Set(novelData.characters.map((item) => item.name.toLowerCase()))
+      const existingLocationNames = new Set(
+        novelData.locations
+          .filter((item) => assetKind(item as unknown as Record<string, unknown>) !== 'prop')
+          .map((item) => item.name.toLowerCase()),
+      )
+      const existingPropNames = new Set(
+        novelData.locations
+          .filter((item) => assetKind(item as unknown as Record<string, unknown>) === 'prop')
+          .map((item) => item.name.toLowerCase()),
+      )
       await prisma.$transaction(async (tx) => {
+        await persistAnalyzedCharacters({
+          projectInternalId: novelData.id,
+          existingNames: existingCharacterNames,
+          analyzedCharacters: result.analyzedCharacters,
+          db: tx,
+        })
+        await persistAnalyzedLocations({
+          projectInternalId: novelData.id,
+          existingNames: existingLocationNames,
+          analyzedLocations: result.analyzedLocations,
+          db: tx,
+        })
+        await persistAnalyzedProps({
+          projectInternalId: novelData.id,
+          existingNames: existingPropNames,
+          analyzedProps: result.analyzedProps,
+          db: tx,
+        })
+        // The storyboard workflow uses clips as its stable scene inputs. A new
+        // episode screenplay replaces those inputs, so clear all derived output
+        // before materializing one clip for each approved screenplay scene.
+        await tx.novelPromotionVoiceLine.deleteMany({ where: { episodeId } })
+        await tx.novelPromotionStoryboard.deleteMany({ where: { episodeId } })
+        await tx.novelPromotionShot.deleteMany({ where: { episodeId } })
+        await tx.novelPromotionClip.deleteMany({ where: { episodeId } })
+        await tx.novelPromotionClip.createMany({
+          data: storyboardClips.map((clip) => ({ episodeId, ...clip })),
+        })
         await tx.novelPromotionScreenplay.upsert({
           where: { episodeId },
           create: {

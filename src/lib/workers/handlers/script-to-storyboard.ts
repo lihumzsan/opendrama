@@ -38,6 +38,9 @@ import {
   runScriptToStoryboardAtomicRetry,
 } from './script-to-storyboard-atomic-retry'
 import { buildVoiceLineRowsFromDialogueBeats } from '@/lib/novel-promotion/dialogue-beats'
+import { buildStoryboardClipsFromStoredScreenplayScenes } from '@/lib/novel-promotion/screenplay/to-storyboard-clips'
+import { normalizeDefaultVideoModel } from '@/lib/novel-promotion/video-model-defaults'
+import { resolveStoryboardDurationPolicy } from '@/lib/novel-promotion/storyboard-duration-policy'
 import { resolveWorkflowRunId } from './workflow-run-id'
 import { submitEpisodeCoverTask } from '@/lib/novel-promotion/episode-cover/task'
 
@@ -108,12 +111,28 @@ export async function handleScriptToStoryboardTask(job: Job<TaskJobData>) {
     where: { id: episodeId },
     include: {
       clips: { orderBy: { createdAt: 'asc' } },
+      screenplay: { include: { scenes: { orderBy: { sceneNumber: 'asc' } } } },
     },
   })
   if (!episode || episode.novelPromotionProjectId !== novelData.id) {
     throw new Error('Episode not found')
   }
-  const clips = episode.clips || []
+  let clips = episode.clips || []
+  if (clips.length === 0 && episode.screenplay?.scenes.length) {
+    const generatedClips = buildStoryboardClipsFromStoredScreenplayScenes(episode.screenplay.scenes)
+    await prisma.$transaction(async (tx) => {
+      const existingClipCount = await tx.novelPromotionClip.count({ where: { episodeId } })
+      if (existingClipCount === 0) {
+        await tx.novelPromotionClip.createMany({
+          data: generatedClips.map((clip) => ({ episodeId, ...clip })),
+        })
+      }
+    })
+    clips = await prisma.novelPromotionClip.findMany({
+      where: { episodeId },
+      orderBy: { createdAt: 'asc' },
+    })
+  }
   if (clips.length === 0) {
     throw new Error('No clips found')
   }
@@ -147,6 +166,9 @@ export async function handleScriptToStoryboardTask(job: Job<TaskJobData>) {
   const capabilityReasoningEffort = llmCapabilityOptions.reasoningEffort
   const reasoningEffort = requestedReasoningEffort
     || (isReasoningEffort(capabilityReasoningEffort) ? capabilityReasoningEffort : 'high')
+  const storyboardDurationPolicy = resolveStoryboardDurationPolicy(
+    normalizeDefaultVideoModel(novelData.videoModel),
+  )
 
   const phase1PlanTemplate = getPromptTemplate(PROMPT_IDS.NP_AGENT_STORYBOARD_PLAN, job.data.locale)
   const phase2CinematographyTemplate = getPromptTemplate(PROMPT_IDS.NP_AGENT_CINEMATOGRAPHER, job.data.locale)
@@ -310,6 +332,7 @@ export async function handleScriptToStoryboardTask(job: Job<TaskJobData>) {
                     phase2ActingTemplate,
                     phase3DetailTemplate,
                   },
+                  storyboardDurationPolicy,
                   runStep,
                 })
                 return {
@@ -352,6 +375,7 @@ export async function handleScriptToStoryboardTask(job: Job<TaskJobData>) {
                     phase2ActingTemplate,
                     phase3DetailTemplate,
                   },
+                  storyboardDurationPolicy,
                   runStep,
                 })
               } catch (error) {

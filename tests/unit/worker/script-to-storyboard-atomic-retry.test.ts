@@ -41,7 +41,7 @@ describe('script-to-storyboard atomic retry', () => {
           refId: 'clip-1',
           versionHash: null,
           payload: {
-            panels: [{ panel_number: 1, description: 'p1', location: 'Office', source_text: 'src', characters: [] }],
+            panels: [{ panel_number: 1, duration: 3, description: 'p1', location: 'Office', source_text: 'src', characters: [] }],
           },
           createdAt: '2026-03-03T00:00:00.000Z',
         }]
@@ -124,6 +124,7 @@ describe('script-to-storyboard atomic retry', () => {
         phase2ActingTemplate: '{panels_json} {panel_count} {characters_info}',
         phase3DetailTemplate: '{panels_json} {characters_age_gender} {locations_description}',
       },
+      storyboardDurationPolicy: { minSeconds: 5, maxSeconds: 15 },
       runStep,
     })
 
@@ -138,6 +139,7 @@ describe('script-to-storyboard atomic retry', () => {
     expect(result.clipPanels).toHaveLength(1)
     expect(result.clipPanels[0]?.finalPanels[0]).toEqual(expect.objectContaining({
       panel_number: 1,
+      duration: 5,
       description: 'phase3-new',
       photographyPlan: expect.objectContaining({
         composition: '居中',
