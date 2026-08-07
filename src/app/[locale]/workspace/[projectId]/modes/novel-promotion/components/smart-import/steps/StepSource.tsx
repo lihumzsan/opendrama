@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl'
 import { countWords } from '@/lib/word-count'
-import type { EpisodeMarkerResult } from '@/lib/episode-marker-detector'
 import { AppIcon } from '@/components/ui/icons'
 
 interface StepSourceProps {
@@ -11,11 +10,6 @@ interface StepSourceProps {
   onRawContentChange: (content: string) => void
   onAnalyze: () => void
   error: string | null
-  showMarkerConfirm: boolean
-  markerResult: EpisodeMarkerResult | null
-  onCloseMarkerConfirm: () => void
-  onUseMarkerSplit: () => void
-  onUseAiSplit: () => void
 }
 
 export default function StepSource({
@@ -24,78 +18,11 @@ export default function StepSource({
   onRawContentChange,
   onAnalyze,
   error,
-  showMarkerConfirm,
-  markerResult,
-  onCloseMarkerConfirm,
-  onUseMarkerSplit,
-  onUseAiSplit,
 }: StepSourceProps) {
   const t = useTranslations('smartImport')
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-8">
-      {showMarkerConfirm && markerResult && (
-        <div className="fixed inset-0 glass-overlay flex items-center justify-center z-50" onClick={onCloseMarkerConfirm}>
-          <div className="glass-surface-modal p-6 w-full max-w-lg animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-[var(--glass-tone-info-bg)] rounded-full flex items-center justify-center mx-auto mb-4">
-                <AppIcon name="fileText" className="w-7 h-7 text-[var(--glass-tone-info-fg)]" />
-              </div>
-              <h3 className="text-xl font-bold text-[var(--glass-text-primary)] mb-2">{t('markerDetected.title')}</h3>
-              <p className="text-[var(--glass-text-secondary)]">
-                {t('markerDetected.description', {
-                  count: markerResult.matches.length,
-                  type: t(`markerDetected.markerTypes.${markerResult.markerTypeKey}` as 'numbered' | 'chapter' | 'custom'),
-                })}
-              </p>
-            </div>
-
-            <div className="mb-6">
-              <p className="text-sm font-medium text-[var(--glass-text-tertiary)] mb-3">{t('markerDetected.preview')}</p>
-              <div className="bg-[var(--glass-bg-muted)] rounded-xl p-4 max-h-64 overflow-y-auto space-y-2">
-                {markerResult.previewSplits.map((split, idx) => (
-                  <div key={idx} className="flex items-start gap-3 text-sm">
-                    <span className="flex-shrink-0 w-16 font-medium text-[var(--glass-tone-info-fg)]">
-                      {t('episode', { num: split.number })}
-                    </span>
-                    <span className="text-[var(--glass-text-secondary)] truncate flex-1">
-                      {split.preview || split.title}
-                    </span>
-                    <span className="flex-shrink-0 text-[var(--glass-text-tertiary)] text-xs">
-                      ~{split.wordCount.toLocaleString()}{t('upload.words')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <button
-                onClick={onUseMarkerSplit}
-                className="glass-btn-base glass-btn-primary py-4 px-3 rounded-xl font-bold transition-all flex flex-col items-center gap-1"
-              >
-                <span>{t('markerDetected.useMarker')}</span>
-                <span className="text-xs font-normal opacity-80">{t('markerDetected.useMarkerDesc')}</span>
-              </button>
-              <button
-                onClick={onUseAiSplit}
-                className="py-4 bg-[var(--glass-bg-surface)] border-2 border-[var(--glass-stroke-base)] text-[var(--glass-text-secondary)] rounded-xl font-bold hover:border-[var(--glass-stroke-focus)] hover:bg-[var(--glass-tone-info-bg)] transition-all flex flex-col items-center gap-1"
-              >
-                <span>{t('markerDetected.useAI')}</span>
-                <span className="text-xs font-normal text-[var(--glass-text-tertiary)]">{t('markerDetected.useAIDesc')}</span>
-              </button>
-            </div>
-
-            <button
-              onClick={onCloseMarkerConfirm}
-              className="w-full py-2.5 text-[var(--glass-text-tertiary)] hover:text-[var(--glass-text-secondary)] font-medium transition-colors"
-            >
-              {t('markerDetected.cancel')}
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-5xl w-full">
         <div className="text-center mb-12 relative">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[var(--glass-bg-surface)]/80 rounded-full blur-3xl -z-10"></div>
@@ -152,7 +79,7 @@ export default function StepSource({
                 </span>
                 <button
                   onClick={onAnalyze}
-                  disabled={!rawContent.trim() || rawContent.length < 100}
+                  disabled={!rawContent.trim()}
                   className="glass-btn-base glass-btn-primary px-5 py-2 rounded-xl font-bold active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
                 >
                   <span>{t('upload.startAnalysis')}</span>

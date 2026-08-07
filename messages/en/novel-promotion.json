@@ -135,6 +135,10 @@
     "creating": "AI Creating...",
     "ready": "✓ Configuration complete, ready for next step",
     "pleaseInput": "Please enter script content first",
+    "actions": {
+      "aiSplit": "AI Smart Split",
+      "singleEpisode": "Create Single Episode"
+    },
     "longTextDetection": {
       "title": "🚀 Smart Episode Splitting Recommended",
       "description": "Detected ~{count} characters. Processing long text as a single episode may reduce output quality.",

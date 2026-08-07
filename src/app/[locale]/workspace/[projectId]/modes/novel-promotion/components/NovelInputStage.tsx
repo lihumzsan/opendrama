@@ -9,7 +9,6 @@ import { useTranslations } from 'next-intl'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import '@/styles/animations.css'
 import AiWriteModal from '@/components/home/AiWriteModal'
-import LongTextDetectionPrompt from '@/components/story-input/LongTextDetectionPrompt'
 import StoryInputComposer from '@/components/story-input/StoryInputComposer'
 import { ART_STYLES, VIDEO_RATIOS } from '@/lib/constants'
 import TaskStatusInline from '@/components/task/TaskStatusInline'
@@ -19,7 +18,6 @@ import { DEFAULT_STYLE_PRESET_VALUE, STYLE_PRESETS } from '@/lib/style-presets'
 import { PROJECT_STORY_INPUT_MIN_ROWS } from '@/lib/ui/textarea-height'
 import { apiFetch } from '@/lib/api-fetch'
 import { expandHomeStory } from '@/lib/home/ai-story-expand'
-import { shouldRecommendSmartSplit } from '@/lib/novel-promotion/smart-split-recommendation'
 
 interface NovelInputStageProps {
   // 核心数据
@@ -91,16 +89,10 @@ export default function NovelInputStage({
   }
 
   const hasContent = localText.trim().length > 0
-  const [showLongTextPrompt, setShowLongTextPrompt] = useState(false)
 
-  /** 点击"开始创作"时，先检测文本长度 */
-  const handleStartClick = useCallback(() => {
-    if (shouldRecommendSmartSplit(localText) && onSmartSplit) {
-      setShowLongTextPrompt(true)
-    } else {
-      onNext()
-    }
-  }, [localText, onNext, onSmartSplit])
+  const handleChapterBatchImport = useCallback(() => {
+    onSmartSplit?.(localText)
+  }, [localText, onSmartSplit])
 
   const handleAiWriteStart = useCallback(async (prompt: string) => {
     if (aiWriteLoading) return
@@ -196,38 +188,48 @@ export default function NovelInputStage({
           textareaClassName="px-0 pt-0 pb-3 align-top"
           primaryAction={(
             <button
-              onClick={handleStartClick}
-              disabled={!hasContent || isSubmittingTask || isSwitchingStage}
+              onClick={handleChapterBatchImport}
+              disabled={!hasContent || !onSmartSplit || isSubmittingTask || isSwitchingStage}
               className="glass-btn-base glass-btn-primary h-10 flex-shrink-0 px-5 text-sm disabled:opacity-50 flex items-center gap-2"
             >
               {isSwitchingStage ? (
                 <TaskStatusInline state={stageSwitchingState} className="text-white [&>span]:text-white [&_svg]:text-white" />
               ) : (
                 <>
-                  <span>{t("smartImport.manualCreate.button")}</span>
-                  <AppIcon name="arrowRight" className="w-4 h-4" />
+                  <AppIcon name="sparkles" className="w-4 h-4" />
+                  <span>{t('storyInput.actions.aiSplit')}</span>
                 </>
               )}
             </button>
           )}
           secondaryActions={(
-            <button
-              onClick={() => setAiWriteOpen(true)}
-              disabled={isSubmittingTask || isSwitchingStage}
-              className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
-            >
-              <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
-              <span
-                className="font-medium"
-                style={{
-                  background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+            <>
+              <button
+                onClick={onNext}
+                disabled={!hasContent || isSubmittingTask || isSwitchingStage}
+                className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
               >
-                {homeT('aiWrite.trigger')}
-              </span>
-            </button>
+                <AppIcon name="arrowRight" className="w-4 h-4" />
+                <span>{t('storyInput.actions.singleEpisode')}</span>
+              </button>
+              <button
+                onClick={() => setAiWriteOpen(true)}
+                disabled={isSubmittingTask || isSwitchingStage}
+                className="glass-btn-base flex h-10 flex-shrink-0 items-center gap-1.5 border border-[var(--glass-stroke-strong)] px-3 text-sm transition-all hover:border-[var(--glass-tone-info-fg)]/40"
+              >
+                <AppIcon name="sparkles" className="w-4 h-4 text-[#7c3aed]" />
+                <span
+                  className="font-medium"
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {homeT('aiWrite.trigger')}
+                </span>
+              </button>
+            </>
           )}
         />
       </div>
@@ -281,29 +283,6 @@ export default function NovelInputStage({
         </div>
       )}
 
-      <LongTextDetectionPrompt
-        open={showLongTextPrompt}
-        copy={{
-          title: t('storyInput.longTextDetection.title'),
-          description: t('storyInput.longTextDetection.description', {
-            count: localText.trim().length.toLocaleString(),
-          }),
-          strongRecommend: t('storyInput.longTextDetection.strongRecommend'),
-          smartSplitLabel: t('storyInput.longTextDetection.smartSplit'),
-          smartSplitBadge: t('storyInput.longTextDetection.smartSplitRecommend'),
-          continueLabel: t('storyInput.longTextDetection.continueAnyway'),
-          continueHint: t('storyInput.longTextDetection.singleEpisodeWarning'),
-        }}
-        onClose={() => setShowLongTextPrompt(false)}
-        onSmartSplit={() => {
-          setShowLongTextPrompt(false)
-          onSmartSplit?.(localText)
-        }}
-        onContinue={() => {
-          setShowLongTextPrompt(false)
-          onNext()
-        }}
-      />
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { logError as _ulogError, logInfo as _ulogInfo } from '@/lib/logging/core'
-import { detectEpisodeMarkers, type EpisodeMarkerResult } from '@/lib/episode-marker-detector'
 import { countWords } from '@/lib/word-count'
 import {
   useAnalyzeChapterBatch,
@@ -10,7 +9,6 @@ import {
   useCreateChapterBatch,
   useListProjectEpisodes,
   useSaveProjectEpisodesBatch,
-  useSplitProjectEpisodesByMarkers,
 } from '@/lib/query/hooks'
 import type { DeleteConfirmState, SplitEpisode, WizardStage } from '../types'
 import { mapChapterBatchPlanToSplitEpisodes } from '../chapter-batch-mapping'
@@ -62,8 +60,6 @@ export function useWizardState({
     index: -1,
     title: '',
   })
-  const [markerResult, setMarkerResult] = useState<EpisodeMarkerResult | null>(null)
-  const [showMarkerConfirm, setShowMarkerConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [splitProfile, setSplitProfile] = useState<'horizontal_motion_comic' | 'regular_episode' | null>(null)
   const [aiRecommendation, setAiRecommendation] = useState<SplitEpisode[] | null>(null)
@@ -74,7 +70,6 @@ export function useWizardState({
   const createChapterBatchMutation = useCreateChapterBatch(projectId)
   const analyzeChapterBatchMutation = useAnalyzeChapterBatch(projectId)
   const confirmChapterBatchMutation = useConfirmChapterBatch(projectId)
-  const splitProjectEpisodesByMarkersMutation = useSplitProjectEpisodesByMarkers(projectId)
   const saveProjectEpisodesBatchMutation = useSaveProjectEpisodesBatch(projectId)
 
   const loadSavedEpisodes = useCallback(async () => {
@@ -113,7 +108,6 @@ export function useWizardState({
   }, [episodes.length, importStatus, loadSavedEpisodes])
 
   const performAISplit = useCallback(async () => {
-    setShowMarkerConfirm(false)
     setStage('analyzing')
     setError(null)
 
@@ -157,22 +151,7 @@ export function useWizardState({
       return
     }
 
-    const detection = detectEpisodeMarkers(rawContent)
-    _ulogInfo('[SmartImport] marker detection result', {
-      hasMarkers: detection.hasMarkers,
-      markerType: detection.markerType,
-      confidence: detection.confidence,
-      matchCount: detection.matches.length,
-      previewSplitsCount: detection.previewSplits.length,
-    })
-
-    if (detection.hasMarkers) {
-      setMarkerResult(detection)
-      setShowMarkerConfirm(true)
-      return
-    }
-
-    _ulogInfo('[SmartImport] no markers detected, using AI split')
+    _ulogInfo('[SmartImport] using AI chapter batch analysis')
     await performAISplit()
   }, [performAISplit, projectId, rawContent, t])
 
@@ -183,30 +162,6 @@ export function useWizardState({
       void handleAnalyze()
     }
   })
-
-  const handleMarkerSplit = useCallback(async () => {
-    if (!markerResult) return
-
-    setShowMarkerConfirm(false)
-    setStage('analyzing')
-    setError(null)
-
-    try {
-      const data = await splitProjectEpisodesByMarkersMutation.mutateAsync({ content: rawContent })
-      const splitEpisodes = data.episodes || []
-      setEpisodes(splitEpisodes)
-      setAiRecommendation(null)
-      setSplitProfile(null)
-      setChapterBatchId(null)
-      setSelectedPlanId(null)
-      _ulogInfo('[SmartImport] marker split ready for preview; database will update only after confirmation')
-      setStage('preview')
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('errors.analyzeFailed')
-      setError(message || t('errors.analyzeFailed'))
-      setStage('select')
-    }
-  }, [markerResult, rawContent, splitProjectEpisodesByMarkersMutation, t])
 
   const updateEpisodeTitle = useCallback((index: number, title: string) => {
     setEpisodes((prev) => prev.map((ep, i) => (i === index ? { ...ep, title } : ep)))
@@ -352,14 +307,9 @@ export function useWizardState({
     saving,
     splitProfile,
     canResetAIRecommendation: aiRecommendation !== null,
-    markerResult,
-    showMarkerConfirm,
     deleteConfirm,
     handleAnalyze,
     performAISplit,
-    handleMarkerSplit,
-    setShowMarkerConfirm,
-    setMarkerResult,
     updateEpisodeTitle,
     updateEpisodeSummary,
     updateEpisodeNumber,

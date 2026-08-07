@@ -47,15 +47,6 @@ export default function SmartImportWizard({
         onRawContentChange={wizard.setRawContent}
         onAnalyze={() => { void wizard.handleAnalyze() }}
         error={wizard.error}
-        showMarkerConfirm={wizard.showMarkerConfirm}
-        markerResult={wizard.markerResult}
-        onCloseMarkerConfirm={() => wizard.setShowMarkerConfirm(false)}
-        onUseMarkerSplit={() => { void wizard.handleMarkerSplit() }}
-        onUseAiSplit={() => {
-          wizard.setShowMarkerConfirm(false)
-          wizard.setMarkerResult(null)
-          void wizard.performAISplit()
-        }}
       />
     )
   }

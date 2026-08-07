@@ -1,8 +1,15 @@
 import * as React from 'react'
 import { createElement } from 'react'
+import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import NovelInputStage from '@/app/[locale]/workspace/[projectId]/modes/novel-promotion/components/NovelInputStage'
+
+declare global {
+  var IS_REACT_ACT_ENVIRONMENT: boolean
+}
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: Record<string, string | number>) => {
@@ -87,5 +94,33 @@ describe('NovelInputStage', () => {
     expect(html).toContain('AiWriteModal')
     expect(html).not.toContain('storyInput.wordCount 0')
     expect(html).not.toContain('storyInput.currentConfigSummary')
+  })
+
+  it('starts chapter-batch import for plain document text from the primary action', async () => {
+    Reflect.set(globalThis, 'React', React)
+    const onSmartSplit = vi.fn()
+    const onNext = vi.fn()
+    let renderer: ReactTestRenderer
+
+    await act(async () => {
+      renderer = create(createElement(NovelInputStage, {
+        novelText: '1111\n2222\n3333',
+        onNovelTextChange: () => undefined,
+        onNext,
+        onSmartSplit,
+      }))
+    })
+
+    const primaryAction = renderer!.root.findAllByType('button').find((button) =>
+      String(button.props.className).includes('glass-btn-primary'),
+    )
+
+    expect(primaryAction).toBeDefined()
+    await act(async () => {
+      primaryAction!.props.onClick()
+    })
+
+    expect(onSmartSplit).toHaveBeenCalledWith('1111\n2222\n3333')
+    expect(onNext).not.toHaveBeenCalled()
   })
 })
